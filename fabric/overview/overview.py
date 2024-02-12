@@ -35,14 +35,6 @@ def getOpenWindows() -> dict:
             cdict[client["workspace"]["id"]].append((client["class"], client["at"]))
     return cdict
 
-def BuildWorkSpaceBox(children):
-    box = Box(
-        spacing=2,
-        orientation="h",
-        name="widgets-container",
-        children=children,
-    )
-
 class Overview(Window):
     def __init__(
         self,
