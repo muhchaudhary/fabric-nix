@@ -49,7 +49,7 @@ class Overview(Window):
         self.center_box = CenterBox(
             name="main-window",
             spacing=10,
-            center_widgets=self.make_windows_children(getOpenWindows()),
+            center_widgets=self.make_windows_children(get_open_windows()),
             )
         self.add(self.center_box)
         self.show_all()
@@ -74,6 +74,5 @@ def apply_style(*args):
 
 if __name__ == "__main__":
     bar = Overview()
-    clients = getOpenWindows()
     apply_style()
     fabric.start()
