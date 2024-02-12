@@ -35,7 +35,7 @@
     all: unset;
     font-family: "Iosevka Nerd Font";
     font-weight: 500;
-    font-size: 14px;
+    font-size: 30px;
     color: black;
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
@@ -50,6 +50,10 @@
 
 #window-box {
     margin: 10px;
+    font-size: 70px;
+    border: solid 2px;
+    border-color: var(--border-color);
+    border-radius: 30px;
     background-color: var(--foreground);
 }
 

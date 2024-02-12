@@ -30,7 +30,7 @@ def get_open_windows() -> dict:
     cdict = {}
     for client in clients:
         if client["workspace"]["id"] not in cdict:
-            cdict[client["workspace"]["id"]] = [(client["class"], client["at"])]
+            cdict[client["workspace"]["id"]] = [(client["class"] or client["title"], client["at"])]
         else:
             cdict[client["workspace"]["id"]].append((client["class"], client["at"]))
     return cdict
@@ -41,7 +41,7 @@ class Overview(Window):
     ):
         super().__init__(
             layer="overlay",
-            anchor="left center right",
+            anchor="center",
             margin="10px 10px -2px 10px",
             exclusive=True,
             visible=True,
@@ -56,14 +56,16 @@ class Overview(Window):
 
     def make_windows_children(self, cdict):
         boxes = []
-        for w in sorted(cdict.keys())[1:]:
+        for w in range(1,MAX_OPEN_WRKSPACE + 1):
             labels = []
-            for clients in cdict[w]:
-                labels.append(Label(clients[0]))
+            if w in cdict.keys():
+                for clients in cdict[w]:
+                    labels.append(Label(clients[0]))
             windows_box = Box(
                 name="window-box",
                 spacing=10,
                 children=labels,
+                size=100,
             )
             boxes.append(windows_box)
         return boxes
