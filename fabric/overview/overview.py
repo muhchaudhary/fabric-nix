@@ -19,7 +19,7 @@ from fabric.utils import (
 connection = Connection()
 MAX_OPEN_WRKSPACE = 7
 
-def getOpenWindows() -> dict:
+def get_open_windows() -> dict:
     clients = json.loads(
         str(
             connection.send_command(
