@@ -40,6 +40,33 @@
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
+#player-box {
+    border: solid 2px;
+    border-color: var(--border-color);
+    background-color: var(--window-bg);
+    border-radius: 100px;
+    
+}
+
+#image-box {
+    border: solid 2px;
+    border-color: var(--border-color);
+    background-color: var(--window-bg);
+    border-radius: 10px;
+    
+}
+
+#player-title {
+    font-weight: bold;
+    font-size: 18px;
+} 
+
+#player-artist {
+    font-size: 16px;
+
+}
+  
+
 #main-window {
     border: solid 2px;
     border-color: var(--border-color);
@@ -111,6 +138,8 @@ menu > menuitem > label,
 #center-box {
     margin: 1px;
 }
+
+
 
 /* system tray */
 

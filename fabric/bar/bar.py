@@ -25,7 +25,7 @@ from fabric.utils import (
     get_relative_path,
 )
 import gi
-from gi.repository import Gio, GLib
+from gi.repository import Gio, GLib, Playerctl, GdkPixbuf
 
 PYWAL = False
 AUDIO_WIDGET = True
@@ -85,35 +85,105 @@ class VolumeWidget(Box):
         return
 
 class playerBox(Box):
-    def __init__(self, **kwargs):
+    def __init__(self, player: Playerctl.Player, **kwargs):
         super().__init__(**kwargs)
+        self.player = player
+        self.player_width = 200
+        self.player_hight = 100
+        self.container_box = Box(
+            name = "player-box", 
+            spacing=10,
+            )
+        self.container_box.set_size_request(self.player_width, self.player_hight)
 
-        self.player = None
-        self.player.connect('playback-status::playing', on_play)
-        self.container_box = CenterBox(name = "player-box")
-        self.image = Image(name='player-image')
+        self.image = Image()
+        self.image_box = Box(
+            name = "player-image",
+            h_align="start",
+            v_align="start",
+            children=self.image,
+        )
+
+        self.track_title = Label(label="", name="player-title", justfication="left")
+        self.track_artist = Label(label="",  name = "player-artist", justfication="left")
+        
+        self.track_title.set_line_wrap(True)
+        self.track_title.set_max_width_chars(1)
+        self.track_title.set_xalign(0)
+
+        self.track_artist.set_line_wrap(True)
+        self.track_artist.set_max_width_chars(1)
+        self.track_artist.set_xalign(0)
+        
+       
+        self.track_info = Box(
+            name= "player-info",
+            spacing= 2,
+            orientation= 'v',
+            v_align= "start",
+            h_align= "start",
+            children=[
+                self.track_title,
+                self.track_artist,
+            ],
+            
+        )
+        self.track_info.set_size_request(self.player_width,-1)
 
         self.play_pause_button = Button(
             label="Play",
             name="player-button",
         )
+        
+        self.player.connect('playback-status::playing', self.on_play)
+        self.player.connect("metadata", self.update)
+        
+        #run once
+        self.update(player,player.get_property("metadata"))
 
-        self.container_box.add_left(self.image)
-        self.image_box.add
+        self.container_box.add_children([self.image_box, self.track_info])
 
+        self.add(self.container_box)
+
+    def set_player(self, player):
+        self.player = player
     def on_play(self, player, status):
+        logger.info("[PLAYER START] on player start")
         self.play
 
     def play(self, *args):
-        player.play()
+        self.player.play()
     
     def pause(self, *args):
-        player.pause()
+        self.player.pause()
+
+    def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
+        try:
+            logger.info(f"[Player] saving cover photo to {self.cover_path}")
+            source.copy_finish(result)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_size(self.cover_path,width=80,height=80)
+            self.image.set_from_pixbuf(pixbuf)
+
+        except:
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(self.cover_path)
+            logger.error(f"[PLAYER] Failed to grab artUrl {Exception}")
     
+    def set_image(self, url):
+        self.cover_path = MEDIA_CACHE + '/' + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
+        Gio.File.new_for_uri(uri=url).copy_async(
+            destination = Gio.File.new_for_path(self.cover_path),
+            flags = Gio.FileCopyFlags.OVERWRITE,
+            io_priority = GLib.PRIORITY_DEFAULT,
+            cancellable = None, 
+            progress_callback = None,
+            callback = self.img_callback,
+        )
+
     def update(self, player, metadata):
         logger.info(f"[PLAYER] updating with {metadata}")
-        self.image.set_from_file(metadata["mpris:artUrl"])
-        self.player_info_label.set_label(metadata["xesam:artist"][0] + "-" + metadata['xesam:title'])
+        self.set_image(metadata['mpris:artUrl'])
+        self.track_title.set_label(metadata['xesam:title'])
+        self.track_artist.set_label(metadata["xesam:artist"][0])
 
 
 class playerWidget(Box):
@@ -157,9 +227,12 @@ class playerWidget(Box):
             progress_callback = None,
             callback = self.img_callback,
         )
-        
+
+    def get_players(self):
+        return self.mpris_manager.get_players()
+
     def update(self, player, metadata):
-        logger.info(f"[PLAYER] is updating {self.get_image(metadata['mpris:artUrl'])}")
+        logger.info("[PLAYER] is updating")
         self.set_image(metadata["mpris:artUrl"])
         self.player_info_label.set_label(metadata["xesam:artist"][0] + "-" + metadata['xesam:title'])
 
@@ -234,6 +307,7 @@ class StatusBar(Window):
         )
         self.volume = VolumeWidget() if AUDIO_WIDGET is True else None
         self.mprisplayer = playerWidget()
+        self.player_box = playerBox(self.mprisplayer.get_players()[0])
         self.widgets_container = Box(
             spacing=2,
             orientation="h",
@@ -243,7 +317,7 @@ class StatusBar(Window):
             ],
         )
         self.widgets_container.add(self.volume) if self.volume is not None else None
-        self.center_box.add_left(self.mprisplayer)
+        self.center_box.add_left(self.player_box)
         self.center_box.add_left(self.workspaces)
         self.center_box.add_right(self.widgets_container)
         self.center_box.add_center(self.active_window)
