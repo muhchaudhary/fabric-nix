@@ -10,6 +10,7 @@ in
 
       # add aditional python packages here
       python311Packages.psutil
+      playerctl
     ];
     nativeBuildInputs = with pkgs; [
       wrapGAppsHook

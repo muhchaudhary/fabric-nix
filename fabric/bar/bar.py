@@ -11,9 +11,12 @@ from fabric.widgets.overlay import Overlay
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.date_time import DateTime
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.image import Image
+from fabric.widgets.button import Button
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
+from service import MprisPlayerManager
 from fabric.utils import (
     set_stylesheet_from_file,
     bulk_replace,
@@ -21,6 +24,8 @@ from fabric.utils import (
     invoke_repeater,
     get_relative_path,
 )
+import gi
+from gi.repository import Gio, GLib
 
 PYWAL = False
 AUDIO_WIDGET = True
@@ -31,6 +36,13 @@ if AUDIO_WIDGET is True:
     except Exception as e:
         logger.error(e)
         AUDIO_WIDGET = False
+
+CHACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
+MEDIA_CACHE = CHACHE_DIR + "/media"
+if not os.path.exists(CHACHE_DIR):
+    os.makedirs(CHACHE_DIR)
+if not os.path.exists(MEDIA_CACHE):
+    os.makedirs(MEDIA_CACHE)
 
 
 class VolumeWidget(Box):
@@ -72,6 +84,84 @@ class VolumeWidget(Box):
         self.circular_progress_bar.percentage = self.audio.speaker.volume
         return
 
+class playerBox(Box):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.player = None
+        self.player.connect('playback-status::playing', on_play)
+        self.container_box = CenterBox(name = "player-box")
+        self.image = Image(name='player-image')
+
+        self.play_pause_button = Button(
+            label="Play",
+            name="player-button",
+        )
+
+        self.container_box.add_left(self.image)
+        self.image_box.add
+
+    def on_play(self, player, status):
+        self.play
+
+    def play(self, *args):
+        player.play()
+    
+    def pause(self, *args):
+        player.pause()
+    
+    def update(self, player, metadata):
+        logger.info(f"[PLAYER] updating with {metadata}")
+        self.image.set_from_file(metadata["mpris:artUrl"])
+        self.player_info_label.set_label(metadata["xesam:artist"][0] + "-" + metadata['xesam:title'])
+
+
+class playerWidget(Box):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.mpris_manager = MprisPlayerManager()
+
+        self.player_info_label = Label(label="")
+        self.cover_path = ""
+        self.image = Image(name='player-image')
+        self.event_box = Box(
+            spacing=10,
+            orientation="h",
+            name="hyprland-window",
+            children=[
+                self.player_info_label,
+                self.image,
+            ],
+        )
+        
+        for player in self.mpris_manager.get_players():
+            player.connect("metadata", self.update)
+        self.add(self.event_box)
+
+    def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
+        logger.info(f"{source}, {result.get_task_data()}")
+        try:
+            source.copy_finish(result)
+            self.image.set_from_file(self.cover_path)
+
+        except:
+            logger.error("[PLAYER] Failed to grab artUrl")
+    
+    def set_image(self, url):
+        self.cover_path = MEDIA_CACHE + '/' + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
+        Gio.File.new_for_uri(uri=url).copy_async(
+            destination = Gio.File.new_for_path(self.cover_path),
+            flags = Gio.FileCopyFlags.OVERWRITE,
+            io_priority = GLib.PRIORITY_DEFAULT,
+            cancellable = None, 
+            progress_callback = None,
+            callback = self.img_callback,
+        )
+        
+    def update(self, player, metadata):
+        logger.info(f"[PLAYER] is updating {self.get_image(metadata['mpris:artUrl'])}")
+        self.set_image(metadata["mpris:artUrl"])
+        self.player_info_label.set_label(metadata["xesam:artist"][0] + "-" + metadata['xesam:title'])
 
 class StatusBar(Window):
     def __init__(
@@ -143,6 +233,7 @@ class StatusBar(Window):
             ],
         )
         self.volume = VolumeWidget() if AUDIO_WIDGET is True else None
+        self.mprisplayer = playerWidget()
         self.widgets_container = Box(
             spacing=2,
             orientation="h",
@@ -152,7 +243,7 @@ class StatusBar(Window):
             ],
         )
         self.widgets_container.add(self.volume) if self.volume is not None else None
-
+        self.center_box.add_left(self.mprisplayer)
         self.center_box.add_left(self.workspaces)
         self.center_box.add_right(self.widgets_container)
         self.center_box.add_center(self.active_window)
