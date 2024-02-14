@@ -17,4 +17,8 @@ in
       gobject-introspection
       pkg-config
     ];
+    # fix svg
+    shellHook = ''
+      export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
+    '';
   }
