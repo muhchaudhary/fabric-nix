@@ -90,14 +90,9 @@ class playerBox(Box):
         super().__init__(**kwargs)
         self.player = player
         self.player_width = 200
-        self.player_hight = 100
+        self.player_height = 100
         self.cover_path = ""
         self.old_cover_path = ""
-        self.container_box = CenterBox(
-            name = "player-box", 
-            spacing=10,
-            )
-        self.container_box.set_size_request(self.player_width, self.player_hight)
 
         # Cover Image
         self.image_box = Box(
@@ -110,11 +105,11 @@ class playerBox(Box):
             h_align="start",
             v_align="start",
         )
-        self.image_box.set_size_request(80,80)
-        self.last_image_box.set_size_request(80,80)
+        self.image_box.set_size_request(120,120)
+        self.last_image_box.set_size_request(120,120)
         
         self.image_stack = Stack(
-            transition_duration=1000,
+            transition_duration=500,
             transition_type="over-up",
         )
         self.image_stack.add_named(self.image_box, "player_image")
@@ -134,7 +129,7 @@ class playerBox(Box):
         
         self.track_info = Box(
             name= "player-info",
-            spacing= 2,
+            spacing= 0,
             orientation= 'v',
             v_align= "start",
             h_align= "start",
@@ -156,10 +151,10 @@ class playerBox(Box):
         self.play_pause_button = Button(name="player-button", child = Image(icon_name="media-playback-start"))
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
         
-        self.next_button = Button(name="player-button", child = Image(icon_name="media-seek-forward"))
+        self.next_button = Button(name="player-button", child = Image(icon_name="media-seek-forward", icon_size=48))
         self.next_button.connect("clicked", lambda _: self.player.next())
 
-        self.prev_button = Button(name="player-button", child = Image(icon_name="media-seek-backward"))
+        self.prev_button = Button(name="player-button", child = Image(image_file=get_relative_path("assets/play.svg")))
         self.prev_button.connect("clicked", lambda _: self.player.previous())
 
         self.shuffle_button = Button(name="player-button", child = Image(icon_name="media-playlist-shuffle"))
@@ -170,9 +165,8 @@ class playerBox(Box):
         self.button_box.add_left(self.shuffle_button)
         self.button_box.add_right(self.next_button)
 
-        # Seek Bar
-        self.adjustment = Gtk.Adjustment(0, 0, 100, 5, 10, 0)
-        self.seek_bar = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adjustment)
+        # Seek Bar (not working well)
+        self.seek_bar = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=Gtk.Adjustment(0, 0, 100, 2, 10, 0))
         self.seek_bar.set_digits(0)
         self.seek_bar.set_hexpand(True)
         self.seek_bar.set_valign(Gtk.Align.START)
@@ -182,27 +176,45 @@ class playerBox(Box):
             children= self.seek_bar
         )
 
+        # Connections
 
         self.player.connect('playback-status', self.playback_update)
         self.player.connect('shuffle', self.shuffle_update)
         self.player.connect("metadata", self.update)
 
         
-        #run once
-        self.space_box = Box(
-            spacing=10
+
+        self.inner_box = Box(
+            orientation="v",
+            size=80,
+            spacing=25,
+            children=[self.track_info, ], 
+            style="background-color: white; border-radius: 20px;",
+            v_align='center',
         )
-        self.space_box.set_size_request(20,1)
+
+        self.final_box = Box()
+        self.final_box.set_size_request(self.player_width*2,self.player_height+25)
+        self.overlay_box = Overlay(
+            children=self.final_box,
+            overlays=[
+                self.inner_box,
+                self.image_stack,
+                self.button_box
+            ],
+            v_align='center',
+            h_align='center'
+        )
+        self.track_info.set_margin_start(120)
+        self.track_info.set_margin_top(5)
+        self.button_box.set_margin_start(140)
+        self.button_box.set_margin_end(10)
+        self.button_box.set_margin_top(80)
+        self.inner_box.set_margin_start(20)
+        self.inner_box.set_size_request(self.player_width,self.player_height - 10)
         self.update(player,player.get_property("metadata"))
         self.playback_update(player,player.get_property("playback-status"))
-        self.container_box.add_left(self.image_stack)
-        self.container_box.add_left(self.space_box)
-        self.container_box.add_center(Box(
-            orientation="v",
-            spacing=10,
-            children=[self.track_info,self.seek_bar_box, self.button_box], 
-        ))
-        self.add(self.container_box)
+        self.add(self.overlay_box)
         
 
     def scale_moved(self, event):
@@ -217,9 +229,9 @@ class playerBox(Box):
 
     def playback_update(self, player, status):
         if status == Playerctl.PlaybackStatus.PAUSED:
-            self.play_pause_button.get_child().set_from_icon_name("media-playback-start", Gtk.IconSize.BUTTON)
+            self.play_pause_button.get_child().set_from_icon_name("media-playback-start", Gtk.IconSize.DND)
         if status == Playerctl.PlaybackStatus.PLAYING:
-            self.play_pause_button.get_child().set_from_icon_name("media-playback-pause", Gtk.IconSize.BUTTON)
+            self.play_pause_button.get_child().set_from_icon_name("media-playback-pause", Gtk.IconSize.DND)
             print(status)
 
         logger.info(f"[PLAYER] status changed to {status}")
@@ -261,7 +273,7 @@ class playerBox(Box):
 
     def update(self, player, metadata):
         logger.info(f"[PLAYER] new song")
-        self.seek_bar.set_adjustment(Gtk.Adjustment(0, 0, metadata['mpris:length'] // 1e6, 5, 10, 0))
+        self.seek_bar.set_adjustment(Gtk.Adjustment(0, 0, metadata['mpris:length'], 2e6, 2e6, 0))
         self.set_image(metadata['mpris:artUrl'])
         self.track_title.set_label(metadata['xesam:title'])
         self.track_artist.set_label(metadata["xesam:artist"][0])

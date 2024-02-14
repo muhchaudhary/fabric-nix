@@ -15,7 +15,7 @@
     --color8: #ab9989;
     --color9: #72448D;
     --color10: #9C5995;
-    --color11: #D5719F;
+    --color11:   #b5b5b5;
     --color12: #9A62F3;
     --color13: #E075DF;
     --color14: #F98F9F;
@@ -51,25 +51,24 @@
 }
 
 
-
 #player-title {
     font-family: "roboto";
     font-weight: bold;
-    color: #CECECE;
-    text-shadow: 2px 2px #000000;
-    font-size: 18px;
+    color: #000000;
+    /* text-shadow: 1px 1px 2px black; */
+    font-size: 14px;
 } 
 
 #player-artist {
     font-family: "roboto";
-    font-size: 16px;
-    color: #CECECE;
-    text-shadow: 2px 2px #000000;
+    font-size: 12px;
+    color: #7D7178;
+    /* text-shadow: 1px 1px 2px black; */
 
 }
 
 #player-button {
-    font-size: 20px;
+    font-size: 200px;
 }
   
 
