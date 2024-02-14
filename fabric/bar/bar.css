@@ -42,7 +42,6 @@
 
 #player-box {
     border-radius: 10px;
-    
 }
 
   
@@ -66,11 +65,10 @@
     /* text-shadow: 1px 1px 2px black; */
 
 }
-
-#player-button {
-    font-size: 200px;
-}
   
+#player-button:hover {
+    background-color: #b5b5b5;
+}
 
 #main-window {
     border: solid 2px;
