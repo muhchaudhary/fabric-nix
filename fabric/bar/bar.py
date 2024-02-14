@@ -89,7 +89,8 @@ class playerBox(Box):
     def __init__(self, player: Playerctl.Player, **kwargs):
         super().__init__(**kwargs)
         self.player = player
-        self.player_width = 200
+        self.player_width = 350
+        self.text_wrap_width = 200
         self.player_height = 100
         self.cover_path = ""
         self.old_cover_path = ""
@@ -111,6 +112,8 @@ class playerBox(Box):
         self.image_stack = Stack(
             transition_duration=500,
             transition_type="over-up",
+            h_align="start",
+            v_align="start",
         )
         self.image_stack.add_named(self.image_box, "player_image")
         self.image_stack.add_named(self.last_image_box, "last_player_image")
@@ -139,7 +142,7 @@ class playerBox(Box):
             ],
             
         )
-        self.track_info.set_size_request(self.player_width,-1)
+        self.track_info.set_size_request(self.text_wrap_width,-1)
 
         # Buttons 
 
@@ -151,10 +154,10 @@ class playerBox(Box):
         self.play_pause_button = Button(name="player-button", child = Image(icon_name="media-playback-start"))
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
         
-        self.next_button = Button(name="player-button", child = Image(icon_name="media-seek-forward", icon_size=48))
+        self.next_button = Button(name="player-button", child = Image(icon_name="media-seek-forward"))
         self.next_button.connect("clicked", lambda _: self.player.next())
 
-        self.prev_button = Button(name="player-button", child = Image(image_file=get_relative_path("assets/play.svg")))
+        self.prev_button = Button(name="player-button", child = Image(icon_name="media-seek-backward"))
         self.prev_button.connect("clicked", lambda _: self.player.previous())
 
         self.shuffle_button = Button(name="player-button", child = Image(icon_name="media-playlist-shuffle"))
@@ -182,36 +185,42 @@ class playerBox(Box):
         self.player.connect('shuffle', self.shuffle_update)
         self.player.connect("metadata", self.update)
 
-        
+        self.player_info_box = Box(
+            v_align='center',
+            h_align='end',
+            orientation='v',
+            spacing=10,
+            children=[self.track_info, self.button_box],
+        )
+       
 
         self.inner_box = Box(
-            orientation="v",
-            size=80,
-            spacing=25,
-            children=[self.track_info, ], 
-            style="background-color: white; border-radius: 20px;",
-            v_align='center',
-        )
-
-        self.final_box = Box()
-        self.final_box.set_size_request(self.player_width*2,self.player_height+25)
+            style="background-color: white; border-radius: 20px;", 
+            v_align='center')
+        self.overlay_box = Box()
+        # get a better way to do this later
+        self.overlay_box.set_size_request(self.player_width,self.player_height + 20)
         self.overlay_box = Overlay(
-            children=self.final_box,
+            children=self.overlay_box,
             overlays=[
-                self.inner_box,
+                Overlay(
+                    children=self.inner_box,
+                    overlays=[
+                        self.player_info_box
+                    ],                    
+                ),
                 self.image_stack,
-                self.button_box
             ],
             v_align='center',
             h_align='center'
         )
-        self.track_info.set_margin_start(120)
-        self.track_info.set_margin_top(5)
-        self.button_box.set_margin_start(140)
-        self.button_box.set_margin_end(10)
-        self.button_box.set_margin_top(80)
-        self.inner_box.set_margin_start(20)
-        self.inner_box.set_size_request(self.player_width,self.player_height - 10)
+        # push the icons a litte from the left
+        self.player_info_box.set_margin_end(20)
+        # hide a bit of the inner_box underneath the image
+        self.inner_box.set_margin_start(10)
+        # resize the inner box 
+        self.inner_box.set_size_request(-1,self.player_height - 10)
+
         self.update(player,player.get_property("metadata"))
         self.playback_update(player,player.get_property("playback-status"))
         self.add(self.overlay_box)
