@@ -15,6 +15,8 @@
   libdbusmenu-gtk3,
   pkg-config,
   wrapGAppsHook,
+  gdk-pixbuf,
+  librsvg,
 }:
 buildPythonPackage rec {
   pname = "fabric";
@@ -47,6 +49,8 @@ buildPythonPackage rec {
     pygobject-stubs
     pycairo
     loguru
+    gdk-pixbuf
+    librsvg
   ];
 
   meta = with lib; {
