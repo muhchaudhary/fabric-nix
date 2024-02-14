@@ -6,7 +6,7 @@
     --foreground: #f5dbc4;
     --color0: #150d16;
     --color1: #72448D;
-    --color2: #9C5995;
+    --color2: #01d34a;
     --color3: #D5719F;
     --color4: #9A62F3;
     --color5: #E075DF;
@@ -45,18 +45,11 @@
     
 }
 
-@keyframes spin {
-    to { -gtk-icon-transform: rotate(1turn); }
-  }
   
-  #player-image {
-    animation-name: spin;
-    animation-duration: 1s;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    border-radius: 10px;
-  }
-  
+#player-image {
+    border-radius: 100px;
+}
+
 
 
 #player-title {

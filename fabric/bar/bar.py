@@ -12,6 +12,8 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.date_time import DateTime
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
+from fabric.widgets.stack import Stack
+from fabric.widgets.image import Image
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
@@ -24,7 +26,7 @@ from fabric.utils import (
     get_relative_path,
 )
 import gi
-from gi.repository import Gio, GLib, Playerctl,Gtk
+from gi.repository import Gio, GLib, Playerctl, Gtk
 
 PYWAL = False
 AUDIO_WIDGET = True
@@ -90,19 +92,35 @@ class playerBox(Box):
         self.player_width = 200
         self.player_hight = 100
         self.cover_path = ""
-        self.container_box = Box(
+        self.old_cover_path = ""
+        self.container_box = CenterBox(
             name = "player-box", 
             spacing=10,
             )
         self.container_box.set_size_request(self.player_width, self.player_hight)
 
+        # Cover Image
         self.image_box = Box(
             name = "player-image",
             h_align="start",
             v_align="start",
         )
+        self.last_image_box = Box(
+            name = "player-image",
+            h_align="start",
+            v_align="start",
+        )
         self.image_box.set_size_request(80,80)
+        self.last_image_box.set_size_request(80,80)
+        
+        self.image_stack = Stack(
+            transition_duration=1000,
+            transition_type="over-up",
+        )
+        self.image_stack.add_named(self.image_box, "player_image")
+        self.image_stack.add_named(self.last_image_box, "last_player_image")
 
+        # Track Info 
         self.track_title = Label(label="", name="player-title", justfication="left")
         self.track_artist = Label(label="",  name = "player-artist", justfication="left")
         
@@ -114,7 +132,6 @@ class playerBox(Box):
         self.track_artist.set_max_width_chars(1)
         self.track_artist.set_xalign(0)
         
-       
         self.track_info = Box(
             name= "player-info",
             spacing= 2,
@@ -129,17 +146,42 @@ class playerBox(Box):
         )
         self.track_info.set_size_request(self.player_width,-1)
 
-        self.play_pause_button = Button(name="player-button")
-        self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
+        # Buttons 
 
-        self.next_button = Button(name="player-button")
+        self.button_box = CenterBox(
+            name = "button-box",
+            spacing= 10,
+        )
+        
+        self.play_pause_button = Button(name="player-button", child = Image(icon_name="media-playback-start"))
+        self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
+        
+        self.next_button = Button(name="player-button", child = Image(icon_name="media-seek-forward"))
         self.next_button.connect("clicked", lambda _: self.player.next())
 
-        self.prev_button = Button(name="player-button")
+        self.prev_button = Button(name="player-button", child = Image(icon_name="media-seek-backward"))
         self.prev_button.connect("clicked", lambda _: self.player.previous())
 
-        self.shuffle_button = Button(name="player-button")
-        self.shuffle_button.connect("clicked", lambda _: player.shuffle(False) if player.get_property("shuffle") else player.shuffle(True))
+        self.shuffle_button = Button(name="player-button", child = Image(icon_name="media-playlist-shuffle"))
+        self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
+
+        self.button_box.add_center(self.play_pause_button)
+        self.button_box.add_left(self.prev_button)
+        self.button_box.add_left(self.shuffle_button)
+        self.button_box.add_right(self.next_button)
+
+        # Seek Bar
+        self.adjustment = Gtk.Adjustment(0, 0, 100, 5, 10, 0)
+        self.seek_bar = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=self.adjustment)
+        self.seek_bar.set_digits(0)
+        self.seek_bar.set_hexpand(True)
+        self.seek_bar.set_valign(Gtk.Align.START)
+        self.seek_bar.connect("value-changed", self.scale_moved)
+        self.seek_bar_box = Box(
+            spacing=10,
+            children= self.seek_bar
+        )
+
 
         self.player.connect('playback-status', self.playback_update)
         self.player.connect('shuffle', self.shuffle_update)
@@ -147,51 +189,64 @@ class playerBox(Box):
 
         
         #run once
+        self.space_box = Box(
+            spacing=10
+        )
+        self.space_box.set_size_request(20,1)
         self.update(player,player.get_property("metadata"))
         self.playback_update(player,player.get_property("playback-status"))
-
-        self.container_box.add_children([self.image_box, self.track_info, self.play_pause_button])
-
+        self.container_box.add_left(self.image_stack)
+        self.container_box.add_left(self.space_box)
+        self.container_box.add_center(Box(
+            orientation="v",
+            spacing=10,
+            children=[self.track_info,self.seek_bar_box, self.button_box], 
+        ))
         self.add(self.container_box)
         
 
-
+    def scale_moved(self, event):
+        logger.info(("Horizontal scale is " + str(int(self.seek_bar.get_value()))))
+        
     def shuffle_update(self, player, status):
+        logger.info(f"[Player] shuffle status changed to {status}")
         if status == True:
-            self.shuffle_button.set_label("shuffle yes")
+            self.shuffle_button.get_child().set_from_icon_name("media-playlist-shuffle-symbolic", Gtk.IconSize.BUTTON)
         else:
-            self.shuffle_button.set_label("shuffle no")
+            self.shuffle_button.get_child().set_from_icon_name("media-playlist-shuffle", Gtk.IconSize.BUTTON)
 
     def playback_update(self, player, status):
         if status == Playerctl.PlaybackStatus.PAUSED:
-            #Gtk.Image.new_from_icon_name("media-playback-start")
-            self.play_pause_button.set_label("󰏦")
-            #self.play_pause_button = self.play_pause_button.new_from_icon_name("media-playback-start", 4)
+            self.play_pause_button.get_child().set_from_icon_name("media-playback-start", Gtk.IconSize.BUTTON)
         if status == Playerctl.PlaybackStatus.PLAYING:
-            #self.play_pause_button = self.play_pause_button.new_from_icon_name("media-playback-pause", 4)
-            self.play_pause_button.set_label("󰏦")
+            self.play_pause_button.get_child().set_from_icon_name("media-playback-pause", Gtk.IconSize.BUTTON)
             print(status)
 
         logger.info(f"[PLAYER] status changed to {status}")
-
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
             logger.info(f"[Player] saving cover photo to {self.cover_path}")
             os.path.isfile(self.cover_path)
             # source.copy_finish(result)
-            self.image_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
-            self.container_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
-
+            self.update_image()
         except:
             logger.error("[PLAYER] Failed to grab artUrl")
-    
+
+    def update_image(self):
+        self.image_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
+        #self.container_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
+        self.last_image_box.set_style(style=f"background-image: url('{self.old_cover_path}'); background-size: cover;")
+        self.image_stack.set_visible_child_name("last_player_image")
+        self.image_stack.set_visible_child_name("player_image")
+       
+
     def set_image(self, url):
+        self.old_cover_path = self.cover_path
         self.cover_path = MEDIA_CACHE + '/' + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
         if os.path.exists(self.cover_path):
             # messy,make it handele this better
-            self.image_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
-            self.container_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
+            self.update_image()
             return
         Gio.File.new_for_uri(uri=url).copy_async(
             destination = Gio.File.new_for_path(self.cover_path),
@@ -205,7 +260,8 @@ class playerBox(Box):
         )
 
     def update(self, player, metadata):
-        logger.info(f"[PLAYER] updating with {metadata}")
+        logger.info(f"[PLAYER] new song")
+        self.seek_bar.set_adjustment(Gtk.Adjustment(0, 0, metadata['mpris:length'] // 1e6, 5, 10, 0))
         self.set_image(metadata['mpris:artUrl'])
         self.track_title.set_label(metadata['xesam:title'])
         self.track_artist.set_label(metadata["xesam:artist"][0])
