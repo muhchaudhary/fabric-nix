@@ -24,6 +24,7 @@ from fabric.utils import (
     monitor_file,
     invoke_repeater,
     get_relative_path,
+    compile_css,
 )
 import gi
 from gi.repository import Gio, GLib, Playerctl, Gtk, GdkPixbuf
@@ -150,16 +151,24 @@ class playerBox(Box):
         self.button_box = CenterBox(
             name = "button-box",
         )
-        # Image(image_file=get_relative_path("assets/svg_logo.svg"))
-        self.play_pause_button = Button(name="player-button", child = Image(image_file = get_relative_path("assets/play.svg")))
+
+        self.skip_next_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-next.symbolic.png"))
+        self.skip_prev_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-prev.symbolic.png"))
+        self.shuffle_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/shuffle.symbolic.png"))
+        self.play_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/play.symbolic.png"))
+        self.pause_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/pause.symbolic.png"))
+
+
+        self.play_pause_button = Button(name="player-button", child = Image.new_from_gicon(self.play_icon, Gtk.IconSize.BUTTON))
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
-        self.next_button = Button(name="player-button", child = Image(image_file = get_relative_path("assets/skip-next.svg")))
+        
+        self.next_button = Button(name="player-button", child = Image.new_from_gicon(self.skip_next_icon, Gtk.IconSize.BUTTON) )
         self.next_button.connect("clicked", lambda _: self.player.next())
 
-        self.prev_button = Button(name="player-button", child = Image(image_file = get_relative_path("assets/skip-prev.svg")))
+        self.prev_button = Button(name="player-button", child = Image.new_from_gicon(self.skip_prev_icon, Gtk.IconSize.BUTTON))
         self.prev_button.connect("clicked", lambda _: self.player.previous())
 
-        self.shuffle_button = Button(name="player-button", child = Image(image_file=get_relative_path("assets/shuffle.svg")))
+        self.shuffle_button = Button(name="player-button", child = Image.new_from_gicon(self.shuffle_icon, Gtk.IconSize.BUTTON))
         self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
 
         self.button_box.add_center(self.play_pause_button)
@@ -227,15 +236,15 @@ class playerBox(Box):
     def shuffle_update(self, player, status):
         logger.info(f"[Player] shuffle status changed to {status}")
         if status == True:
-            self.shuffle_button.get_child().set_from_file(get_relative_path(get_relative_path("assets/shuffle.svg")))
+            self.shuffle_button.set_style("     background: #eee; box-shadow: 2px 2px 2px -3px black;  ")
         else:
-            self.shuffle_button.get_child().set_from_file(get_relative_path(get_relative_path("assets/shuffle-gray.svg")))
+            self.shuffle_button.set_style("")
 
     def playback_update(self, player, status):
         if status == Playerctl.PlaybackStatus.PAUSED:
-            self.play_pause_button.get_child().set_from_file(get_relative_path(get_relative_path("assets/play.svg")))
+            self.play_pause_button.get_child().set_from_gicon(self.play_icon, Gtk.IconSize.BUTTON)
         if status == Playerctl.PlaybackStatus.PLAYING:
-            self.play_pause_button.get_child().set_from_file(get_relative_path(get_relative_path("assets/pause.svg")))
+            self.play_pause_button.get_child().set_from_gicon(self.pause_icon, Gtk.IconSize.BUTTON)
 
         logger.info(f"[PLAYER] status changed to {status}")
 
@@ -250,7 +259,7 @@ class playerBox(Box):
 
     def update_image(self):
         self.image_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
-        #self.inner_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
+        # self.inner_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
         self.last_image_box.set_style(style=f"background-image: url('{self.old_cover_path}'); background-size: cover;")
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")

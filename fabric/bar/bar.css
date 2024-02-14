@@ -65,9 +65,30 @@
     /* text-shadow: 1px 1px 2px black; */
 
 }
-  
-#player-button:hover {
-    background-color: #b5b5b5;
+
+#player-button {
+    margin: 3px;
+    min-width: 30px;
+    min-height: 30px;
+    border-radius: 100%;
+}
+
+#player-button image {
+    color: black;
+}
+
+
+#player-button:hover{
+    background: #eee;
+    box-shadow: 0 0 2px -3px black;  
+}
+
+#player-button:active image{
+    color: #506c66;
+}
+
+#player-button:active {
+    box-shadow: 0 0 4px -2px black; 
 }
 
 #main-window {
