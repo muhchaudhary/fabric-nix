@@ -23,10 +23,8 @@ except:
 
 class MprisPlayerManager(Service):
     __gsignals__ = SignalContainer(
-        Signal("name-appeared", "run-last", None, ()),
-        Signal("name-vanished", "run-last", None, ()),
-        Signal("player-appeared", "run-last", None, ()),
-        Signal("player-vanished", "run-last", None, ()),
+        Signal("player-appeared", "run-first", None, (Playerctl.PlayerManager,Playerctl.Player,)),
+        Signal("player-vanished", "run-first", None, (Playerctl.PlayerManager,Playerctl.Player,)),
     )
     def __init__(
         self,
@@ -43,12 +41,15 @@ class MprisPlayerManager(Service):
         self.add_players()
         super().__init__(**kwargs)
 
-    def on_name_appeard(self, player_manager, name):
-        logger.info(f"[MprisPlayer] {name.name} appeared")
-        self._manager.manage_player(Playerctl.Player.new_from_name(name))
+    def on_name_appeard(self, player_manager: Playerctl.PlayerManager, player: Playerctl.Player):
+        logger.info(f"[MprisPlayer] {player.name} appeared")
+        new_player = Playerctl.Player.new_from_name(player)
+        self._manager.manage_player(new_player)
+        self.emit("player-appeared",player_manager, new_player)
 
-    def on_name_vanished(self, player_manager, name):
-        logger.info(f"[MprisPlayer] {name.name} vanished")
+    def on_name_vanished(self, player_manager, player):
+        logger.info(f"[MprisPlayer] {player.name} vanished")
+        self.emit("player-vanished",player_manager, player)
 
     def add_players(self):
         for player in self._manager.get_property("player-names"):
@@ -57,34 +58,3 @@ class MprisPlayerManager(Service):
 
     def get_players(self):
         return self._manager.get_property("players")
-        
-
-def on_metadata(player, metadata):
-    if 'xesam:artist' in metadata.keys() and 'xesam:title' in metadata.keys():
-        print('Now playing:')
-        print('{artist} - {title}'.format(
-            artist=metadata['xesam:artist'][0], title=metadata['xesam:title']))
-
-
-def on_play(player, status):
-    print('Playing at volume {}'.format(player.props.volume))
-
-
-def on_pause(player, status):
-    print('Paused the song: {}'.format(player.get_title()))
-
-def playback_tim(player, status):
-    print('current status {}'.format(player.get_position()))
-
-# player.connect('playback-status::playing', on_play)
-# player.connect('playback-status::paused', on_pause)
-# player.connect('metadata', on_metadata)
-# player.connect('seeked', playback_tim)
-
-# mpris = MprisPlayerManager()
-# for player in mpris.get_players():
-#     player.connect('metadata', on_metadata)
-#     player.connect('playback-status', on_play)
-
-# main = GLib.MainLoop()
-# main.run()
