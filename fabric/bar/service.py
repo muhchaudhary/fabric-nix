@@ -21,6 +21,18 @@ try:
 except:
     raise PlayerctlImportError()
 
+# TODO: Build Out MprisPlayer Service
+
+class MprisPlayer(Service):
+    __gsignals__ = SignalContainer(
+       Signal("track-title", "run-first", None, (str,)),
+       Signal("track-artist", "run-first", None, (GLib.Array,)),
+       Signal("player-abilities", "run-first", None, (GLib.Array,)),
+       Signal("playback-status", "run-first",None, (Playerctl.PlaybackStatus,)),
+       Signal("seeked", "run-first",None, (int,)),
+       Signal("shuffle", "run-first",None, (bool,)),
+    )
+
 class MprisPlayerManager(Service):
     __gsignals__ = SignalContainer(
         Signal("player-appeared", "run-first", None, (Playerctl.PlayerManager,Playerctl.Player,)),
@@ -43,6 +55,7 @@ class MprisPlayerManager(Service):
 
     def on_name_appeard(self, player_manager: Playerctl.PlayerManager, player: Playerctl.Player):
         logger.info(f"[MprisPlayer] {player.name} appeared")
+        # This might cause memory leak (haven't checked)
         new_player = Playerctl.Player.new_from_name(player)
         self._manager.manage_player(new_player)
         self.emit("player-appeared",player_manager, new_player)
