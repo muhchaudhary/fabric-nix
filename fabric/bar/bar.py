@@ -13,7 +13,8 @@ from fabric.widgets.date_time import DateTime
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
-from fabric.widgets.image import Image
+from image import Image
+from scale import Scale
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
@@ -24,7 +25,6 @@ from fabric.utils import (
     monitor_file,
     invoke_repeater,
     get_relative_path,
-    compile_css,
 )
 import gi
 from gi.repository import Gio, GLib, Playerctl, Gtk, GdkPixbuf
@@ -95,8 +95,8 @@ class playerBox(Box):
         self.text_wrap_width = 200
         self.image_size = 120
         self.player_height = 100
-        self.cover_path = ""
-        self.old_cover_path = ""
+        self.cover_path = None
+        self.old_cover_path = None
 
         # Cover Image
         self.image_box = Box(
@@ -122,15 +122,20 @@ class playerBox(Box):
         self.image_stack.add_named(self.last_image_box, "last_player_image")
 
         # Track Info 
-        self.track_title = Label(label="", name="player-title", justfication="left")
-        self.track_artist = Label(label="",  name = "player-artist", justfication="left")
+        self.track_title = Label(label="", 
+                                 name="player-title", 
+                                 justfication="left",
+                                 character_max_width=1,)
+        
+        self.track_artist = Label(label="",  
+                                  name = "player-artist", 
+                                  justfication="left",
+                                  character_max_width=1,)
         
         self.track_title.set_line_wrap(True)
-        self.track_title.set_max_width_chars(1)
         self.track_title.set_xalign(0)
 
         self.track_artist.set_line_wrap(True)
-        self.track_artist.set_max_width_chars(1)
         self.track_artist.set_xalign(0)
         
         self.track_info = Box(
@@ -154,39 +159,42 @@ class playerBox(Box):
 
         self.skip_next_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-next.symbolic.png"))
         self.skip_prev_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-prev.symbolic.png"))
-        self.shuffle_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/shuffle.symbolic.png"))
-        self.play_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/play.symbolic.png"))
-        self.pause_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/pause.symbolic.png"))
+        self.shuffle_icon   = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/shuffle.symbolic.png"))
+        self.play_icon      = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/play.symbolic.png"))
+        self.pause_icon     = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/pause.symbolic.png"))
 
 
-        self.play_pause_button = Button(name="player-button", child = Image.new_from_gicon(self.play_icon, Gtk.IconSize.BUTTON))
+        self.play_pause_button = Button(name="player-button", child = Image(gicon=self.play_icon, icon_size=Gtk.IconSize.BUTTON))
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
         
-        self.next_button = Button(name="player-button", child = Image.new_from_gicon(self.skip_next_icon, Gtk.IconSize.BUTTON) )
+        self.next_button = Button(name="player-button", child = Image(gicon=self.skip_next_icon, icon_size=Gtk.IconSize.BUTTON) )
         self.next_button.connect("clicked", lambda _: self.player.next())
 
-        self.prev_button = Button(name="player-button", child = Image.new_from_gicon(self.skip_prev_icon, Gtk.IconSize.BUTTON))
+        self.prev_button = Button(name="player-button", child = Image(gicon=self.skip_prev_icon, icon_size=Gtk.IconSize.BUTTON))
         self.prev_button.connect("clicked", lambda _: self.player.previous())
 
-        self.shuffle_button = Button(name="player-button", child = Image.new_from_gicon(self.shuffle_icon, Gtk.IconSize.BUTTON))
+        self.shuffle_button = Button(name="player-button", child = Image(gicon=self.shuffle_icon, icon_size=Gtk.IconSize.BUTTON))
         self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
 
         self.button_box.add_center(self.play_pause_button)
         self.button_box.add_left(self.prev_button)
         self.button_box.add_left(self.shuffle_button)
         self.button_box.add_right(self.next_button)
-
+        self.test_scroll = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         # Seek Bar (not working well)
-        self.seek_bar = Gtk.Scale(orientation=Gtk.Orientation.HORIZONTAL, adjustment=Gtk.Adjustment(0, 0, 100, 2, 10, 0))
-        self.seek_bar.set_digits(0)
-        self.seek_bar.set_hexpand(True)
-        self.seek_bar.set_valign(Gtk.Align.START)
+        self.seek_bar = Scale(min=0,
+                              max=100,
+                              step=5,
+                              orientation="h", 
+                              draw_value=True,
+                              name="seek-bar",
+                              digits=0,
+                              h_expand=True,
+                              v_align="start",)
+        self.seek_bar.connect("move-slider", self.scale_moved)
         self.seek_bar.connect("value-changed", self.scale_moved)
-        self.seek_bar_box = Box(
-            spacing=10,
-            children= self.seek_bar
-        )
-
+        self.seek_bar.set_show_fill_level(True)
+        self.seek_bar.set_min_slider_size(100)
         # Connections
 
         self.player.connect('playback-status', self.playback_update)
@@ -198,36 +206,30 @@ class playerBox(Box):
             v_align='center',
             h_align='start',
             orientation='v',
-            spacing=10,
-            children=[self.track_info, self.button_box],
+            spacing=0,
+            children=[self.track_info,self.button_box],
         )
        
 
         self.inner_box = Box(
             style=f"background-color: #FEFEFE; border-radius: 20px; margin-left: {self.image_size // 2};", 
-            v_align='center')
-        # resize the inner box 
-        self.inner_box.set_size_request(-1,self.player_height)
-
-        self.overlay_box = Box()
-        # get a better way to do this later
-        self.overlay_box.set_size_request(self.player_width,self.image_size)
-        self.overlay_box = Overlay(
-            children=self.overlay_box,
-            overlays=[
-                Overlay(
-                    children=self.inner_box,
-                    overlays=[self.player_info_box],
-                ),
-                self.image_stack,
-            ],
             v_align='center',
-            h_align='center'
-        )
+            h_align="start",)
+        # resize the inner box 
+        self.inner_box.set_size_request(self.player_width,self.player_height)
 
+        self.outer_box = Box(h_align="start")
+        self.outer_box.set_size_request(self.player_width,self.image_size)
+        self.overlay_box = Overlay(
+            children=self.outer_box,
+            overlays=[self.inner_box, self.player_info_box, self.image_stack]
+        )
+        self.add_children(self.overlay_box)
+        self.set_halign(Gtk.Align.START)
+        self.set_size_request(self.player_width,self.image_size)
         self.update(player,player.get_property("metadata"))
         self.playback_update(player,player.get_property("playback-status"))
-        self.add(self.overlay_box)
+        
         
 
     def scale_moved(self, event):
@@ -235,10 +237,13 @@ class playerBox(Box):
         
     def shuffle_update(self, player, status):
         logger.info(f"[Player] shuffle status changed to {status}")
+        child = self.shuffle_button.get_child()
         if status == True:
-            self.shuffle_button.set_style("     background: #eee; box-shadow: 2px 2px 2px -3px black;  ")
+            self.shuffle_button.set_style("background-color: #eee ;box-shadow: 0 0 4px -2px black;")
+            child.set_style("* {color: green}")
         else:
             self.shuffle_button.set_style("")
+            child.set_style("* {color: black}")
 
     def playback_update(self, player, status):
         if status == Playerctl.PlaybackStatus.PAUSED:
@@ -258,9 +263,10 @@ class playerBox(Box):
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
-        self.image_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
+        style = lambda x: f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 2px -2px black;"
+        self.image_box.set_style(style=style(self.cover_path),append=True)
         # self.inner_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
-        self.last_image_box.set_style(style=f"background-image: url('{self.old_cover_path}'); background-size: cover;")
+        self.last_image_box.set_style(style=style(self.old_cover_path),append=True)
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")
        
@@ -284,13 +290,12 @@ class playerBox(Box):
         )
 
     def update(self, player, metadata):
-        logger.info(f"[PLAYER] new song {metadata}")
+        logger.info(f"[PLAYER] playing new song")
         #self.seek_bar.set_adjustment(Gtk.Adjustment(0, 0, metadata['mpris:length'], 2e6, 2e6, 0))
         if 'mpris:artUrl' in metadata.keys():
             self.set_image(metadata['mpris:artUrl'])
         self.track_title.set_label(metadata['xesam:title'])
         self.track_artist.set_label(metadata["xesam:artist"][0])
-
 
 class StatusBar(Window):
     def __init__(
@@ -375,13 +380,12 @@ class StatusBar(Window):
             ],
         )
         self.widgets_container.add(self.volume) if self.volume is not None else None
-        self.center_box.add_left(self.player_box)
         self.center_box.add_left(self.workspaces)
         self.center_box.add_right(self.widgets_container)
-        self.center_box.add_center(self.active_window)
         self.center_box.add_right(self.system_tray)
         self.center_box.add_right(self.date_time)
         self.center_box.add_right(self.language)
+        self.center_box.add_center(self.player_box)
         self.add(self.center_box)
 
         invoke_repeater(1000, self.update_progress_bars)

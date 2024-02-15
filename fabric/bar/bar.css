@@ -33,20 +33,30 @@
 * {
     /* unsets everything so we can style everything from scratch. */
     all: unset;
-    font-family: "Iosevka Nerd Font";
+    font-family: "roboto";
     font-weight: 500;
     font-size: 14px;
     color: var(--foreground);
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
+#seek-bar value {
+    background-image: url('assets/play.symbolic.png');
+    color: black;
+}
+
+#seek-bar through slider {
+    background-color: black;
+    color: black;
+}
+
 #player-box {
-    border-radius: 10px;
+    border-radius: 10%;
 }
 
   
 #player-image {
-    border-radius: 100px;
+    border-radius: 100%;
 }
 
 
@@ -60,7 +70,7 @@
 
 #player-artist {
     font-family: "roboto";
-    font-size: 12px;
+    font-size: 10px;
     color: #7D7178;
     /* text-shadow: 1px 1px 2px black; */
 
@@ -78,7 +88,7 @@
 }
 
 
-#player-button:hover{
+#player-button:hover {
     background: #eee;
     box-shadow: 0 0 2px -3px black;  
 }
