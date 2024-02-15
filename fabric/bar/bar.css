@@ -40,10 +40,7 @@
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
-#seek-bar value {
-    background-image: url('assets/play.symbolic.png');
-    color: black;
-}
+
 
 #seek-bar through slider {
     background-color: black;

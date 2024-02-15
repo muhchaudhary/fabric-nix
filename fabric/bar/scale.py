@@ -90,6 +90,13 @@ class Scale(Gtk.Scale, Widget):
         digits: int | None = None,
         draw_value: bool | None = False,
         has_origin: bool | None = True, 
+        value_pos: Literal[
+            "bottom",
+            "left",
+            "right",
+            "top",
+        ] 
+        | Gtk.PositionType = None,
         orientation: Literal[
             "horizontal",
             "vertical",
@@ -121,7 +128,33 @@ class Scale(Gtk.Scale, Widget):
         """
         Nothing for now
         """
-        Gtk.Scale.__init__(self, **kwargs)
+        _orientation = (
+            orientation
+            if isinstance(orientation, Gtk.Orientation)
+            else {
+                "horizontal": Gtk.Orientation.HORIZONTAL,
+                "vertical": Gtk.Orientation.VERTICAL,
+                "h": Gtk.Orientation.HORIZONTAL,
+                "v": Gtk.Orientation.VERTICAL,
+            }.get(orientation, Gtk.Orientation.HORIZONTAL)
+        )
+        _value_pos = (
+            value_pos
+            if isinstance(orientation, Gtk.PositionType)
+            else {
+                "bottom": Gtk.PositionType.BOTTOM,
+                "left": Gtk.PositionType.LEFT,
+                "right": Gtk.PositionType.RIGHT,
+                "top": Gtk.PositionType.TOP,
+            }.get(value_pos, Gtk.PositionType.BOTTOM)
+        )
+
+        super().__init__(
+            self,
+            value_pos=_value_pos,
+            orientation=_orientation,
+            **kwargs,
+        )
         super().set_digits(digits) if digits is not None else None
         super().set_draw_value(draw_value) if draw_value is not None else None
         super().set_has_origin(has_origin) if has_origin is not None else None

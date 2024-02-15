@@ -114,7 +114,7 @@ class playerBox(Box):
         
         self.image_stack = Stack(
             transition_duration=500,
-            transition_type="over-up",
+            transition_type="over-down",
             h_align="start",
             v_align="start",
         )
@@ -168,10 +168,10 @@ class playerBox(Box):
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
         
         self.next_button = Button(name="player-button", child = Image(gicon=self.skip_next_icon, icon_size=Gtk.IconSize.BUTTON) )
-        self.next_button.connect("clicked", lambda _: self.player.next())
+        self.next_button.connect("clicked", self.on_player_next)
 
         self.prev_button = Button(name="player-button", child = Image(gicon=self.skip_prev_icon, icon_size=Gtk.IconSize.BUTTON))
-        self.prev_button.connect("clicked", lambda _: self.player.previous())
+        self.prev_button.connect("clicked", self.on_player_prev)
 
         self.shuffle_button = Button(name="player-button", child = Image(gicon=self.shuffle_icon, icon_size=Gtk.IconSize.BUTTON))
         self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
@@ -180,7 +180,7 @@ class playerBox(Box):
         self.button_box.add_left(self.prev_button)
         self.button_box.add_left(self.shuffle_button)
         self.button_box.add_right(self.next_button)
-        self.test_scroll = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
+        # self.test_scroll = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
         # Seek Bar (not working well)
         self.seek_bar = Scale(min=0,
                               max=100,
@@ -190,11 +190,14 @@ class playerBox(Box):
                               name="seek-bar",
                               digits=0,
                               h_expand=True,
-                              v_align="start",)
+                              v_expand=True,
+                              v_align="start",
+                              h_align="start",
+                              value_pos="bottom",
+                              )
+        print(self.seek_bar.get_style_context().to_string(Gtk.StyleContextPrintFlags.RECURSE))
         self.seek_bar.connect("move-slider", self.scale_moved)
         self.seek_bar.connect("value-changed", self.scale_moved)
-        self.seek_bar.set_show_fill_level(True)
-        self.seek_bar.set_min_slider_size(100)
         # Connections
 
         self.player.connect('playback-status', self.playback_update)
@@ -207,7 +210,7 @@ class playerBox(Box):
             h_align='start',
             orientation='v',
             spacing=0,
-            children=[self.track_info,self.button_box],
+            children=[self.track_info,self.seek_bar, self.button_box],
         )
        
 
@@ -235,6 +238,16 @@ class playerBox(Box):
     def scale_moved(self, event):
         logger.info(("Horizontal scale is " + str(int(self.seek_bar.get_value()))))
         
+
+    def on_player_next(self, _):
+        self.image_stack.set_transition_type("over-right")
+        self.player.next()
+    
+    def on_player_prev(self, _):
+        self.image_stack.set_transition_type("over-left")
+        self.player.previous()
+
+
     def shuffle_update(self, player, status):
         logger.info(f"[Player] shuffle status changed to {status}")
         child = self.shuffle_button.get_child()
