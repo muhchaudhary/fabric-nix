@@ -13,6 +13,7 @@
   pygobject3,
   pygobject-stubs,
   libdbusmenu-gtk3,
+  click,
   pkg-config,
   wrapGAppsHook,
   gdk-pixbuf,
@@ -24,8 +25,8 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Fabric-Development";
     repo = "fabric";
-    rev = "55276ab6e8ebfe2d4377e2e4d3b4234d657c5cb8";
-    sha256 = "sha256-xPTwIvQzoapMXMZlZn4JTsJgp50SHWsnt/e4KsQiEjQ=";
+    rev = "cb3336ee1686c45f1530269dd9606cf31902825f";
+    sha256 = "sha256-VvZX6ncqS8AU3Ku6lnD0jTqTwLaFVxdc90Nay+gabhg=";
   };
   format = "setuptools";
 
@@ -51,6 +52,7 @@ buildPythonPackage rec {
     loguru
     gdk-pixbuf
     librsvg
+    click
   ];
 
   meta = with lib; {
