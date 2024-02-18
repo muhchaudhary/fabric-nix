@@ -32,7 +32,7 @@
 
 * {
     /* unsets everything so we can style everything from scratch. */
-    /* all: unset; */
+    all: unset;
     font-family: "roboto";
     font-weight: 500;
     font-size: 14px;
@@ -41,16 +41,29 @@
 }
 
 
-
-scale slider {
-    background-color: blue;
-    min-width: 10px;                                                                              
+scale {
+    margin-top: 10px;
+    margin-bottom: 5px;
+    padding: 0px;
+    color: #01d34a;
 }
 
-scale through {
-    background-color: black;
-    min-height: 100px;                                                                              
+scale trough highlight {
+    background-image: none;
+    background-color: #01d34a;
+    color: #01d34a;
 }
+
+scale trough {
+    min-height: 6px;
+    background-color: #dadada;
+}
+
+
+scale trough:hover {
+    background-color: #98bc94;
+}
+
 #player-box {
     border-radius: 10%;
 }
@@ -76,13 +89,17 @@ scale through {
 
 }
 
+#button-box {
+    margin-bottom: 5px;
+    margin-right: 5px;
+}
+
 #player-button {
     min-width: 16px;
     min-height: 16px;
     padding: 5px;
     border-radius: 100%;
 }
-
 
 #player-button:hover {
     background: #eee;

@@ -28,7 +28,8 @@ class Scale(Gtk.Scale, Widget):
             "left",
             "right",
             "top",            
-        ] | Gtk.PositionType = None,
+        ] 
+        | Gtk.PositionType = None,
         orientation: Literal[
             "horizontal",
             "vertical",
@@ -36,7 +37,7 @@ class Scale(Gtk.Scale, Widget):
             "v",
         ]
         | Gtk.Orientation = None,
-        visible: bool | None = True,
+        visible: bool = True,
         all_visible: bool = False,
         style: str | None = None,
         style_compiled: bool = True,
@@ -55,7 +56,6 @@ class Scale(Gtk.Scale, Widget):
         name: str | None = None,
         size: tuple[int] | None = None,
         **kwargs,
-       
     ):
         """
         Nothing for now
@@ -90,7 +90,7 @@ class Scale(Gtk.Scale, Widget):
                 "top": Gtk.PositionType.TOP,
             }.get(mark_pos, Gtk.PositionType.BOTTOM)
         )
-        super().__init__(
+        Gtk.Scale.__init__(
             self,
             value_pos=_value_pos,
             orientation=_orientation,
@@ -102,6 +102,7 @@ class Scale(Gtk.Scale, Widget):
         super().set_range(min, max) if min is not None and max is not None else None
         super().set_increments(step,step) if step is not None else None
         super().add_mark(marks,_mark_pos,mark_text) if marks is not None else None
+        
 
         # Get back to this
         Widget.__init__(
@@ -121,3 +122,5 @@ class Scale(Gtk.Scale, Widget):
             name,
             size,
         )
+    def set_range(self,min,max):
+        super().set_range(min,max)

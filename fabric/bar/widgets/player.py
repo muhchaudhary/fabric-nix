@@ -122,15 +122,14 @@ class playerBox(Box):
         self.button_box.add_left(self.prev_button)
         self.button_box.add_left(self.shuffle_button)
         self.button_box.add_right(self.next_button)
-        # self.test_scroll = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 0, 100, 1)
-        # Seek Bar (not working well)
         self.seek_bar = Scale(min=0,
                               max=100,
                               step=5,
                               orientation="h", 
                               draw_value=False,
                               name="seek-bar",
-                              digits=0)
+                              digits=0,
+                              )
         self.seek_bar.connect("move-slider", self.scale_moved)
         self.seek_bar.connect("value-changed", self.scale_moved)
         # Connections
@@ -170,7 +169,8 @@ class playerBox(Box):
         
 
     def scale_moved(self, event):
-        logger.info(("Horizontal scale is " + str(int(self.seek_bar.get_value()))))
+        logger.info("Horizontal scale is " + str(self.seek_bar.get_value()))
+        self.player.set_position(self.seek_bar.get_value())
         
 
     def on_player_next(self, _):
@@ -238,7 +238,9 @@ class playerBox(Box):
 
     def update(self, player, metadata):
         logger.info(f"[PLAYER] playing new song")
-        #self.seek_bar.set_adjustment(Gtk.Adjustment(0, 0, metadata['mpris:length'], 2e6, 2e6, 0))
+        self.seek_bar.set_value(0)
+        self.seek_bar.set_range(0,metadata['mpris:length'])
+        self.seek_bar.set_increments(3e+6,3e+6)
         if 'mpris:artUrl' in metadata.keys():
             self.set_image(metadata['mpris:artUrl'])
         self.track_title.set_label(metadata['xesam:title'])
