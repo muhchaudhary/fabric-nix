@@ -7,7 +7,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
-from scale import Scale
+from widgets.scale import Scale
 from gi.repository import Gtk, Gio, Playerctl, GLib
 from fabric.utils import get_relative_path
 
@@ -90,15 +90,15 @@ class playerBox(Box):
             name = "button-box",
         )
 
-        self.skip_next_icon = Svg(svg_file=get_relative_path("assets/player/skip-next.svg"),
+        self.skip_next_icon = Svg(svg_file=get_relative_path("../assets/player/skip-next.svg"),
                                   name="player-icon")
-        self.skip_prev_icon = Svg(svg_file=get_relative_path("assets/player/skip-prev.svg"),
+        self.skip_prev_icon = Svg(svg_file=get_relative_path("../assets/player/skip-prev.svg"),
                                   name="player-icon")
-        self.shuffle_icon   = Svg(svg_file=get_relative_path("assets/player/shuffle.svg"),
+        self.shuffle_icon   = Svg(svg_file=get_relative_path("../assets/player/shuffle.svg"),
                                   name="player-icon")
-        self.play_icon      = Svg(svg_file=get_relative_path("assets/player/play.svg"),
+        self.play_icon      = Svg(svg_file=get_relative_path("../assets/player/play.svg"),
                                   name="player-icon")
-        self.pause_icon     = Svg(svg_file=get_relative_path("assets/player/pause.svg"),
+        self.pause_icon     = Svg(svg_file=get_relative_path("../assets/player/pause.svg"),
                                   name="player-icon")
         
         self.play_pause_stack = Stack()

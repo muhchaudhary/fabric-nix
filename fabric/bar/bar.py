@@ -15,7 +15,7 @@ from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
 from services.mpris import MprisPlayerManager
-from player import playerBox
+from widgets.player import playerBox
 from fabric.utils import (
     set_stylesheet_from_file,
     bulk_replace,
