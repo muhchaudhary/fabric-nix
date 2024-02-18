@@ -32,7 +32,7 @@
 
 * {
     /* unsets everything so we can style everything from scratch. */
-    all: unset;
+    /* all: unset; */
     font-family: "roboto";
     font-weight: 500;
     font-size: 14px;
@@ -42,11 +42,15 @@
 
 
 
-#seek-bar through slider {
-    background-color: black;
-    color: black;
+scale slider {
+    background-color: blue;
+    min-width: 10px;                                                                              
 }
 
+scale through {
+    background-color: black;
+    min-height: 100px;                                                                              
+}
 #player-box {
     border-radius: 10%;
 }
@@ -73,7 +77,6 @@
 }
 
 #player-button {
-    margin: 3px;
     min-width: 16px;
     min-height: 16px;
     padding: 5px;
