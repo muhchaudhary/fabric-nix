@@ -51,7 +51,6 @@
     border-radius: 10%;
 }
 
-  
 #player-image {
     border-radius: 100%;
 }
@@ -75,23 +74,16 @@
 
 #player-button {
     margin: 3px;
-    min-width: 30px;
-    min-height: 30px;
+    min-width: 16px;
+    min-height: 16px;
+    padding: 5px;
     border-radius: 100%;
-}
-
-#player-button image {
-    color: black;
 }
 
 
 #player-button:hover {
     background: #eee;
     box-shadow: 0 0 2px -3px black;  
-}
-
-#player-button:active image{
-    color: #506c66;
 }
 
 #player-button:active {

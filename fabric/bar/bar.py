@@ -13,7 +13,7 @@ from fabric.widgets.date_time import DateTime
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
-from image import Image
+from fabric.widgets.svg import Svg
 from scale import Scale
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
@@ -157,23 +157,32 @@ class playerBox(Box):
             name = "button-box",
         )
 
-        self.skip_next_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-next.symbolic.png"))
-        self.skip_prev_icon = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/skip-prev.symbolic.png"))
-        self.shuffle_icon   = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/shuffle.symbolic.png"))
-        self.play_icon      = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/play.symbolic.png"))
-        self.pause_icon     = GdkPixbuf.Pixbuf.new_for_string(get_relative_path("assets/pause.symbolic.png"))
-
-
-        self.play_pause_button = Button(name="player-button", child = Image(gicon=self.play_icon, icon_size=Gtk.IconSize.BUTTON))
-        self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
+        self.skip_next_icon = Svg(svg_file=get_relative_path("assets/player/skip-next.svg"),
+                                  name="player-icon")
+        self.skip_prev_icon = Svg(svg_file=get_relative_path("assets/player/skip-prev.svg"),
+                                  name="player-icon")
+        self.shuffle_icon   = Svg(svg_file=get_relative_path("assets/player/shuffle.svg"),
+                                  name="player-icon")
+        self.play_icon      = Svg(svg_file=get_relative_path("assets/player/play.svg"),
+                                  name="player-icon")
+        self.pause_icon     = Svg(svg_file=get_relative_path("assets/player/pause.svg"),
+                                  name="player-icon")
         
-        self.next_button = Button(name="player-button", child = Image(gicon=self.skip_next_icon, icon_size=Gtk.IconSize.BUTTON) )
+        self.play_pause_stack = Stack()
+        self.play_pause_stack.add_named(self.play_icon, "play")
+        self.play_pause_stack.add_named(self.pause_icon, "pause")
+
+        self.play_pause_button = Button(name="player-button", child = self.play_pause_stack)
+        self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
+
+
+        self.next_button = Button(name="player-button", child = self.skip_next_icon)
         self.next_button.connect("clicked", self.on_player_next)
 
-        self.prev_button = Button(name="player-button", child = Image(gicon=self.skip_prev_icon, icon_size=Gtk.IconSize.BUTTON))
+        self.prev_button = Button(name="player-button", child = self.skip_prev_icon)
         self.prev_button.connect("clicked", self.on_player_prev)
 
-        self.shuffle_button = Button(name="player-button", child = Image(gicon=self.shuffle_icon, icon_size=Gtk.IconSize.BUTTON))
+        self.shuffle_button = Button(name="player-button", child = self.shuffle_icon)
         self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
 
         self.button_box.add_center(self.play_pause_button)
@@ -200,7 +209,7 @@ class playerBox(Box):
         self.seek_bar.connect("value-changed", self.scale_moved)
         # Connections
 
-        self.player.connect('playback-status', self.playback_update)
+        self.player.connect('playback-status', self.on_playback_change)
         self.player.connect('shuffle', self.shuffle_update)
         self.player.connect("metadata", self.update)
 
@@ -231,7 +240,7 @@ class playerBox(Box):
         self.set_halign(Gtk.Align.START)
         self.set_size_request(self.player_width,self.image_size)
         self.update(player,player.get_property("metadata"))
-        self.playback_update(player,player.get_property("playback-status"))
+        self.on_playback_change(player,player.get_property("playback-status"))
         
         
 
@@ -253,16 +262,16 @@ class playerBox(Box):
         child = self.shuffle_button.get_child()
         if status == True:
             self.shuffle_button.set_style("background-color: #eee ;box-shadow: 0 0 4px -2px black;")
-            child.set_style("* {color: green}")
+            child.set_style("fill: green")
         else:
             self.shuffle_button.set_style("")
-            child.set_style("* {color: black}")
+            child.set_style("fill: black")
 
-    def playback_update(self, player, status):
+    def on_playback_change(self, player, status):
         if status == Playerctl.PlaybackStatus.PAUSED:
-            self.play_pause_button.get_child().set_from_gicon(self.play_icon, Gtk.IconSize.BUTTON)
+            self.play_pause_button.get_child().set_visible_child_name("play")
         if status == Playerctl.PlaybackStatus.PLAYING:
-            self.play_pause_button.get_child().set_from_gicon(self.pause_icon, Gtk.IconSize.BUTTON)
+            self.play_pause_button.get_child().set_visible_child_name("pause")
 
         logger.info(f"[PLAYER] status changed to {status}")
 
@@ -277,9 +286,9 @@ class playerBox(Box):
 
     def update_image(self):
         style = lambda x: f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 2px -2px black;"
-        self.image_box.set_style(style=style(self.cover_path),append=True)
+        self.image_box.set_style(style=style(self.cover_path))
         # self.inner_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;", append=True)
-        self.last_image_box.set_style(style=style(self.old_cover_path),append=True)
+        self.last_image_box.set_style(style=style(self.old_cover_path))
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")
        
