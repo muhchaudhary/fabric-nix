@@ -101,7 +101,7 @@ class Scale(Gtk.Scale, Widget):
         super().set_has_origin(has_origin) if has_origin is not None else None
         super().set_range(min, max) if min is not None and max is not None else None
         super().set_increments(step,step) if step is not None else None
-        super().add_mark(marks,_mark_pos,mark_text)
+        super().add_mark(marks,_mark_pos,mark_text) if marks is not None else None
 
         # Get back to this
         Widget.__init__(
