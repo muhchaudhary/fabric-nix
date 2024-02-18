@@ -9,7 +9,8 @@ from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from widgets.scale import Scale
 from gi.repository import Gtk, Gio, Playerctl, GLib
-from fabric.utils import get_relative_path
+from fabric.utils import get_relative_path, invoke_repeater
+
 
 CHACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 MEDIA_CACHE = CHACHE_DIR + "/media"
@@ -130,8 +131,9 @@ class playerBox(Box):
                               name="seek-bar",
                               digits=0,
                               )
-        self.seek_bar.connect("move-slider", self.scale_moved)
-        self.seek_bar.connect("value-changed", self.scale_moved)
+        #self.seek_bar.connect("move-slider", self.scale_moved)
+        self.seek_bar.connect("change-value", self.scale_moved)
+        # self.seek_bar.connect("value-changed", self.scale_moved)
         # Connections
 
         self.player.connect('playback-status', self.on_playback_change)
@@ -165,12 +167,10 @@ class playerBox(Box):
         self.set_size_request(self.player_width,self.image_size)
         self.update(player,player.get_property("metadata"))
         self.on_playback_change(player,player.get_property("playback-status"))
-        
-        
+        invoke_repeater(60, self.move_seekbar)
 
-    def scale_moved(self, event):
-        logger.info("Horizontal scale is " + str(self.seek_bar.get_value()))
-        self.player.set_position(self.seek_bar.get_value())
+    def scale_moved(self, scale, event , moved_pos):
+        self.player.set_position(moved_pos)
         
 
     def on_player_next(self, _):
@@ -235,6 +235,10 @@ class playerBox(Box):
             callback = self.img_callback,
 
         )
+    # TODO: this is bad for performance, just move by offset
+    def move_seekbar(self):
+        self.seek_bar.set_value(self.player.get_position())
+        return True
 
     def update(self, player, metadata):
         logger.info(f"[PLAYER] playing new song")
