@@ -8,8 +8,9 @@ from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from widgets.scale import Scale
-from gi.repository import Gtk, Gio, Playerctl, GLib
+from gi.repository import Gio, Playerctl, GLib
 from fabric.utils import get_relative_path, invoke_repeater
+
 
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -91,6 +92,11 @@ class playerBox(Box):
             ],
             
         )
+        # Player Signals
+        self.player.connect('playback-status', self.on_playback_change)
+        self.player.connect('shuffle', self.shuffle_update)
+        self.player.connect("metadata", self.update)
+
         # Buttons 
         self.button_box = CenterBox(
             name = "button-box",
@@ -114,7 +120,6 @@ class playerBox(Box):
         self.play_pause_button = Button(name="player-button", child = self.play_pause_stack)
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
 
-
         self.next_button = Button(name="player-button", child = self.skip_next_icon)
         self.next_button.connect("clicked", self.on_player_next)
 
@@ -137,11 +142,6 @@ class playerBox(Box):
                               digits=0,
                               )
         self.seek_bar.connect("change-value", self.on_scale_move)
-
-        self.player.connect('playback-status', self.on_playback_change)
-        self.player.connect('shuffle', self.shuffle_update)
-        self.player.connect("metadata", self.update)
-
         self.player_info_box = Box(
             style = f"margin-left: {self.image_size + 10}px",
             v_align='center',
@@ -150,7 +150,6 @@ class playerBox(Box):
             children=[self.track_info,self.seek_bar, self.button_box],
         )
        
-
         self.inner_box = Box(
             style=f"background-color: #FEFEFE; border-radius: 20px; margin-left: {self.image_size // 2}px;" +
                   f"min-width:{self.player_width-self.image_size // 2}px; min-height:{self.player_height}px;", 
@@ -173,7 +172,10 @@ class playerBox(Box):
 
     def on_player_exit(self, _):
         self.exit = True
-        #TODO make custom destroy function, we have a memeory :(
+        self.player.disconnect_by_func(self.on_player_exit)
+        self.player.disconnect_by_func(self.on_playback_change)
+        self.player.disconnect_by_func(self.shuffle_update)
+        self.player.disconnect_by_func(self.update)
         self.destroy()
 
     def on_player_next(self, _):
@@ -196,12 +198,11 @@ class playerBox(Box):
             child.set_style("fill: black")
 
     def on_playback_change(self, player, status):
+        logger.info(f"[PLAYER] status changed to {status}")
         if status == Playerctl.PlaybackStatus.PAUSED:
             self.play_pause_button.get_child().set_visible_child_name("play")
         if status == Playerctl.PlaybackStatus.PLAYING:
             self.play_pause_button.get_child().set_visible_child_name("pause")
-
-        logger.info(f"[PLAYER] status changed to {status}")
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
@@ -214,8 +215,9 @@ class playerBox(Box):
 
     def update_image(self):
         style = lambda x: f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
+        # style2 = lambda x,y: f"background-image: cross-fade(10% url('{x}'), url('{y}')); background-size: cover;"
+        # self.inner_box.set_style(style=style2(self.cover_path,get_relative_path("assets/Solid_white.png")),append=True )
         self.image_box.set_style(style=style(self.cover_path))
-        # self.inner_box.set_style(style=f"background-image: url('{self.cover_path}'); background-size: cover;")
         self.last_image_box.set_style(style=style(self.old_cover_path))
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")
@@ -236,7 +238,6 @@ class playerBox(Box):
             progress_callback = None,
             #callback=None,
             callback = self.img_callback,
-
         )
     # TODO: this is bad for performance, just move by offset
     def move_seekbar(self):
