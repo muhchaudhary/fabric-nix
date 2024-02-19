@@ -142,10 +142,19 @@ class StatusBar(Window):
             ],
         )
         self.volume = VolumeWidget() if AUDIO_WIDGET is True else None
+
+
+        self.players = {}
         self.mprisplayer = MprisPlayerManager()
-        self.mprisplayer.connect('player-appeared',self.on_new_player)
-        #self.mprisplayer.connect('player-vanished', self.on_lost_player)
-        self.player_box = playerBox(self.mprisplayer.get_players()[0])
+        self.mprisplayer.connect('player-appeared',self.on_new_player)        
+        self.mprisplayer.connect('player-vanished', self.on_lost_player)
+        self.mprisBox = Box(orientation="v",spacing=5)
+
+        for player in self.mprisplayer.get_players():
+            self.on_new_player(self.mprisplayer,self.mprisplayer,player)
+
+        
+        # self.player_box = playerBox(self.mprisplayer.get_players()[0])
         self.widgets_container = Box(
             spacing=2,
             orientation="h",
@@ -160,7 +169,7 @@ class StatusBar(Window):
         self.center_box.add_right(self.system_tray)
         self.center_box.add_right(self.date_time)
         self.center_box.add_right(self.language)
-        self.center_box.add_center(self.player_box)
+        self.center_box.add_center(self.mprisBox)
         self.add(self.center_box)
 
         invoke_repeater(1000, self.update_progress_bars)
@@ -169,11 +178,15 @@ class StatusBar(Window):
         self.show_all()
     
     def on_new_player(self, mpris_manager, player_manager, player,):
-        logger.info(f"{player_manager}, {player}")
-        self.center_box.add_left(playerBox(player=player))
+        name = player.get_property("player-name")
+        self.players[name] = playerBox(player=player)
+        self.mprisBox.add_children(self.players[name])
     
-    # def on_lost_player(self, player_manager, player):
-    #     self.center_box.remove_left()
+    def on_lost_player(self, mpris_manager, player_manager, player_name):
+         logger.info(f"Player Lost {self.players}")
+         self.mprisBox.remove(self.players[player_name])
+        #  self.players[player_name].destroy()
+         self.players.pop(player_name, None)
 
     def update_progress_bars(self):
         self.ram_circular_progress_bar.percentage = psutil.virtual_memory().percent
