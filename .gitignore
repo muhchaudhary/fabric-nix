@@ -1,2 +1,3 @@
 fabric/bar/services/__pycache__/*
-fabric/bar/assets/svg/*
+fabric/bar/widgets/__pycache__/*
+.vscode/*
