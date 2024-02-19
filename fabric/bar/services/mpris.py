@@ -35,7 +35,7 @@ class MprisPlayer(Service):
 class MprisPlayerManager(Service):
     __gsignals__ = SignalContainer(
         Signal("player-appeared", "run-first", None, (Playerctl.PlayerManager,Playerctl.Player,)),
-        Signal("player-vanished", "run-first", None, (Playerctl.PlayerManager,Playerctl.Player,)),
+        Signal("player-vanished", "run-first", None, (Playerctl.PlayerManager,str,)),
     )
     def __init__(
         self,
@@ -52,16 +52,16 @@ class MprisPlayerManager(Service):
         self.add_players()
         super().__init__(**kwargs)
 
-    def on_name_appeard(self, player_manager: Playerctl.PlayerManager, player: Playerctl.Player):
-        logger.info(f"[MprisPlayer] {player.name} appeared")
+    def on_name_appeard(self, player_manager: Playerctl.PlayerManager, player_name: Playerctl.PlayerName):
+        logger.info(f"[MprisPlayer] {player_name.name} appeared")
         # This might cause memory leak (haven't checked)
-        new_player = Playerctl.Player.new_from_name(player)
+        new_player = Playerctl.Player.new_from_name(player_name)
         self._manager.manage_player(new_player)
         self.emit("player-appeared",player_manager, new_player)
 
-    def on_name_vanished(self, player_manager, player):
-        logger.info(f"[MprisPlayer] {player.name} vanished")
-        self.emit("player-vanished",player_manager, player)
+    def on_name_vanished(self, player_manager: Playerctl.PlayerManager, player_name: Playerctl.PlayerName):
+        logger.info(f"[MprisPlayer] {player_name.name} vanished")
+        self.emit("player-vanished",player_manager, player_name.name)
 
     def add_players(self):
         for player in self._manager.get_property("player-names"):
