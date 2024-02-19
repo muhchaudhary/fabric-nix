@@ -4,6 +4,7 @@
 :vars {
     --background: #150d16;
     --foreground: #f5dbc4;
+    --troughcol: #CB1629;
     --color0: #150d16;
     --color1: #72448D;
     --color2: #01d34a;
@@ -44,24 +45,29 @@
 scale {
     margin-top: 10px;
     margin-bottom: 5px;
-    padding: 0px;
-    color: #01d34a;
-}
-
-scale trough highlight {
-    background-image: none;
-    background-color: #01d34a;
-    color: #01d34a;
 }
 
 scale trough {
-    min-height: 6px;
+    border-style:solid;
+    border-width: 1px;
+    border-radius: 400px;
+    min-height: 5px;
+    border-color: #dadada;
     background-color: #dadada;
+}
+
+scale trough highlight {
+    border-style:solid;
+    border-width: 1px;
+    border-radius: 400px;
+    min-height: 5px;
+    border-color: var(--troughcol);
+    background-color: var(--troughcol);
 }
 
 
 scale trough:hover {
-    background-color: #98bc94;
+    background-color: #bcbcbc;
 }
 
 #player-box {
