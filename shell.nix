@@ -10,6 +10,9 @@ in
 
       # add aditional python packages here
       python311Packages.psutil
+      python311Packages.pillow
+      python311Packages.colorthief
+
       playerctl
     ];
     nativeBuildInputs = with pkgs; [
