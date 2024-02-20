@@ -14,7 +14,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
-from services.mpris import MprisPlayerManager
+from services.mpris import MprisPlayer, MprisPlayerManager
 from widgets.player import playerBox
 from fabric.utils import (
     set_stylesheet_from_file,
@@ -177,7 +177,7 @@ class StatusBar(Window):
     
     def on_new_player(self, mpris_manager, player,):
         logger.info(f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}")
-        self.mprisBox.add_children(playerBox(player=player))
+        self.mprisBox.add_children(playerBox(player=MprisPlayer(player)))
     
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
