@@ -7,10 +7,12 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
+from services.mpris import MprisPlayer
 from widgets.scale import Scale
-from gi.repository import Gio, Playerctl, GLib
+from fabric.utils.fabricator import Fabricate
+from gi.repository import Gio, GLib
 from fabric.utils import get_relative_path, invoke_repeater
-
+from utls.accent import grab_color
 
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -21,13 +23,13 @@ if not os.path.exists(MEDIA_CACHE):
 
 
 class playerBox(Box):
-    def __init__(self, player: Playerctl.Player, **kwargs):
-        # TODO: create a player service
+    def __init__(self, player: MprisPlayer, **kwargs):
+        # TODO: create a player service DONE
         super().__init__(
             h_align="start",
             **kwargs
         )
-        self.player: Playerctl.Player = player
+        self.player: MprisPlayer = player
         self.exit = False
         self.player_width = 350
         self.text_wrap_width = 200
@@ -36,7 +38,7 @@ class playerBox(Box):
         self.cover_path = None
         self.old_cover_path = None
 
-        #exit logic
+        # Exit Logic
         self.player.connect("exit", self.on_player_exit)
 
         # Cover Image
@@ -61,17 +63,20 @@ class playerBox(Box):
         )
         self.image_stack.add_named(self.image_box, "player_image")
         self.image_stack.add_named(self.last_image_box, "last_player_image")
+        self.player.connect("track-arturl", self.set_image)
 
         # Track Info 
         self.track_title = Label(label="", 
                                  name="player-title", 
                                  justfication="left",
                                  character_max_width=1,)
+        self.player.connect("track-title", lambda _, x: self.track_title.set_label(x))
         
         self.track_artist = Label(label="",  
                                   name = "player-artist", 
                                   justfication="left",
                                   character_max_width=1,)
+        self.player.connect("track-artist", lambda _, x: self.track_artist.set_label(x))
         
         self.track_title.set_line_wrap(True)
         self.track_title.set_xalign(0)
@@ -95,7 +100,6 @@ class playerBox(Box):
         # Player Signals
         self.player.connect('playback-status', self.on_playback_change)
         self.player.connect('shuffle', self.shuffle_update)
-        self.player.connect("metadata", self.update)
 
         # Buttons 
         self.button_box = CenterBox(
@@ -127,12 +131,14 @@ class playerBox(Box):
         self.prev_button.connect("clicked", self.on_player_prev)
 
         self.shuffle_button = Button(name="player-button", child = self.shuffle_icon)
-        self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_property("shuffle") else player.set_shuffle(True))
+        self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_shuffle() else player.set_shuffle(True))
 
         self.button_box.add_center(self.play_pause_button)
         self.button_box.add_left(self.prev_button)
         self.button_box.add_left(self.shuffle_button)
         self.button_box.add_right(self.next_button)
+
+        # Seek Bar
         self.seek_bar = Scale(min=0,
                               max=100,
                               step=5,
@@ -142,6 +148,8 @@ class playerBox(Box):
                               digits=0,
                               )
         self.seek_bar.connect("change-value", self.on_scale_move)
+        self.player.connect("track-length", lambda _, x: self.seek_bar.set_range(0,x))
+
         self.player_info_box = Box(
             style = f"margin-left: {self.image_size + 10}px",
             v_align='center',
@@ -163,19 +171,17 @@ class playerBox(Box):
             overlays=[self.inner_box, self.player_info_box, self.image_stack]
         )
         self.add_children(self.overlay_box)
-        self.update(player,player.get_property("metadata"))
-        self.on_playback_change(player,player.get_property("playback-status"))
+
+        player.initilize()
+
         invoke_repeater(60, self.move_seekbar)
 
     def on_scale_move(self, scale, event , moved_pos):
         self.player.set_position(moved_pos)
 
-    def on_player_exit(self, _):
-        self.exit = True
-        self.player.disconnect_by_func(self.on_player_exit)
-        self.player.disconnect_by_func(self.on_playback_change)
-        self.player.disconnect_by_func(self.shuffle_update)
-        self.player.disconnect_by_func(self.update)
+    def on_player_exit(self, _,value):
+        self.exit = value
+        # del self.player sort of works but idk if has any edge cases
         self.destroy()
 
     def on_player_next(self, _):
@@ -188,7 +194,6 @@ class playerBox(Box):
 
 
     def shuffle_update(self, player, status):
-        logger.info(f"[Player] shuffle status changed to {status}")
         child = self.shuffle_button.get_child()
         if status == True:
             self.shuffle_button.set_style("background-color: #eee ;box-shadow: 0 0 4px -2px black;")
@@ -198,10 +203,9 @@ class playerBox(Box):
             child.set_style("fill: black")
 
     def on_playback_change(self, player, status):
-        logger.info(f"[PLAYER] status changed to {status}")
-        if status == Playerctl.PlaybackStatus.PAUSED:
+        if status == "paused":
             self.play_pause_button.get_child().set_visible_child_name("play")
-        if status == Playerctl.PlaybackStatus.PLAYING:
+        if status == "playing":
             self.play_pause_button.get_child().set_visible_child_name("pause")
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
@@ -214,6 +218,7 @@ class playerBox(Box):
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
+        self.update_colors(1)
         style = lambda x: f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
         # style2 = lambda x,y: f"background-image: cross-fade(10% url('{x}'), url('{y}')); background-size: cover;"
         # self.inner_box.set_style(style=style2(self.cover_path,get_relative_path("assets/Solid_white.png")),append=True )
@@ -221,9 +226,19 @@ class playerBox(Box):
         self.last_image_box.set_style(style=style(self.old_cover_path))
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")
-       
+    
+    def update_colors(self, n):
+        colors = (203,22,41)
+        try:
+            colors = grab_color(self.cover_path,10)
+        except:
+            logger.error("[PLAYER] could not grab color")
+        
+        bg = f"background-color: rgb{colors};"
+        border = f"border-color: rgb{colors};"
+        self.seek_bar.set_style(f" trough highlight{{ {bg} {border} }}")
 
-    def set_image(self, url):
+    def set_image(self, player, url):
         self.old_cover_path = self.cover_path
         self.cover_path = MEDIA_CACHE + '/' + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
         if os.path.exists(self.cover_path):
@@ -241,22 +256,10 @@ class playerBox(Box):
         )
     # TODO: this is bad for performance, just move by offset
     def move_seekbar(self):
+        if self.player.can_go_next == False:
+            return False
         if not self.exit:
             self.seek_bar.set_value(self.player.get_position())
             return True
         else:
             return False
-
-    def update(self, player, metadata):
-        logger.info(f"[PLAYER] playing new song")
-        self.seek_bar.set_value(0)
-        if 'mpris:length' in metadata.keys():
-            self.seek_bar.set_range(0,metadata['mpris:length'])
-            self.seek_bar.set_increments(3e+6,3e+6)
-        if 'mpris:artUrl' in metadata.keys():
-            self.set_image(metadata['mpris:artUrl'])
-        if 'xesam:title' and 'xesam:artist' in metadata.keys():
-            self.track_title.set_label(metadata['xesam:title'])
-            if len(metadata["xesam:artist"]) > 0:
-                self.track_artist.set_label(metadata["xesam:artist"][0])
-
