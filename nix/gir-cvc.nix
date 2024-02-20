@@ -20,8 +20,8 @@ stdenv.mkDerivation (finalAttrs: {
   version = "22.0";
 
   src = fetchurl {
-    url = "https://github.com/linuxmint/cinnamon-desktop/archive/refs/tags/master.lmde6.tar.gz";
-    hash = "sha256-r2/YKXMqIKxKPN91cZA5fHKCGDtcb14aXnEwF2cfJ4Q=";
+    url = "https://github.com/linuxmint/cinnamon-desktop/archive/refs/tags/master.mint22.tar.gz";
+    hash = "sha256-JO30J1ZzM0lerXWXsKI08lm14Bmlm93gT78zlwiz/vU=";
   };
 
   nativeBuildInputs = [meson ninja pkg-config gobject-introspection];
