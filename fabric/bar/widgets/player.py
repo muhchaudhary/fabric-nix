@@ -8,8 +8,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from services.mpris import MprisPlayer
-from widgets.scale import Scale
-from fabric.utils.fabricator import Fabricate
+from fabric.widgets.scale import Scale
 from gi.repository import Gio, GLib, GObject
 from fabric.utils import get_relative_path, invoke_repeater
 from utls.accent import grab_color
