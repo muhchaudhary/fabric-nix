@@ -10,7 +10,7 @@ from fabric.widgets.svg import Svg
 from services.mpris import MprisPlayer
 from widgets.scale import Scale
 from fabric.utils.fabricator import Fabricate
-from gi.repository import Gio, GLib
+from gi.repository import Gio, GLib, GObject
 from fabric.utils import get_relative_path, invoke_repeater
 from utls.accent import grab_color
 
@@ -21,6 +21,7 @@ if not os.path.exists(CACHE_DIR):
 if not os.path.exists(MEDIA_CACHE):
     os.makedirs(MEDIA_CACHE)
 
+#TODO move Box of playerBoxes here
 
 class playerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
@@ -37,6 +38,7 @@ class playerBox(Box):
         self.player_height = 100
         self.cover_path = None
         self.old_cover_path = None
+        self.scale_new_pos = 0
 
         # Exit Logic
         self.player.connect("exit", self.on_player_exit)
@@ -123,15 +125,20 @@ class playerBox(Box):
 
         self.play_pause_button = Button(name="player-button", child = self.play_pause_stack)
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
+        self.player.connect("notify::can-pause", lambda y, _: self.play_pause_button.set_child_visible(y.can_pause))
+
 
         self.next_button = Button(name="player-button", child = self.skip_next_icon)
         self.next_button.connect("clicked", self.on_player_next)
+        self.player.connect("notify::can-go-next", lambda y, _: self.next_button.set_child_visible(y.can_go_next))
 
         self.prev_button = Button(name="player-button", child = self.skip_prev_icon)
         self.prev_button.connect("clicked", self.on_player_prev)
+        self.player.connect("notify::can-go-previous", lambda y, _: self.prev_button.set_child_visible(y.can_go_previous))
 
         self.shuffle_button = Button(name="player-button", child = self.shuffle_icon)
-        self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(False) if player.get_shuffle() else player.set_shuffle(True))
+        self.shuffle_button.connect("clicked", lambda _: player.set_shuffle(not player.get_shuffle()))
+        self.player.connect("notify::can-shuffle", lambda y, _: self.shuffle_button.set_child_visible(y.can_shuffle))
 
         self.button_box.add_center(self.play_pause_button)
         self.button_box.add_left(self.prev_button)
@@ -139,16 +146,18 @@ class playerBox(Box):
         self.button_box.add_right(self.next_button)
 
         # Seek Bar
-        self.seek_bar = Scale(min=0,
-                              max=100,
-                              step=5,
-                              orientation="h", 
-                              draw_value=False,
-                              name="seek-bar",
-                              digits=0,
-                              )
+        self.seek_bar = Scale(
+            min_value=0,
+            max_value=100,
+            increments=(5,5),
+            orientation="h",
+            draw_value=False,
+            name="seek-bar",
+        )
         self.seek_bar.connect("change-value", self.on_scale_move)
+        self.seek_bar.connect("button-release-event",self.on_button_scale_release)
         self.player.connect("track-length", lambda _, x: self.seek_bar.set_range(0,x))
+        self.player.connect("notify::can-seek", lambda y, _: self.seek_bar.set_child_visible(y.can_seek))
 
         self.player_info_box = Box(
             style = f"margin-left: {self.image_size + 10}px",
@@ -171,13 +180,17 @@ class playerBox(Box):
             overlays=[self.inner_box, self.player_info_box, self.image_stack]
         )
         self.add_children(self.overlay_box)
-
         player.initilize()
+        invoke_repeater(60, self.move_seekbar)
 
+    def on_button_scale_release(self, scale, event):
+        self.player.set_position(self.scale_new_pos)
+        self.exit = False
         invoke_repeater(60, self.move_seekbar)
 
     def on_scale_move(self, scale, event , moved_pos):
-        self.player.set_position(moved_pos)
+        self.exit = True
+        self.scale_new_pos = moved_pos
 
     def on_player_exit(self, _,value):
         self.exit = value
@@ -203,6 +216,8 @@ class playerBox(Box):
             child.set_style("fill: black")
 
     def on_playback_change(self, player, status):
+        logger.info(f"THE prop is: {self.seek_bar.get_property('visible')}")
+
         if status == "paused":
             self.play_pause_button.get_child().set_visible_child_name("play")
         if status == "playing":
@@ -251,15 +266,11 @@ class playerBox(Box):
             io_priority = GLib.PRIORITY_DEFAULT,
             cancellable = None, 
             progress_callback = None,
-            #callback=None,
             callback = self.img_callback,
         )
     # TODO: this is bad for performance, just move by offset
     def move_seekbar(self):
-        if self.player.can_go_next == False:
+        if self.player.can_seek == False or self.exit:
             return False
-        if not self.exit:
-            self.seek_bar.set_value(self.player.get_position())
-            return True
-        else:
-            return False
+        self.seek_bar.set_value(self.player.get_position())
+        return True

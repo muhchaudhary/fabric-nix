@@ -39,11 +39,11 @@ class MprisPlayer(Service):
     ):
         self._player = player
         # missing can_play (has side effect)
-        self.can_go_next = self._player.get_property("can-go-next")
-        self._can_go_next = self._player.get_property("can-go-next")
-        self.can_go_previous = self._player.get_property("can_go_previous")
-        self.can_pause = self._player.get_property("can_pause")
-        self.can_seek = self._player.get_property("can_seek")
+        self._can_go_next = self._player.get_property("can_go_next")
+        self._can_go_previous = self._player.get_property("can_go_previous")
+        self._can_pause = self._player.get_property("can_pause")
+        self._can_seek = self._player.get_property("can_seek")
+        self._can_shuffle = False
         bulk_connect(
             self._player,
             {
@@ -57,22 +57,20 @@ class MprisPlayer(Service):
         self.on_metadata_update(self._player,self._player.get_property("metadata"))
         self._player.connect("notify::can-go-next", lambda x,y: logger.error(f"AHHHADAFDSFDSFSFSFFDSF EUFH {x} {y}"))
 
-        self._player.bind_property(
-            "can-go-next",
-            self,
-            "can-skip-n",
-            GObject.BindingFlags.DEFAULT,
-        )
-
 
     # callback function
-    def update_abilities(self):
-        logger.info(f"can go next? {self._player.get_property('can_go_next')}")
-        self.notify("can-skip-n")
-        self.can_go_next = self._player.get_property("can_go_next")
-        self.can_go_previous = self._player.get_property("can_go_previous")
-        self.can_pause = self._player.get_property("can_pause")
-        self.can_seek = self._player.get_property("can_seek")
+    def update_properties(self):
+        self.set_property("can-go-next", self._player.get_property("can_go_next"))
+        self.set_property("can-go-previous", self._player.get_property("can_go_previous"))
+        self.set_property("can-seek", self._player.get_property("can_seek"))
+        self.set_property("can-pause", self._player.get_property("can_pause"))
+        #playerctl doesnt tell you if shuffle is a property or not
+        try:
+            self._player.get_shuffle()
+            self.set_property("can-shuffle", True)
+        except:
+            self.set_property("can-shuffle", False)
+
 
     def on_player_exit(self, player):
         self.emit("exit", True)
@@ -96,9 +94,8 @@ class MprisPlayer(Service):
         self.emit("shuffle", status)
 
     def on_metadata_update(self, player, metadata):
-        self.update_abilities()
+        self.update_properties()
         keys = metadata.keys()
-        # or we can do if self.can_seek
         if "mpris:length" in keys:
             self.emit("track-length", metadata["mpris:length"])
         if "mpris:artUrl" in keys:
@@ -120,13 +117,13 @@ class MprisPlayer(Service):
         self._player.play_pause() if self.can_pause else None
 
     def next(self):
-        self._player.next() if self._player.get_property("can-go-next") else None
+        self._player.next() if self._can_go_next else None
 
     def previous(self):
         self._player.previous() if self.can_go_previous else None
 
     def set_position(self, pos):
-        self._player.set_position(pos) if self.can_seek else None
+        self._player.set_position(pos) if self._can_seek else None
 
     def set_shuffle(self, shuffle):
         self._player.set_shuffle(shuffle)
@@ -135,21 +132,54 @@ class MprisPlayer(Service):
         return self._player.get_property("shuffle")
 
     def get_position(self):
-        return self._player.get_position() if self.can_seek else None
+        return self._player.get_position() if self._can_seek else None
 
     def get_playback_status(self):
         self.on_playback_update(
             self._player,
             self._player.get_property("playback-status")
         )
-    # Setters
+    # Properties
     @Property(value_type=bool,default_value=True,flags="read-write")
-    def can_skip_n(self):
-        return self.can_go_next
+    def can_go_next(self):
+        return self._can_go_next
 
-    @can_skip_n.setter
-    def can_skip_n(self, value: bool):
+    @can_go_next.setter
+    def can_go_next(self, value: bool):
         self._can_go_next = value
+
+    @Property(value_type=bool,default_value=True,flags="read-write")
+    def can_go_previous(self):
+        return self._can_go_previous
+
+    @can_go_previous.setter
+    def can_go_previous(self, value: bool):
+        self._can_go_previous = value
+
+    @Property(value_type=bool,default_value=True,flags="read-write")
+    def can_seek(self):
+        return self._can_seek
+
+    @can_seek.setter
+    def can_seek(self, value: bool):
+        self._can_seek = value
+
+    @Property(value_type=bool,default_value=True,flags="read-write")
+    def can_pause(self):
+        return self._can_pause
+
+    @can_pause.setter
+    def can_pause(self, value: bool):
+        self._can_pause = value
+
+    @Property(value_type=bool,default_value=True,flags="read-write")
+    def can_shuffle(self):
+        return self._can_shuffle
+
+    @can_shuffle.setter
+    def can_shuffle(self, value: bool):
+        self._can_shuffle = value
+
 
 
 class MprisPlayerManager(Service):
