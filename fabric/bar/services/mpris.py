@@ -19,7 +19,7 @@ try:
 except:
     raise PlayerctlImportError()
 
-# TODO: Build Out MprisPlayer Service
+# TODO: consider building my own mpris service using dbus rather than playerctl
 
 class MprisPlayer(Service):
     __gsignals__ = SignalContainer(
@@ -38,7 +38,7 @@ class MprisPlayer(Service):
         **kwargs,
     ):
         self._player = player
-        # missing can_play (has side effect)
+        # Missing can_play (has side effect)
         self._can_go_next = self._player.get_property("can_go_next")
         self._can_go_previous = self._player.get_property("can_go_previous")
         self._can_pause = self._player.get_property("can_pause")
@@ -54,21 +54,19 @@ class MprisPlayer(Service):
             }
         )
         super().__init__(**kwargs)
-        self.on_metadata_update(self._player,self._player.get_property("metadata"))
-        self._player.connect("notify::can-go-next", lambda x,y: logger.error(f"AHHHADAFDSFDSFSFSFFDSF EUFH {x} {y}"))
 
 
-    # callback function
+    # Callback function
     def update_properties(self):
         self.set_property("can-go-next", self._player.get_property("can_go_next"))
         self.set_property("can-go-previous", self._player.get_property("can_go_previous"))
         self.set_property("can-seek", self._player.get_property("can_seek"))
         self.set_property("can-pause", self._player.get_property("can_pause"))
-        #playerctl doesnt tell you if shuffle is a property or not
+        # Playerctl doesnt tell you if shuffle is a property or not
         try:
-            self._player.get_shuffle()
+            self._player.set_shuffle(self._player.get_property("shuffle"))
             self.set_property("can-shuffle", True)
-        except:
+        except GLib.GError:
             self.set_property("can-shuffle", False)
 
 
@@ -106,7 +104,7 @@ class MprisPlayer(Service):
             self.emit("track-artist", ', '.join(metadata["xesam:artist"]))
 
     def initilize(self):
-        self.on_metadata_update(self.play_pause,
+        self.on_metadata_update(self._player,
                                 self._player.get_property("metadata"))
         self.on_playback_update(self._player, self.get_playback_status())
         self.on_shuffle(self._player, self.get_shuffle())
