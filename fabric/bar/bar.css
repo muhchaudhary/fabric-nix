@@ -51,16 +51,16 @@ scale trough {
     border-style:solid;
     border-width: 1px;
     border-radius: 400px;
-    min-height: 5px;
-    border-color: #dadada;
-    background-color: #dadada;
+    min-height: 3px;
+    border-color: #D1CFCF;
+    background-color: #D1CFCF;
 }
 
 scale trough highlight {
     border-style:solid;
     border-width: 1px;
     border-radius: 400px;
-    min-height: 5px;
+    min-height: 3px;
     border-color: var(--troughcol);
     background-color: var(--troughcol);
 }
@@ -101,8 +101,8 @@ scale trough:hover {
 }
 
 #player-button {
-    min-width: 16px;
-    min-height: 16px;
+    min-width: 20px;
+    min-height: 20px;
     padding: 5px;
     border-radius: 100%;
 }

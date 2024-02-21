@@ -3,37 +3,18 @@ import fabric
 import os
 from loguru import logger
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
 from fabric.widgets.wayland import Window
-from fabric.widgets.overlay import Overlay
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.centerbox import CenterBox
-from fabric.hyprland.service import Connection
+from kinetic_scroller import KineticScroll
+from fabric.widgets.scale import Scale
 from fabric.utils import (
     set_stylesheet_from_file,
-    bulk_replace,
-    monitor_file,
-    invoke_repeater,
     get_relative_path,
+    invoke_repeater,
+    clamp,
 )
-connection = Connection()
-MAX_OPEN_WRKSPACE = 7
-
-def get_open_windows() -> dict:
-    clients = json.loads(
-        str(
-            connection.send_command(
-                "j/clients",
-            ).reply.decode()
-        )
-    )
-    cdict = {}
-    for client in clients:
-        if client["workspace"]["id"] not in cdict:
-            cdict[client["workspace"]["id"]] = [(client["class"] or client["title"], client["at"])]
-        else:
-            cdict[client["workspace"]["id"]].append((client["class"], client["at"]))
-    return cdict
+from gi.repository import Gdk
 
 class Overview(Window):
     def __init__(
@@ -42,37 +23,39 @@ class Overview(Window):
         super().__init__(
             layer="overlay",
             anchor="center",
-            margin="10px 10px -2px 10px",
             exclusive=True,
             visible=True,
         )
-        self.center_box = CenterBox(
-            name="main-window",
-            spacing=10,
-            center_widgets=self.make_windows_children(get_open_windows()),
-            )
-        self.add(self.center_box)
+        self.scroll_value = 0
+        self.iters = 0
+
+        self.scroller = Scale(min_value=0,
+                              max_value=100,
+                              orientation="h",
+                              draw_value=False,
+                              name="seek-bar")
+        self.scroller.set_size_request(500, -1)
+        self.scrollBox = Box(name="box",
+                             children=self.scroller,
+                             )
+        # self.workspacescroll = EventBox(style="background-color: black;",events="smooth-scroll", )
+        self.workspacescroll = KineticScroll(
+            mult=2,
+            min_value=0,
+            max_value=100,
+            children=CenterBox(orientation="v",center_widgets=Box(size=100, style="background-color: red;") ,left_widgets=self.scrollBox)
+        )
+        self.workspacescroll.connect("smooth-scroll-event", self.on_scroll)
+
+        self.add(self.workspacescroll)
         self.show_all()
 
-    def make_windows_children(self, cdict):
-        boxes = []
-        for w in range(1,MAX_OPEN_WRKSPACE + 1):
-            labels = []
-            if w in cdict.keys():
-                for clients in cdict[w]:
-                    labels.append(Label(clients[0]))
-            windows_box = Box(
-                name="window-box",
-                spacing=10,
-                children=labels,
-                size=100,
-            )
-            boxes.append(windows_box)
-        return boxes
+    def on_scroll(self,widget, value):
+        self.scroller.set_value(value)
 
 def apply_style(*args):
     logger.info("[Bar] CSS applied")
-    return set_stylesheet_from_file(get_relative_path("overview.css"))
+    return set_stylesheet_from_file(get_relative_path("../bar/bar.css"))
 
 if __name__ == "__main__":
     bar = Overview()

@@ -32,18 +32,15 @@
 
 * {
     /* unsets everything so we can style everything from scratch. */
-    all: unset;
     font-family: "Iosevka Nerd Font";
     font-weight: 500;
     font-size: 30px;
-    color: black;
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
 #main-window {
     border: solid 2px;
     border-color: var(--border-color);
-    background-color: var(--window-bg);
     border-radius: 100px;
     margin: 10px;
 }
@@ -54,7 +51,6 @@
     border: solid 2px;
     border-color: var(--border-color);
     border-radius: 30px;
-    background-color: var(--foreground);
 }
 
 button {
