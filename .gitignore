@@ -1,3 +1,2 @@
-fabric/bar/services/__pycache__/*
-fabric/bar/widgets/__pycache__/*
+*.pyc
 .vscode/*
