@@ -1,6 +1,6 @@
 import gi
 from loguru import logger
-from fabric.service import *
+from fabric.service import Service, Signal, SignalContainer, Property
 from fabric.utils import (
     bulk_connect
 )
@@ -16,7 +16,7 @@ class PlayerctlImportError(ImportError):
 try:
     gi.require_version('Playerctl', '2.0')
     from gi.repository import Playerctl
-except:
+except ValueError:
     raise PlayerctlImportError()
 
 # TODO: consider building my own mpris service using dbus rather than playerctl

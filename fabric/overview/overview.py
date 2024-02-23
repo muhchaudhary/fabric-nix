@@ -2,9 +2,8 @@ import fabric
 from loguru import logger
 from fabric.widgets.box import Box
 from fabric.widgets.wayland import Window
-from fabric.widgets.overlay import Overlay
 from fabric.widgets.centerbox import CenterBox
-from kinetic_scroller import KineticScroll
+from widgets.kinetic_scroller import KineticScroll
 from fabric.widgets.scale import Scale
 from fabric.utils import (
     set_stylesheet_from_file,

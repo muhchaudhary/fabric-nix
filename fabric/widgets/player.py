@@ -9,7 +9,8 @@ from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from services.mpris import MprisPlayer
 from fabric.widgets.scale import Scale
-from gi.repository import Gio, GLib, GObject
+from gi.repository import Gio, GLib
+
 from fabric.utils import get_relative_path, invoke_repeater
 from utls.accent import grab_color
 
@@ -107,15 +108,17 @@ class playerBox(Box):
             name = "button-box",
         )
 
-        self.skip_next_icon = Svg(svg_file=get_relative_path("../assets/player/skip-next.svg"),
+        PLAYER_ASSETS_PATH = "../assets/player/"
+
+        self.skip_next_icon = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-next.svg"),
+                                  name="player-icon",)
+        self.skip_prev_icon = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-prev.svg"),
+                                  name="player-icon",)
+        self.shuffle_icon   = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "shuffle.svg"),
                                   name="player-icon")
-        self.skip_prev_icon = Svg(svg_file=get_relative_path("../assets/player/skip-prev.svg"),
+        self.play_icon      = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "play.svg"),
                                   name="player-icon")
-        self.shuffle_icon   = Svg(svg_file=get_relative_path("../assets/player/shuffle.svg"),
-                                  name="player-icon")
-        self.play_icon      = Svg(svg_file=get_relative_path("../assets/player/play.svg"),
-                                  name="player-icon")
-        self.pause_icon     = Svg(svg_file=get_relative_path("../assets/player/pause.svg"),
+        self.pause_icon     = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "pause.svg"),
                                   name="player-icon")
         
         self.play_pause_stack = Stack()
@@ -207,7 +210,7 @@ class playerBox(Box):
 
     def shuffle_update(self, player, status):
         child = self.shuffle_button.get_child()
-        if status == True:
+        if status is True:
             self.shuffle_button.set_style("background-color: #eee ;box-shadow: 0 0 4px -2px black;")
             child.set_style("fill: green")
         else:
@@ -228,12 +231,13 @@ class playerBox(Box):
             os.path.isfile(self.cover_path)
             # source.copy_finish(result)
             self.update_image()
-        except:
+        except ValueError:
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
         self.update_colors(1)
-        style = lambda x: f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
+        def style(x):
+            return f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
         # style2 = lambda x,y: f"background-image: cross-fade(10% url('{x}'), url('{y}')); background-size: cover;"
         # self.inner_box.set_style(style=style2(self.cover_path,get_relative_path("assets/Solid_white.png")),append=True )
         self.image_box.set_style(style=style(self.cover_path))
@@ -242,10 +246,10 @@ class playerBox(Box):
         self.image_stack.set_visible_child_name("player_image")
     
     def update_colors(self, n):
-        colors = (203,22,41)
+        colors = (0,0,0)
         try:
             colors = grab_color(self.cover_path,10)
-        except:
+        except ValueError:
             logger.error("[PLAYER] could not grab color")
         
         bg = f"background-color: rgb{colors};"
@@ -269,7 +273,7 @@ class playerBox(Box):
         )
     # TODO: this is bad for performance, just move by offset
     def move_seekbar(self):
-        if self.player.can_seek == False or self.exit:
+        if self.player.can_seek is False or self.exit:
             return False
         self.seek_bar.set_value(self.player.get_position())
         return True

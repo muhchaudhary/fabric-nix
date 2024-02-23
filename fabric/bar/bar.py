@@ -1,6 +1,4 @@
 """desktop status bar example"""
-import fabric
-import os
 import psutil
 from loguru import logger
 from fabric.widgets.box import Box
@@ -17,13 +15,9 @@ from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, L
 from services.mpris import MprisPlayer, MprisPlayerManager
 from widgets.player import playerBox
 from fabric.utils import (
-    set_stylesheet_from_file,
     bulk_replace,
-    monitor_file,
     invoke_repeater,
-    get_relative_path,
 )
-PYWAL = False
 AUDIO_WIDGET = True
 
 if AUDIO_WIDGET is True:
@@ -188,22 +182,3 @@ class StatusBar(Window):
         self.cpu_circular_progress_bar.percentage = psutil.cpu_percent()
         return True
 
-
-def apply_style(*args):
-    logger.info("[Bar] CSS applied")
-    return set_stylesheet_from_file(get_relative_path("bar.css"))
-
-
-if __name__ == "__main__":
-    bar = StatusBar()
-
-    if PYWAL is True:
-        monitor = monitor_file(
-            f"/home/{os.getlogin()}/.cache/wal/colors-widgets.css", "none"
-        )
-        monitor.connect("changed", apply_style)
-
-    # initialize style
-    apply_style()
-
-    fabric.start()
