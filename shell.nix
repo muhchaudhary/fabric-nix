@@ -13,6 +13,8 @@ in
       python311Packages.pillow
       python311Packages.colorthief
 
+      # non python aditional packages
+      ruff
       playerctl
     ];
     nativeBuildInputs = with pkgs; [
