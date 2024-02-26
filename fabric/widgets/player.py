@@ -8,10 +8,14 @@ from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
 from services.mpris import MprisPlayer
+from widgets.circleimage import CircleImage
 from fabric.widgets.scale import Scale
 from gi.repository import Gio, GLib
 
-from fabric.utils import get_relative_path, invoke_repeater
+from fabric.utils import (
+    get_relative_path,
+    invoke_repeater,
+)
 from utls.accent import grab_color
 
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
@@ -21,9 +25,12 @@ if not os.path.exists(CACHE_DIR):
 if not os.path.exists(MEDIA_CACHE):
     os.makedirs(MEDIA_CACHE)
 
+
+PLAYER_ASSETS_PATH = "../assets/player/"
+
 #TODO move Box of playerBoxes here
 
-class playerBox(Box):
+class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
         # TODO: create a player service DONE
         super().__init__(
@@ -44,18 +51,20 @@ class playerBox(Box):
         self.player.connect("exit", self.on_player_exit)
 
         # Cover Image
-        self.image_box = Box(
-            name = "player-image",
-            h_align="start",
-            v_align="start",
-        )
-        self.last_image_box = Box(
-            name = "player-image",
-            h_align="start",
-            v_align="start",
-        )
-        self.image_box.set_size_request(self.image_size,self.image_size)
-        self.last_image_box.set_size_request(self.image_size,self.image_size)
+        # self.image_box = Box(
+        #     name = "player-image",
+        #     h_align="start",
+        #     v_align="start",
+        # )
+        self.image_box = CircleImage(size=self.image_size)
+        # self.last_image_box = Box(
+        #     name = "player-image",
+        #     h_align="start",
+        #     v_align="start",
+        # )
+        self.last_image_box = CircleImage(size=self.image_size)
+        # self.image_box.set_size_request(self.image_size,self.image_size)
+        # self.last_image_box.set_size_request(self.image_size,self.image_size)
         
         self.image_stack = Stack(
             transition_duration=500,
@@ -107,8 +116,6 @@ class playerBox(Box):
         self.button_box = CenterBox(
             name = "button-box",
         )
-
-        PLAYER_ASSETS_PATH = "../assets/player/"
 
         self.skip_next_icon = Svg(svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-next.svg"),
                                   name="player-icon",)
@@ -183,6 +190,7 @@ class playerBox(Box):
         )
         self.add_children(self.overlay_box)
         player.initilize()
+        self.rot = 0
         invoke_repeater(60, self.move_seekbar)
 
     def on_button_scale_release(self, scale, event):
@@ -212,14 +220,12 @@ class playerBox(Box):
         child = self.shuffle_button.get_child()
         if status is True:
             self.shuffle_button.set_style("background-color: #eee ;box-shadow: 0 0 4px -2px black;")
-            child.set_style("fill: green")
+            child.set_style("fill: green;")
         else:
             self.shuffle_button.set_style("")
-            child.set_style("fill: black")
+            child.set_style("fill: black;")
 
     def on_playback_change(self, player, status):
-        logger.info(f"THE prop is: {self.seek_bar.get_property('visible')}")
-
         if status == "paused":
             self.play_pause_button.get_child().set_visible_child_name("play")
         if status == "playing":
@@ -240,8 +246,13 @@ class playerBox(Box):
             return f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
         # style2 = lambda x,y: f"background-image: cross-fade(10% url('{x}'), url('{y}')); background-size: cover;"
         # self.inner_box.set_style(style=style2(self.cover_path,get_relative_path("assets/Solid_white.png")),append=True )
-        self.image_box.set_style(style=style(self.cover_path))
-        self.last_image_box.set_style(style=style(self.old_cover_path))
+
+        # self.image_box.set_style(style=style(self.cover_path))
+        self.image_box.set_image(self.cover_path)
+        self.image_box.set_style("border-radius: 100%")
+        self.last_image_box.set_image(self.old_cover_path)
+        self.last_image_box.set_style("border-radius: 100%")
+        # self.last_image_box.set_style(style=style(self.old_cover_path))
         self.image_stack.set_visible_child_name("last_player_image")
         self.image_stack.set_visible_child_name("player_image")
     
@@ -249,7 +260,7 @@ class playerBox(Box):
         colors = (0,0,0)
         try:
             colors = grab_color(self.cover_path,10)
-        except ValueError:
+        except:
             logger.error("[PLAYER] could not grab color")
         
         bg = f"background-color: rgb{colors};"
@@ -276,4 +287,9 @@ class playerBox(Box):
         if self.player.can_seek is False or self.exit:
             return False
         self.seek_bar.set_value(self.player.get_position())
+        if self.player.get_playback_status() == "playing":
+            self.image_box.rotate_more(self.rot)
+            if self.rot >= 360:
+                self.rot -= 360
+            self.rot += 5
         return True
