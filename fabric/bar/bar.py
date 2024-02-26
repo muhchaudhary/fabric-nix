@@ -13,7 +13,7 @@ from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
 from services.mpris import MprisPlayer, MprisPlayerManager
-from widgets.player import playerBox
+from widgets.player import PlayerBox
 from fabric.utils import (
     bulk_replace,
     invoke_repeater,
@@ -82,13 +82,13 @@ class StatusBar(Window):
             spacing=2,
             name="workspaces",
             buttons_list=[
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
-                WorkspaceButton(label=FormattedString("")),
+                WorkspaceButton(label=FormattedString("1")),
+                WorkspaceButton(label=FormattedString("2")),
+                WorkspaceButton(label=FormattedString("3")),
+                WorkspaceButton(label=FormattedString("4")),
+                WorkspaceButton(label=FormattedString("5")),
+                WorkspaceButton(label=FormattedString("6")),
+                WorkspaceButton(label=FormattedString("7")),
             ],
         )
         self.active_window = ActiveWindow(
@@ -115,7 +115,7 @@ class StatusBar(Window):
             name="hyprland-window",
         )
         self.date_time = DateTime(name="date-time")
-        self.system_tray = SystemTray(name="system-tray")
+        # self.system_tray = SystemTray(name="system-tray")
         self.ram_circular_progress_bar = CircularProgressBar(
             name="ram-circular-progress-bar",
             background_color=False,  # false = disabled
@@ -159,7 +159,7 @@ class StatusBar(Window):
         self.widgets_container.add(self.volume) if self.volume is not None else None
         self.center_box.add_left(self.workspaces)
         self.center_box.add_right(self.widgets_container)
-        self.center_box.add_right(self.system_tray)
+        # self.center_box.add_right(self.system_tray)
         self.center_box.add_right(self.date_time)
         self.center_box.add_right(self.language)
         self.center_box.add_center(self.mprisBox)
@@ -171,7 +171,7 @@ class StatusBar(Window):
     
     def on_new_player(self, mpris_manager, player,):
         logger.info(f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}")
-        self.mprisBox.add_children(playerBox(player=MprisPlayer(player)))
+        self.mprisBox.add_children(PlayerBox(player=MprisPlayer(player)))
     
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager

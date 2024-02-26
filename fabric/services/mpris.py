@@ -84,8 +84,8 @@ class MprisPlayer(Service):
                 Playerctl.PlaybackStatus.STOPPED: "stopped",
             }.get(status)
         )
-        logger.info(f"[PLAYER] status changed to {_status}")
         self.emit("playback-status", _status)
+        return _status
 
     def on_shuffle(self, player, status):
         logger.info(f"[Player] shuffle status changed to {status}")
@@ -133,7 +133,7 @@ class MprisPlayer(Service):
         return self._player.get_position() if self._can_seek else None
 
     def get_playback_status(self):
-        self.on_playback_update(
+        return self.on_playback_update(
             self._player,
             self._player.get_property("playback-status")
         )

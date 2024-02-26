@@ -1,35 +1,37 @@
 /* uncomment if you do have pywal configured */
-/* @import url("/home/USER/.cache/wal/colors-widgets.css"); */
+@import url("/home/muhammad/.cache/wal/colors-waybar.css");
+/* @define-color background #090909; */
+/* @define-color foreground #c3c2c2; */
+    /* Special */
+/* @define-color cursor #c3c2c2; */
 
-:vars {
-    --background: #150d16;
-    --foreground: #f5dbc4;
-    --troughcol: #CB1629;
-    --color0: #150d16;
-    --color1: #72448D;
-    --color2: #01d34a;
-    --color3: #D5719F;
-    --color4: #9A62F3;
-    --color5: #E075DF;
-    --color6: #F98F9F;
-    --color7: #f5dbc4;
-    --color8: #ab9989;
-    --color9: #72448D;
-    --color10: #9C5995;
-    --color11:   #b5b5b5;
-    --color12: #9A62F3;
-    --color13: #E075DF;
-    --color14: #F98F9F;
-    --color15: #f5dbc4;
-    --window-bg: alpha(var(--background), 0.6);
-    --module-bg: alpha(var(--background), 0.4);
-    --border-color: var(--color11);
-    --ws-active: var(--color9);
-    --ws-inactive: var(--color3);
-    --ws-empty: var(--color8);
-    --ws-hover: var(--color1);
-    --ws-urgent: var(--color11);
-}
+/* Colors */
+/* @define-color color0 #090909;
+@define-color color1 #103252;
+@define-color color2 #5C5C5D;
+@define-color color3 #B55331;
+@define-color color4 #C9A34E;
+@define-color color5 #345DA6;
+@define-color color6 #4F9AAE;
+@define-color color7 #c3c2c2;
+@define-color color8 #888787;
+@define-color color9 #103252;
+@define-color color10 #5C5C5D;
+@define-color color11 #B55331;
+@define-color color12 #C9A34E;
+@define-color color13 #345DA6;
+@define-color color14 #4F9AAE;
+@define-color color15 #c3c2c2;
+*/
+@define-color window-bg alpha(@background, 0.9);
+@define-color module-bg alpha(@background, 0.4);
+@define-color border-color @color11;
+@define-color ws-active @color9;
+@define-color ws-inactive @color3;
+@define-color ws-empty @color8;
+@define-color ws-hover @color1;
+@define-color ws-urgent @color11;
+
 
 * {
     /* unsets everything so we can style everything from scratch. */
@@ -37,7 +39,7 @@
     font-family: "roboto";
     font-weight: 500;
     font-size: 14px;
-    color: var(--foreground);
+    color: @foreground;
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
@@ -49,7 +51,6 @@ scale {
 
 scale trough {
     border-style:solid;
-    border-width: 1px;
     border-radius: 400px;
     min-height: 3px;
     border-color: #D1CFCF;
@@ -61,13 +62,13 @@ scale trough highlight {
     border-width: 1px;
     border-radius: 400px;
     min-height: 3px;
-    border-color: var(--troughcol);
-    background-color: var(--troughcol);
+    border-color: @color3;
+    background-color: @color3;
 }
 
 
 scale trough:hover {
-    background-color: #bcbcbc;
+    background-color: @color8;
 }
 
 #player-box {
@@ -117,10 +118,11 @@ scale trough:hover {
 }
 
 #main-window {
+    margin-bottom: 10px;
     border: solid 2px;
-    border-color: var(--border-color);
-    background-color: var(--window-bg);
-    border-radius: 100px;
+    border-color: @border-color;
+    background-color: @window-bg;
+    border-radius: 10px;
 }
 
 button {
@@ -131,7 +133,7 @@ button {
 #workspaces {
     margin: 3px;
     padding: 6px;
-    background-color: var(--module-bg);
+    background-color: @module-bg;
     border-radius: 100px;
 }
 
@@ -139,7 +141,7 @@ button {
     padding: 0px 9px;
     /* transition: min-width 0.15s cubic-bezier(0.2, 0.0, 0, 1.0); */
     transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
-    background-color: var(--ws-inactive);
+    background-color: @ws-inactive;
 }
 
 #workspaces > button > label {
@@ -148,7 +150,7 @@ button {
 
 #workspaces > button.active {
     min-width: 48px;
-    background-color: var(--ws-active);
+    background-color: @ws-active;
 }
 
 #workspaces > button.active > label {
@@ -157,21 +159,21 @@ button {
 }
 
 #workspaces > button.empty {
-    background-color: var(--ws-empty);
+    background-color: @ws-empty;
 }
 
 #workspaces > button.urgent {
-    background-color: var(--ws-urgent);
+    background-color: @ws-urgent;
 }
 
 #workspaces > button:hover {
-    background-color: var(--ws-hover);
+    background-color: @ws-hover;
 }
 
 #date-time,
 #hyprland-language,
 #hyprland-window {
-    background-color: var(--module-bg);
+    background-color: @module-bg;
     padding: 0px 8px;
     margin: 3px;
 }
@@ -195,7 +197,7 @@ menu > menuitem > label,
 #system-tray {
     margin: 3px;
     padding: 0px 2px;
-    background-color: var(--module-bg);
+    background-color: @module-bg;
     border-radius: 100px;
 }
 
@@ -208,12 +210,12 @@ menu > menuitem > label,
 
 menu {
     border: solid 2px;
-    border-color: var(--border-color);
+    border-color: @border-color;
     border-radius: 10px;
 }
 
 menu > menuitem {
-    background-color: var(--module-bg);
+    background-color: @module-bg;
     padding: 6px;
     margin-left: 2px;
     margin-right: 2px;
@@ -230,21 +232,21 @@ menu > menuitem:last-child {
 }
 
 menu > menuitem:hover {
-    background-color: var(--border-color);
+    background-color: @border-color;
 }
 
 #volume-circular-progress-bar,
 #ram-circular-progress-bar {
-    border: solid 10px var(--border-color);
+    border: solid 10px @border-color;
 }
 
 #cpu-circular-progress-bar {
-    border: solid 0px alpha(var(--color9), 0.8);
+    border: solid 0px alpha(@color9, 0.8);
 }
 
 #widgets-container {
     border-radius: 100px;
-    background-color: var(--module-bg);
+    background-color: @module-bg;
     padding: 3px;
     margin: 3px;
 }
