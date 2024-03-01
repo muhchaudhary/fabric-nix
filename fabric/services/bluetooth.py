@@ -86,10 +86,13 @@ class BluetoothDevice(Service):
 
     @Property(value_type=bool, default_value=False, flags="read-write")
     def connecting(self) -> bool:
-        return self.connecting
+        return self._connecting
+
     @connecting.setter
     def connecting(self, value: bool):
-        self.connecting = value
+        self._connecting = value
+        self.emit("changed")
+        return
 
     @Property(value_type=int, flags="read")
     def battery_level(self) -> int:
@@ -104,13 +107,13 @@ class BluetoothDevice(Service):
             if value is False:
                 return
             self._connecting = False
-            self.notifier("connecting")
+            self.notify("connecting")
 
         self._connecting = True
+        self.notify("connecting")
         self._client.connect_device(self._device, connect, callback)
-        self.notifier("connecting")
 
-    def notifier(self, name: str, args = None):
+    def notifier(self, name: str, args=None):
         self.notify(name)
         self.emit("changed")
         return
@@ -231,7 +234,7 @@ class BluetoothClient(Service):
             GnomeBluetooth.AdapterState.TURNING_ON: "turning-on",
             GnomeBluetooth.AdapterState.TURNING_OFF: "turning-off",
             GnomeBluetooth.AdapterState.OFF: "off",
-        }.get(self._client.props.state, "unknown")
+        }.get(self._client.props.default_adapter_state, "unknown")
 
     @Property(value_type=bool, default_value=False, flags="read-write")
     def enabled(self) -> str:
@@ -239,4 +242,4 @@ class BluetoothClient(Service):
 
     @enabled.setter
     def enabled(self, value: bool):
-        self._client._client.default_adapter_powered = value
+        self._client.props.default_adapter_powered = value
