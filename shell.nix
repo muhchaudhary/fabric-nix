@@ -16,6 +16,7 @@ in
       # non python aditional packages
       ruff
       playerctl
+      gnome.gnome-bluetooth
     ];
     nativeBuildInputs = with pkgs; [
       wrapGAppsHook
