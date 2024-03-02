@@ -20,7 +20,7 @@ except ValueError:
     raise GnomeBluetoothImportError()
 
 
-# declare for later
+# Declare for later
 class BluetoothClient:
     pass
 
@@ -45,6 +45,7 @@ class BluetoothDevice(Service):
             "address",
             "paired",
             "alias",
+            "icon",
             "name",
         ]:
             self._signal_connectors[sn] = self._device.connect(
@@ -190,17 +191,16 @@ class BluetoothClient(Service):
         self.notifier("devices")
         self.emit("device-added", device.props.address)
 
-    def on_device_removed(
-        self, client: GnomeBluetooth.Client, device: GnomeBluetooth.Device
-    ):
-        if device.props.address not in self._devices.keys():
+    def on_device_removed(self, client: GnomeBluetooth.Client, object_path: str):
+        addr = object_path.split("/")[-1][4:].replace("_",":")
+        if addr not in self._devices.keys():
             return
-        self._devices[device.props.address].close()
-        self._devices.pop(device.props.address)
+        self._devices[addr].close()
+        self._devices.pop(addr)
         self.notify("devices")
         self.notify("connected-devices")
         self.emit("changed")
-        self.emit("device-removed", device.props.address)
+        self.emit("device-removed", addr)
 
     def connect_device(self, device: BluetoothDevice, connection: bool, callback):
         def inner_callback(client: GnomeBluetooth.Client, res: Gio.AsyncResult):
