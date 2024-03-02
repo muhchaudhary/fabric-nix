@@ -69,6 +69,11 @@ class BluetoothDevice(Service):
         return self._device.props.name
 
     @Property(value_type=str, flags="read")
+    def icon(self) -> str:
+        return self._device.props.icon
+
+
+    @Property(value_type=str, flags="read")
     def type(self) -> str:
         return GnomeBluetooth.type_to_string(self._device.type)
 
