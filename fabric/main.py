@@ -1,11 +1,9 @@
 import fabric
 import os
-from fabric.utils import (
-    set_stylesheet_from_file,
-    get_relative_path,
-    monitor_file
-)
-from bar.bar import StatusBar
+from fabric.utils import set_stylesheet_from_file, get_relative_path, monitor_file
+from components.bar.bar import StatusBar
+from components.desktop.desktop_widget import ClockWidget
+
 # from overview.overview import Overview
 from loguru import logger
 
@@ -18,13 +16,14 @@ def apply_style(*args):
 
 
 if __name__ == "__main__":
+    logger.disable("fabric.hyprland.widgets")
+    logger.disable("fabric.audio.service")
     bar = StatusBar()
+    clockWidget = ClockWidget()
     # overview = Overview()
 
     if PYWAL is True:
-        monitor = monitor_file(
-            f"/home/{os.getlogin()}/.cache/wal/colors.css", "none"
-        )
+        monitor = monitor_file(f"/home/{os.getlogin()}/.cache/wal/colors.css", "none")
         monitor.connect("changed", apply_style)
 
     # initialize style
