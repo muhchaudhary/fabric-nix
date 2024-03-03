@@ -22,7 +22,8 @@
 @define-color color13 #345DA6;
 @define-color color14 #4F9AAE;
 @define-color color15 #c3c2c2;
-*/
+ */
+
 @define-color window-bg alpha(@background, 0.9);
 @define-color module-bg alpha(@background, 0.4);
 @define-color border-color @color11;
@@ -206,34 +207,6 @@ menu > menuitem > label,
     margin: 3px;
 }
 
-/* menu and menu items (written for the system tray) */
-
-menu {
-    border: solid 2px;
-    border-color: @border-color;
-    border-radius: 10px;
-}
-
-menu > menuitem {
-    background-color: @module-bg;
-    padding: 6px;
-    margin-left: 2px;
-    margin-right: 2px;
-}
-
-menu > menuitem:first-child {
-    margin-top: 1.5px;
-    border-radius: 8px 8px 0px 0px;
-}
-
-menu > menuitem:last-child {
-    margin-bottom: 1.5px;
-    border-radius: 0px 0px 8px 8px;
-}
-
-menu > menuitem:hover {
-    background-color: @border-color;
-}
 
 #volume-circular-progress-bar,
 #ram-circular-progress-bar {

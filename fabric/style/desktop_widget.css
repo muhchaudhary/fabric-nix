@@ -1,0 +1,48 @@
+@import url("/home/muhammad/.cache/wal/colors-waybar.css");
+
+@define-color window-bg alpha(@background, 0.9);
+@define-color module-bg alpha(@background, 0.4);
+@define-color border-color @color11;
+@define-color ws-active @color9;
+@define-color ws-inactive @color3;
+@define-color ws-empty @color8;
+@define-color ws-hover @color1;
+@define-color ws-urgent @color11;
+
+* {
+    all: unset;
+    transition: color 0.5s ease;
+    color: alpha(@color0, 0.6);
+    font-family: "Iosevka Nerd Font";
+    font-weight: 700;
+}
+
+#clock > label {
+    font-size: 128px;
+    font-weight: 900;
+}
+
+#date > label {
+    font-size: 48px;
+    padding-bottom: 6px;
+}
+
+#sysinfo-container {
+    padding: 20px;
+    background-color: alpha(#000000, 0.2);
+    border-radius: 1.5em;
+    min-width: 10px;
+}
+
+#battery-circular-progress-bar {
+    border-color: alpha(#009d15, 0.5);
+    color: alpha(#767676, 0.3);
+    min-width: 1em;
+}
+
+#cpu-circular-progress-bar,
+#ram-circular-progress-bar {
+    border-color: @foreground;
+    color: alpha(#767676, 0.3);
+    min-width: 1em;
+}
