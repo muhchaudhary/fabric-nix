@@ -1,7 +1,7 @@
 import gi
 from loguru import logger
 from fabric.service import Service, Signal, SignalContainer, Property
-from fabric.utils import bulk_connect, exec_shell_command
+from fabric.utils import bulk_connect
 from gi.repository import Gio, GLib
 from fabric.utils import invoke_repeater
 
@@ -149,26 +149,40 @@ class BluetoothClient(Service):
         self._client: GnomeBluetooth.Client = GnomeBluetooth.Client.new()
         self._devices: dict = {}
         self._connected_devices: dict = {}
-        self._timeout = 1000
 
         bulk_connect(
             self._client,
             {
                 "device-added": self.on_device_added,
                 "device-removed": self.on_device_removed,
-                "notify::default-adapter-state": lambda _, __: self.notifier("state"),
-                "notify::default-adapter-powered": lambda _, __: self.notifier(
+                "notify::default-adapter-state": lambda *args: self.notifier("state"),
+                "notify::default-adapter-powered": lambda *args: self.notifier(
                     "enabled"
                 ),
-                "notify::default-adapter-setup-mode": self.on_scan,
+                "notify::default-adapter-setup-mode": lambda *args: self.notifier(
+                    "scanning"
+                ),
             },
         )
         for device in self._get_devices():
             self.on_device_added(self._client, device)
         super().__init__(**kwargs)
 
-    def toggle(self):
-        self._client.default_adapter_powered = not self._client.default_adapter_powered
+    def toggle_power(self):
+        GLib.idle_add(
+            lambda: self._client.set_property(
+                "default_adapter_powered",
+                not self._client.props.default_adapter_powered,
+            )
+        )
+
+    def toggle_scan(self):
+        GLib.idle_add(
+            lambda: self._client.set_property(
+                "default_adapter_setup_mode",
+                not self._client.props.default_adapter_setup_mode,
+            )
+        )
 
     def _get_devices(self):
         devices = []
@@ -197,8 +211,10 @@ class BluetoothClient(Service):
 
     def on_device_removed(self, client: GnomeBluetooth.Client, object_path: str):
         # TODO may not be a reliable method of obtaining the address
+        # object path is of the form /org/bluez/hci0/dev_AA_AA_AA_AA_AA_AA
+        print(object_path)
         addr = object_path.split("/")[-1][4:].replace("_", ":")
-        if addr not in self._devices.keys():
+        if addr not in self._devices:
             return
         self._devices[addr].close()
         self._devices.pop(addr)
@@ -206,13 +222,6 @@ class BluetoothClient(Service):
         self.notify("connected-devices")
         self.emit("changed")
         self.emit("device-removed", addr)
-
-    def on_scan(self, _, __):
-        if self._client.props.default_adapter_setup_mode:
-            invoke_repeater(
-                self.timeout,
-                lambda: self._client.set_property("default_adapter_setup_mode", False),
-            )
 
     def connect_device(self, device: BluetoothDevice, connection: bool, callback):
         def inner_callback(client: GnomeBluetooth.Client, res: Gio.AsyncResult):
@@ -229,11 +238,6 @@ class BluetoothClient(Service):
 
     def get_device_from_addr(self, address: str) -> BluetoothDevice:
         return self._devices[address]
-
-    def scan_devices(self):
-        GLib.idle_add(
-            lambda: self._client.set_property("default_adapter_setup_mode", True)
-        )
 
     def notifier(self, name: str, args=None):
         self.notify(name)
@@ -259,12 +263,14 @@ class BluetoothClient(Service):
         }.get(self._client.props.default_adapter_state, "unknown")
 
     @Property(value_type=int, flags="read-write")
-    def timeout(self) -> str:
-        return self._timeout
+    def scanning(self) -> int:
+        return self._client.props.default_adapter_setup_mode
 
-    @timeout.setter
-    def timeout(self, value):
-        self._timeout = value
+    @scanning.setter
+    def scanning(self, value):
+        GLib.idle_add(
+            lambda: self._client.set_property("default_adapter_setup_mode", value)
+        )
 
     @Property(value_type=bool, default_value=False, flags="read-write")
     def enabled(self) -> str:
