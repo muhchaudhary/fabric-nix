@@ -7,7 +7,7 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.stack import Stack
 from fabric.widgets.svg import Svg
-from services.mpris import MprisPlayer
+from services.mpris import MprisPlayer, MprisPlayerManager
 from widgets.circleimage import CircleImage
 from fabric.widgets.scale import Scale
 from gi.repository import Gio, GLib
@@ -29,6 +29,31 @@ if not os.path.exists(MEDIA_CACHE):
 PLAYER_ASSETS_PATH = "../assets/player/"
 
 #TODO move Box of playerBoxes here
+
+class PlayerBoxHandler(Box):
+    def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
+        super().__init__(
+            h_align="start",
+            orientation="vertical",
+            spacing=5,
+            **kwargs
+        )
+        self.mpris_manager = mpris_manager
+        self.mpris_manager.connect('player-appeared',self.on_new_player)
+        self.mpris_manager.connect('player-vanished', self.on_lost_player)
+
+        for player in self.mpris_manager.get_players():
+            logger.info(f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}")
+            self.on_new_player(self.mpris_manager,player)
+
+    def on_new_player(self, mpris_manager, player):
+        logger.info(f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}")
+        super().add_children(PlayerBox(player=MprisPlayer(player)))
+
+    def on_lost_player(self, mpris_manager, player_name):
+        # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
+        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}" )
+
 
 class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
