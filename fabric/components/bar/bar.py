@@ -3,7 +3,6 @@ import psutil
 from loguru import logger
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
-from fabric.system_tray import SystemTray
 from fabric.widgets.wayland import Window
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.eventbox import EventBox
@@ -12,8 +11,8 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.circular_progress_bar import CircularProgressBar
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow, Language
-from services.mpris import MprisPlayer, MprisPlayerManager
-from widgets.player import PlayerBox
+from services.mpris import MprisPlayerManager
+from widgets.player import PlayerBoxHandler
 from fabric.utils import (
     bulk_replace,
     invoke_repeater,
@@ -115,7 +114,6 @@ class StatusBar(Window):
             name="hyprland-window",
         )
         self.date_time = DateTime(name="date-time")
-        # self.system_tray = SystemTray(name="system-tray")
         self.ram_circular_progress_bar = CircularProgressBar(
             name="ram-circular-progress-bar",
             background_color=False,  # false = disabled
@@ -138,15 +136,8 @@ class StatusBar(Window):
         self.volume = VolumeWidget() if AUDIO_WIDGET is True else None
 
 
-        self.mprisplayer = MprisPlayerManager()
-        self.mprisplayer.connect('player-appeared',self.on_new_player)        
-        self.mprisplayer.connect('player-vanished', self.on_lost_player)
-        self.mprisBox = Box(orientation="v",spacing=5)
-
-        for player in self.mprisplayer.get_players():
-            logger.info(f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}")
-            self.on_new_player(self.mprisplayer,player)
-
+        # self.mprisplayer = MprisPlayerManager()
+        # self.mprisBox = PlayerBoxHandler(mpris_manager = self.mprisplayer)
         
         self.widgets_container = Box(
             spacing=2,
@@ -159,24 +150,15 @@ class StatusBar(Window):
         self.widgets_container.add(self.volume) if self.volume is not None else None
         self.center_box.add_left(self.workspaces)
         self.center_box.add_right(self.widgets_container)
-        # self.center_box.add_right(self.system_tray)
         self.center_box.add_right(self.date_time)
         self.center_box.add_right(self.language)
-        self.center_box.add_center(self.mprisBox)
+        # self.center_box.add_center(self.mprisBox)
         self.add(self.center_box)
         invoke_repeater(1000, self.update_progress_bars)
         self.update_progress_bars()  # initial call
 
         self.show_all()
     
-    def on_new_player(self, mpris_manager, player,):
-        logger.info(f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}")
-        self.mprisBox.add_children(PlayerBox(player=MprisPlayer(player)))
-    
-    def on_lost_player(self, mpris_manager, player_name):
-        # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
-        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}" )
-
     def update_progress_bars(self):
         self.ram_circular_progress_bar.percentage = psutil.virtual_memory().percent
         self.cpu_circular_progress_bar.percentage = psutil.cpu_percent()
