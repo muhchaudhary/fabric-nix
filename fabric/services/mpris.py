@@ -3,6 +3,7 @@ import gi
 from loguru import logger
 from fabric.service import Service, Signal, SignalContainer, Property
 from fabric.utils import bulk_connect
+from gi.repository import GLib
 
 
 class PlayerctlImportError(ImportError):
@@ -47,6 +48,7 @@ class MprisPlayer(Service):
                 "loop-status": lambda *args: self.notifier("loop-status"),
             },
         )
+        GLib.idle_add(lambda *args: self.update_status())
 
     def update_status(self):
         for prop in self.list_properties():

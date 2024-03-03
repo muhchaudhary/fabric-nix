@@ -232,7 +232,6 @@ class PlayerBox(Box):
             overlays=[self.inner_box, self.player_info_box, self.image_stack],
         )
         self.add_children(self.overlay_box)
-        player.update_status()
         self.rot = 0
         invoke_repeater(500, self.move_seekbar)
 
