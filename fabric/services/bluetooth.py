@@ -1,5 +1,5 @@
 import gi
-from typing import Callable
+from typing import Callable, Dict, List
 from loguru import logger
 from fabric.service import Service, Signal, SignalContainer, Property
 from fabric.utils import bulk_connect
@@ -9,21 +9,16 @@ from gi.repository import Gio, GLib
 class GnomeBluetoothImportError(ImportError):
     def __init__(self, *args):
         super().__init__(
-            "gnome-bluetooth is not installed, please install it first",
+            "gnome-bluetooth-3 is not installed, please install it first",
             *args,
         )
 
 
 try:
     gi.require_version("GnomeBluetooth", "3.0")
-    from gi.repository import GnomeBluetooth  # type: ignore
+    from gi.repository import GnomeBluetooth
 except ValueError:
     raise GnomeBluetoothImportError()
-
-
-# Declare for later
-class BluetoothClient:  # type: ignore
-    pass
 
 
 class BluetoothDevice(Service):
@@ -33,10 +28,10 @@ class BluetoothDevice(Service):
     )
 
     def __init__(
-        self, device: GnomeBluetooth.Device, client: BluetoothClient, **kwargs
+        self, device: GnomeBluetooth.Device, client: GnomeBluetooth.Client, **kwargs
     ):
         self._device: GnomeBluetooth.Device = device
-        self._client = client
+        self._client: GnomeBluetooth.Client = client
         self._signal_connectors: dict = {}
         for sn in [
             "battery-percentage",
@@ -53,8 +48,10 @@ class BluetoothDevice(Service):
                 f"notify::{sn}", lambda *args, sn=sn: self.notifier(sn, args)
             )
         super().__init__(**kwargs)
+        # To get the current state of connection
+        GLib.idle_add(lambda: self.notify("connected"))
 
-    @Property(value_type=GnomeBluetooth.Device, flags="readable")
+    @Property(value_type=object, flags="readable")
     def device(self) -> GnomeBluetooth.Device:
         return self._device
 
@@ -76,7 +73,7 @@ class BluetoothDevice(Service):
 
     @Property(value_type=str, flags="readable")
     def type(self) -> str:
-        return GnomeBluetooth.type_to_string(self._device.type)
+        return GnomeBluetooth.type_to_string(self._device.type)  # type: ignore
 
     @Property(value_type=bool, default_value=False, flags="readable")
     def paired(self) -> bool:
@@ -97,7 +94,7 @@ class BluetoothDevice(Service):
     @connecting.setter
     def connecting(self, value: bool):
         self._connecting = value
-        self.emit("changed")
+        self.notify("connecting")
         return
 
     @Property(value_type=int, flags="readable")
@@ -109,20 +106,26 @@ class BluetoothDevice(Service):
         return self._device.props.battery_percentage
 
     def set_connection(self, connect: bool):
-        def callback(value):
-            if value is False:
-                return
-            self._connecting = False
-            self.notify("connecting")
+        self.connecting = True
+        self.connect_device(
+            connect, lambda *args: self.set_property("connecting", False)
+        )
 
-        self._connecting = True
-        self.notify("connecting")
-        self._client.connect_device(self._device, connect, callback)  # type: ignore
+    def connect_device(self, connection: bool, callback: Callable):
+        def inner_callback(client: GnomeBluetooth.Client, res: Gio.AsyncResult):
+            try:
+                finish = client.connect_service_finish(res)
+                callback(finish)
+            except Exception:
+                logger.error(f"Failed to connect to device {self.address}")
+                callback(False)
 
-    def notifier(self, name: str, args=None):
-        self.notify(name)
-        self.emit("changed")
-        return
+        self._client.connect_service(
+            self._device.get_object_path(),
+            connection,
+            None,
+            inner_callback,
+        )
 
     def close(self):
         for id in self._signal_connectors.values():
@@ -132,9 +135,11 @@ class BluetoothDevice(Service):
                 pass
         self.emit("closed")
 
-    # def __del__(self):
-    #     # hacking into the guts of python's garbage collector
-    #     return self.close()
+    def notifier(self, name: str, args=None):
+        logger.info(f"notify? {name}")
+        self.notify(name)
+        self.emit("changed")
+        return
 
 
 class BluetoothClient(Service):
@@ -146,10 +151,8 @@ class BluetoothClient(Service):
     )
 
     def __init__(self, **kwargs):
-        self._client: GnomeBluetooth.Client = GnomeBluetooth.Client.new()
-        self._devices: dict = {}
-        self._connected_devices: dict = {}
-
+        self._client: GnomeBluetooth.Client = GnomeBluetooth.Client.new()  # type: ignore
+        self._devices: Dict[str, GnomeBluetooth.Device] = {}
         bulk_connect(
             self._client,
             {
@@ -165,7 +168,7 @@ class BluetoothClient(Service):
             },
         )
         for device in self._get_devices():
-            self.on_device_added(self._client, device)
+            self.on_device_added(self._client, device)  # type: ignore
         super().__init__(**kwargs)
 
     def toggle_power(self):
@@ -186,10 +189,10 @@ class BluetoothClient(Service):
 
     def _get_devices(self):
         devices = []
-        device_store = self._client.get_devices()
+        device_store: Gio.ListStore = self._client.get_devices()  # type: ignore
         for i in range(device_store.get_n_items()):
-            device = device_store.get_item(i)
-            if device.paired or device.trusted:
+            device: GnomeBluetooth.Device = device_store.get_item(i)  # type: ignore
+            if device.props.paired or device.props.trusted:
                 devices.append(device)
         return devices
 
@@ -198,48 +201,30 @@ class BluetoothClient(Service):
     ):
         if device.props.address in self._devices.keys():
             return
+        # This may be a mistake, it fixed an issue with me but might not be the right choice
+        #  We should probably let the user choose what to do with devices with no name
         if device.props.name is None:
             return
-        bluetooth_device = BluetoothDevice(device, self)  # type: ignore
+        bluetooth_device: BluetoothDevice = BluetoothDevice(device, self._client)
         bluetooth_device.connect("changed", lambda _: self.emit("changed"))
         bluetooth_device.connect(
-            "notify::connected", lambda _, __: self.notify("connected-devices")
+            "notify::connected", lambda *args: self.notify("connected-devices")
         )
         self._devices[device.props.address] = bluetooth_device
         self.notifier("devices")
         self.emit("device-added", device.props.address)
 
     def on_device_removed(self, client: GnomeBluetooth.Client, object_path: str):
-        # TODO may not be a reliable method of obtaining the address
-        # object path is of the form /org/bluez/hci0/dev_AA_AA_AA_AA_AA_AA
-        print(object_path)
         addr = object_path.split("/")[-1][4:].replace("_", ":")
-        if addr not in self._devices:
+        if addr not in self._devices.keys():
             return
+        was_connected: bool = self._devices[addr].connected
         self._devices[addr].close()
         self._devices.pop(addr)
-        self.notify("devices")
-        self.notify("connected-devices")
-        self.emit("changed")
+        self.notifier("devices")
+        if was_connected:
+            self.notifier("connected-devices")
         self.emit("device-removed", addr)
-
-    def connect_device(
-        self, device: BluetoothDevice, connection: bool, callback: Callable
-    ):
-        def inner_callback(client: GnomeBluetooth.Client, res: Gio.AsyncResult):
-            try:
-                finish = client.connect_service_finish(res)
-                callback(finish)
-            except Exception:
-                logger.error(f"Failed to connect to device {device.props.address}")
-                callback(False)
-
-        self._client.connect_service(
-            device.get_object_path(),  # type: ignore
-            connection,
-            None,
-            inner_callback,
-        )
 
     def get_device_from_addr(self, address: str) -> BluetoothDevice:
         return self._devices[address]
@@ -250,12 +235,16 @@ class BluetoothClient(Service):
         return
 
     @Property(value_type=object, flags="readable")
-    def devices(self) -> dict:
-        return self._devices
+    def devices(self) -> List:
+        return list(self._devices.values())
 
     @Property(value_type=object, flags="readable")
-    def connected_devices(self) -> dict:
-        return self._connected_devices
+    def connected_devices(self) -> List:
+        ret = []
+        for device in self._devices.values():
+            if device.connected:
+                ret.append(device)
+        return ret
 
     @Property(value_type=str, flags="readable")
     def state(self) -> str:
