@@ -17,6 +17,7 @@ from fabric.utils import (
     bulk_replace,
     invoke_repeater,
 )
+
 AUDIO_WIDGET = True
 
 if AUDIO_WIDGET is True:
@@ -25,6 +26,7 @@ if AUDIO_WIDGET is True:
     except Exception as e:
         logger.error(e)
         AUDIO_WIDGET = False
+
 
 class VolumeWidget(Box):
     def __init__(self, **kwargs):
@@ -53,6 +55,9 @@ class VolumeWidget(Box):
         self.audio.connect("speaker-changed", self.update)
         self.add(self.event_box)
 
+    def this_works(self):
+        logger.info("got message yes?")
+
     def on_scroll(self, widget, event):
         if event.direction == 0:
             self.audio.speaker.volume += 8
@@ -64,6 +69,7 @@ class VolumeWidget(Box):
             return
         self.circular_progress_bar.percentage = self.audio.speaker.volume
         return
+
 
 class StatusBar(Window):
     def __init__(
@@ -135,10 +141,9 @@ class StatusBar(Window):
         )
         self.volume = VolumeWidget() if AUDIO_WIDGET is True else None
 
+        self.mprisplayer = MprisPlayerManager()
+        self.mprisBox = PlayerBoxHandler(mpris_manager=self.mprisplayer)
 
-        # self.mprisplayer = MprisPlayerManager()
-        # self.mprisBox = PlayerBoxHandler(mpris_manager = self.mprisplayer)
-        
         self.widgets_container = Box(
             spacing=2,
             orientation="h",
@@ -152,15 +157,14 @@ class StatusBar(Window):
         self.center_box.add_right(self.widgets_container)
         self.center_box.add_right(self.date_time)
         self.center_box.add_right(self.language)
-        # self.center_box.add_center(self.mprisBox)
+        self.center_box.add_center(self.mprisBox)
         self.add(self.center_box)
         invoke_repeater(1000, self.update_progress_bars)
         self.update_progress_bars()  # initial call
 
         self.show_all()
-    
+
     def update_progress_bars(self):
         self.ram_circular_progress_bar.percentage = psutil.virtual_memory().percent
         self.cpu_circular_progress_bar.percentage = psutil.cpu_percent()
         return True
-

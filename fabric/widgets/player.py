@@ -38,7 +38,7 @@ class PlayerBoxHandler(Box):
         self.mpris_manager.connect("player-appeared", self.on_new_player)
         self.mpris_manager.connect("player-vanished", self.on_lost_player)
 
-        for player in self.mpris_manager.get_players():
+        for player in self.mpris_manager.players:  # type: ignore
             logger.info(
                 f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}"
             )
@@ -104,14 +104,13 @@ class PlayerBox(Box):
             justfication="left",
             character_max_width=1,
         )
-        self.player.bind_property("title", self.track_title, "label")
-
         self.track_artist = Label(
             label="",
             name="player-artist",
             justfication="left",
             character_max_width=1,
         )
+        self.player.bind_property("title", self.track_title, "label")
         self.player.bind_property("artist", self.track_artist, "label")
 
         self.track_title.set_line_wrap(True)
@@ -233,12 +232,12 @@ class PlayerBox(Box):
         )
         self.add_children(self.overlay_box)
         self.rot = 0
-        invoke_repeater(500, self.move_seekbar)
+        invoke_repeater(1000, self.move_seekbar)
 
     def on_button_scale_release(self, scale, event):
         self.player.set_position(self.scale_new_pos)
         self.exit = False
-        invoke_repeater(60, self.move_seekbar)
+        invoke_repeater(1000, self.move_seekbar)
 
     def on_scale_move(self, scale, event, moved_pos):
         self.exit = True
@@ -281,7 +280,8 @@ class PlayerBox(Box):
             logger.info(f"[Player] saving cover photo to {self.cover_path}")
             os.path.isfile(self.cover_path)
             # source.copy_finish(result)
-            self.update_image()
+            if os.path.isfile(self.cover_path):
+                self.update_image()
         except ValueError:
             logger.error("[PLAYER] Failed to grab artUrl")
 
@@ -306,7 +306,7 @@ class PlayerBox(Box):
     def update_colors(self, n):
         colors = (0, 0, 0)
         try:
-            colors = grab_color(self.cover_path, 10)
+            colors = grab_color(self.cover_path, 5)
         except:
             logger.error("[PLAYER] could not grab color")
 
@@ -341,10 +341,10 @@ class PlayerBox(Box):
     def move_seekbar(self):
         if self.player.can_seek is False or self.exit:
             return False
-        self.seek_bar.set_value(self.player.position)
+        self.seek_bar.set_value(self.player.get_property("position"))
         # if self.player.playback_status == "playing":
         #     self.image_box.rotate_more(self.rot)
         #     if self.rot >= 360:
         #         self.rot -= 360
-        #     self.rot += 5
+        #     self.rot += 45 // 2
         return True

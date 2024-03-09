@@ -40,7 +40,7 @@
     font-family: "roboto";
     font-weight: 500;
     font-size: 14px;
-    color: @foreground;
+    color: white;
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
@@ -130,6 +130,11 @@ button {
     border-radius: 100px;
     background-size: 400% 400%;
 }
+
+button:hover {
+    background-color: steelblue;
+}
+
 
 #workspaces {
     margin: 3px;

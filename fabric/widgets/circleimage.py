@@ -100,7 +100,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
         self.queue_draw()
 
     def set_image(self, new_image_file):
-        if new_image_file is not None:
+        if new_image_file != "":
             self.image = GdkPixbuf.Pixbuf.new_from_file(new_image_file)
             self.image.scale(
                 self.image,

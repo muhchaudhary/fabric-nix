@@ -9,13 +9,6 @@
 @define-color ws-hover @color1;
 @define-color ws-urgent @color11;
 
-* {
-    all: unset;
-    transition: color 0.5s ease;
-    color: alpha(@color0, 0.6);
-    font-family: "Iosevka Nerd Font";
-    font-weight: 700;
-}
 
 #clock > label {
     font-size: 128px;

@@ -1,9 +1,9 @@
-from typing import Any
 import gi
+import os
 from loguru import logger
 from fabric.service import Service, Signal, SignalContainer, Property
 from fabric.utils import bulk_connect
-from gi.repository import GLib
+from gi.repository import GLib  # type: ignore
 
 
 class PlayerctlImportError(ImportError):
@@ -25,7 +25,6 @@ except ValueError:
 
 class MprisPlayer(Service):
     __gsignals__ = SignalContainer(
-        Signal("position", "run-first", None, (int,)),
         Signal("exit", "run-first", None, (bool,)),
         Signal("changed", "run-first", None, ()),  # type: ignore
     )
@@ -35,37 +34,60 @@ class MprisPlayer(Service):
         player: Playerctl.Player,
         **kwargs,
     ):
+        self._signal_connectors: dict = {}
         self._player: Playerctl.Player = player
         super().__init__(**kwargs)
+        for sn in ["playback-status", "loop-status", "shuffle", "volume", "seeked"]:
+            self._signal_connectors[sn] = self._player.connect(
+                sn, lambda *args, sn=sn: self.notifier(sn, args)
+            )
 
-        bulk_connect(
-            self._player,
-            {
-                "exit": self.on_player_exit,
-                "metadata": lambda *args: self.update_status(),
-                "playback-status": lambda *args: self.notifier("playback-status"),
-                "shuffle": lambda *args: self.notifier("shuffle"),
-                "loop-status": lambda *args: self.notifier("loop-status"),
-            },
+        self._signal_connectors["exit"] = self._player.connect(
+            "exit", self.on_player_exit
         )
-        GLib.idle_add(lambda *args: self.update_status())
+        self._signal_connectors["metadata"] = self._player.connect(
+            "metadata", lambda *args: self.update_status()
+        )
+        GLib.idle_add(lambda *args: self.update_status_once())
 
     def update_status(self):
+        for prop in [
+            "title",
+            "artist",
+            "arturl",
+            "length",
+        ]:
+            self.notifier(prop) if self.get_property(prop) is not None else None
+        for prop in [
+            "can-seek",
+            "can-pause",
+            "can-shuffle",
+            "can-go-next",
+            "can-go-previous",
+        ]:
+            self.notifier(prop)
+
+    def update_status_once(self):
         for prop in self.list_properties():
             self.notifier(prop.name)
 
     def notifier(self, name: str, args=None):
+        logger.info(f"notify? {name}")
         self.notify(name)
         self.emit("changed")
         return
 
     def on_player_exit(self, player):
-        self.emit("exit", True)
+        for id in self._signal_connectors.values():
+            try:
+                self._player.disconnect(id)
+            except Exception:
+                pass
         del self._player
+        self.emit("exit", True)
         # TODO check if this is needed
         del self
 
-    # Player Functions
     def toggle_shuffle(self):
         self._player.set_shuffle(
             not self._player.props.shuffle
@@ -86,31 +108,34 @@ class MprisPlayer(Service):
     def get_position(self) -> int:
         return self._player.get_position() if self.can_seek else None  # type: ignore
 
-    # Because of type error issues (do test)
-    def _get_metadata(self) -> dict:
-        return self._player.get_property("metadata")
+    def set_loop_status(self, status: str):
+        loop_status = {
+            "none": Playerctl.LoopStatus.NONE,
+            "track": Playerctl.LoopStatus.TRACK,
+            "playlist": Playerctl.LoopStatus.PLAYLIST,
+        }.get(status, None)
+
+        self._player.set_loop_status(loop_status) if loop_status else None
 
     # Properties
-    # TODO DICT NOT SUPPORTED?
-
     @Property(value_type=int, flags="readable")
     def position(self) -> int:
         return self._player.get_property("position")
 
-    @Property(value_type=str, flags="readable")
+    @Property(value_type=object, flags="readable")
     def metadata(self) -> dict:
-        return self._get_metadata()
+        return self._player.get_property("metadata")
 
     @Property(value_type=str or None, flags="readable")
     def arturl(self) -> str | None:
-        if "mpris:artUrl" in self._get_metadata().keys():
-            return self._get_metadata()["mpris:artUrl"]
+        if "mpris:artUrl" in self.metadata.keys():  # type: ignore
+            return self.metadata["mpris:artUrl"]  # type: ignore
         return None
 
     @Property(value_type=str or None, flags="readable")
     def length(self) -> str | None:
-        if "mpris:length" in self._get_metadata().keys():
-            return self._get_metadata()["mpris:length"]
+        if "mpris:length" in self.metadata.keys():  # type: ignore
+            return self.metadata["mpris:length"]  # type: ignore
         return None
 
     @Property(value_type=str, flags="readable")
@@ -166,7 +191,15 @@ class MprisPlayer(Service):
         try:
             self._player.set_shuffle(self._player.get_property("shuffle"))
             return True
-        except:
+        except Exception:
+            return False
+
+    @Property(value_type=bool, default_value=False, flags="readable")
+    def can_loop(self) -> bool:
+        try:
+            self._player.set_shuffle(self._player.get_property("shuffle"))
+            return True
+        except Exception:
             return False
 
 
@@ -206,5 +239,6 @@ class MprisPlayerManager(Service):
             self._manager.manage_player(Playerctl.Player.new_from_name(player))
         logger.info(f"[MprisPlayer] starting manager: {self._manager}")
 
-    def get_players(self):
+    @Property(value_type=object, flags="readable")
+    def players(self):
         return self._manager.get_property("players")

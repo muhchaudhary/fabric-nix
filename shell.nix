@@ -15,8 +15,9 @@ in
 
       # non python aditional packages
       ruff
-      playerctl
-      gnome.gnome-bluetooth
+      playerctl # For mpirs
+      gnome.gnome-bluetooth # For bluetooth
+      networkmanager # For network
     ];
     nativeBuildInputs = with pkgs; [
       wrapGAppsHook

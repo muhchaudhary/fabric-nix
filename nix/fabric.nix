@@ -18,6 +18,7 @@
   wrapGAppsHook,
   gdk-pixbuf,
   librsvg,
+  src,
 }:
 buildPythonPackage rec {
   pname = "fabric";
@@ -25,8 +26,8 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Fabric-Development";
     repo = "fabric";
-    rev = "63ed4aedd37f55864d91e66fe3a3fdb417cbcaa3";
-    sha256 = "sha256-wHvvwxs4nnKHUZDSFdiWc5o1wRhYv90bkqKgEv/cOGM=";
+    rev = "01d1d3a70cb8b1b73f0caf027c8b1351166b01d4";
+    sha256 = "sha256-pLJHs3PcCyD3mZ9ycsXqu8I6d/4t+uHboSoygldllzo=";
   };
   format = "setuptools";
 
