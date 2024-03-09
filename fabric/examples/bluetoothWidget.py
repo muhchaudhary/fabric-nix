@@ -1,14 +1,13 @@
 import fabric
-from services.bluetooth import BluetoothClient, BluetoothDevice
-
-# from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
+from loguru import logger
 from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.scrolled_window import ScrolledWindow
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.button import Button
 from fabric.widgets.wayland import Window
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.scrolled_window import ScrolledWindow
+from services.bluetooth import BluetoothClient, BluetoothDevice
 from fabric.utils import set_stylesheet_from_file, get_relative_path
 
 
@@ -22,19 +21,17 @@ class BtDeviceBox(CenterBox):
         self.connect_button.connect(
             "clicked", lambda _: self.device.set_connection(not self.device.connected)
         )
-        self.device.connect("notify::connecting", self.on_device_connecting)
+        self.device.connect("connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
 
         self.add_left(Image(icon_name=device.icon, icon_size=6))  # type: ignore
         self.add_left(Label(label=device.name))  # type: ignore
         self.add_right(self.connect_button)
 
-    def on_device_connecting(self, *args):
+    def on_device_connecting(self, device, connecting):
         self.connect_button.set_label(
             "connecting..."
-        ) if self.device.connecting else self.connect_button.set_label(
-            "failed to connect"
-        )
+        ) if connecting else self.connect_button.set_label("failed to connect")
 
     def on_device_connect(self, *args):
         self.connect_button.set_label(
@@ -109,6 +106,7 @@ class BluetoothWidget(Window):
 
 
 def apply_style(*args):
+    logger.info("[Bluetooth Widget] CSS applied")
     return set_stylesheet_from_file(get_relative_path("bluetoothWidget.css"))
 
 
