@@ -1,3 +1,4 @@
+import math
 from loguru import logger
 import os
 from fabric.widgets.box import Box
@@ -10,7 +11,7 @@ from fabric.widgets.svg import Svg
 from services.mpris import MprisPlayer, MprisPlayerManager
 from widgets.circleimage import CircleImage
 from fabric.widgets.scale import Scale
-from gi.repository import Gio, GLib
+from gi.repository import Gio, GLib, GObject
 
 from fabric.utils import (
     get_relative_path,
@@ -57,61 +58,57 @@ class PlayerBoxHandler(Box):
 
 class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
-        super().__init__(h_align="start", **kwargs)
+        super().__init__(h_align="start", name="player-box", **kwargs)
         self.player: MprisPlayer = player
         self.exit = False
-        self.player_width = 350
-        self.text_wrap_width = 200
-        self.image_size = 120
-        self.player_height = 100
-        self.cover_path = ""
-        self.old_cover_path = ""
+        self.player_width = 450
+        self.image_size = 160
+        self.player_height = 140
+        self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
         self.scale_new_pos = 0
 
         # Exit Logic
         self.player.connect("exit", self.on_player_exit)
 
-        # Cover Image
-        # self.image_box = Box(
-        #     name = "player-image",
-        #     h_align="start",
-        #     v_align="start",
-        # )
-        self.image_box = CircleImage(size=self.image_size)
-        # self.last_image_box = Box(
-        #     name = "player-image",
-        #     h_align="start",
-        #     v_align="start",
-        # )
-        self.last_image_box = CircleImage(size=self.image_size)
-        # self.image_box.set_size_request(self.image_size,self.image_size)
-        # self.last_image_box.set_size_request(self.image_size,self.image_size)
-
-        self.image_stack = Stack(
-            transition_duration=500,
-            transition_type="over-down",
+        self.image_box = CircleImage(size=self.image_size, image_file=self.cover_path)
+        self.image_box.set_size_request(self.image_size, self.image_size)
+        self.transition_type = "None"
+        self.image_stack = Box(
             h_align="start",
             v_align="start",
+            style="border-radius: 100%; box-shadow: 0 0 4px 0px black;",
         )
-        self.image_stack.add_named(self.image_box, "player_image")
-        self.image_stack.add_named(self.last_image_box, "last_player_image")
+        self.image_stack.add_children(self.image_box)
+
         self.player.connect("notify::arturl", self.set_image)
 
         # Track Info
         self.track_title = Label(
-            label="",
+            label="No Title",
             name="player-title",
             justfication="left",
             character_max_width=1,
         )
         self.track_artist = Label(
-            label="",
+            label="No Artist",
             name="player-artist",
             justfication="left",
             character_max_width=1,
         )
-        self.player.bind_property("title", self.track_title, "label")
-        self.player.bind_property("artist", self.track_artist, "label")
+        self.player.bind_property(
+            "title",
+            self.track_title,
+            "label",
+            GObject.BindingFlags.DEFAULT,
+            lambda _, x: x if x != "" else "No Title",
+        )
+        self.player.bind_property(
+            "artist",
+            self.track_artist,
+            "label",
+            GObject.BindingFlags.DEFAULT,
+            lambda _, x: x if x != "" else "No Artist",
+        )
 
         self.track_title.set_line_wrap(True)
         self.track_title.set_xalign(0)
@@ -125,7 +122,7 @@ class PlayerBox(Box):
             orientation="v",
             v_align="start",
             h_align="start",
-            style=f"min-width: {self.text_wrap_width}px;",
+            style=f"min-width: {self.player_width-self.image_size - 20}px;",
             children=[
                 self.track_title,
                 self.track_artist,
@@ -208,7 +205,8 @@ class PlayerBox(Box):
         self.player.bind_property("can-seek", self.seek_bar, "visible")
 
         self.player_info_box = Box(
-            style=f"margin-left: {self.image_size + 10}px",
+            style=f"margin-left: {self.image_size + 10}px;"
+            + f"min-width: {self.player_width-self.image_size - 20}px;",
             v_align="center",
             h_align="start",
             orientation="v",
@@ -216,8 +214,10 @@ class PlayerBox(Box):
         )
 
         self.inner_box = Box(
-            style=f"background-color: #FEFEFE; border-radius: 20px; margin-left: {self.image_size // 2}px;"
-            + f"min-width:{self.player_width-self.image_size // 2}px; min-height:{self.player_height}px;",
+            name="inner-player-box",
+            style=f"margin-left: {self.image_size // 2}px;"
+            + f"min-width:{self.player_width-self.image_size // 2}px;"
+            + f"min-height:{self.player_height}px;",
             v_align="center",
             h_align="start",
         )
@@ -231,7 +231,8 @@ class PlayerBox(Box):
             overlays=[self.inner_box, self.player_info_box, self.image_stack],
         )
         self.add_children(self.overlay_box)
-        self.rot = 0
+
+        self.player.connect("notify::metadata", lambda *args: self.move_on_metadata())
         invoke_repeater(1000, self.move_seekbar)
 
     def on_button_scale_release(self, scale, event):
@@ -249,11 +250,11 @@ class PlayerBox(Box):
         self.destroy()
 
     def on_player_next(self, _):
-        self.image_stack.set_transition_type("over-left")
+        self.transition_type = "sin"
         self.player.next()
 
     def on_player_prev(self, _):
-        self.image_stack.set_transition_type("over-right")
+        self.transition_type = "cos"
         self.player.previous()
 
     def shuffle_update(self, _, __):
@@ -263,21 +264,21 @@ class PlayerBox(Box):
             self.shuffle_button.set_style(
                 "background-color: #eee ;box-shadow: 0 0 4px -2px black;"
             )
-            child.set_style("fill: green;")
+            child.set_style("fill: green;")  # type: ignore
         else:
             self.shuffle_button.set_style("")
-            child.set_style("fill: black;")
+            child.set_style("fill: black;")  # type: ignore
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
         if status == "paused":
-            self.play_pause_button.get_child().set_visible_child_name("play")
+            self.play_pause_button.get_child().set_visible_child_name("play")  # type: ignore
         if status == "playing":
-            self.play_pause_button.get_child().set_visible_child_name("pause")
+            self.play_pause_button.get_child().set_visible_child_name("pause")  # type: ignore
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
-            logger.info(f"[Player] saving cover photo to {self.cover_path}")
+            logger.info(f"[PLAYER] saving cover photo to {self.cover_path}")
             os.path.isfile(self.cover_path)
             # source.copy_finish(result)
             if os.path.isfile(self.cover_path):
@@ -286,27 +287,14 @@ class PlayerBox(Box):
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
-        self.update_colors(1)
-
-        def style(x):
-            return f"background-image: url('{x}'); background-size: cover; box-shadow: 0 0 4px -2px black;"
-
-        # style2 = lambda x,y: f"background-image: cross-fade(10% url('{x}'), url('{y}')); background-size: cover;"
-        # self.inner_box.set_style(style=style2(self.cover_path,get_relative_path("assets/Solid_white.png")),append=True )
-
-        # self.image_box.set_style(style=style(self.cover_path))
+        self.update_colors(5)
         self.image_box.set_image(self.cover_path)
         self.image_box.set_style("border-radius: 100%")
-        self.last_image_box.set_image(self.old_cover_path)
-        self.last_image_box.set_style("border-radius: 100%")
-        # self.last_image_box.set_style(style=style(self.old_cover_path))
-        self.image_stack.set_visible_child_name("last_player_image")
-        self.image_stack.set_visible_child_name("player_image")
 
     def update_colors(self, n):
         colors = (0, 0, 0)
         try:
-            colors = grab_color(self.cover_path, 5)
+            colors = grab_color(self.cover_path, n)
         except:
             logger.error("[PLAYER] could not grab color")
 
@@ -318,7 +306,6 @@ class PlayerBox(Box):
         url = self.player.arturl
         if url is None:
             return
-        self.old_cover_path = self.cover_path
         self.cover_path = (
             MEDIA_CACHE
             + "/"
@@ -337,14 +324,31 @@ class PlayerBox(Box):
             callback=self.img_callback,
         )
 
-    # TODO: this is bad for performance, just move by offset
+    def move_on_metadata(self):
+        anim_time = 0
+        rot = 0
+
+        def invoke():
+            nonlocal anim_time
+            nonlocal rot
+            if abs(rot) < 360:
+                anim_time += 1
+                self.image_box.rotate_more(rot)
+                if self.transition_type == "sin":
+                    rot = math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
+                elif self.transition_type == "cos":
+                    rot = -math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
+                    print(rot)
+                else:
+                    return False
+                return True
+            self.image_box.rotate_more(0)
+            return False
+
+        invoke_repeater(10, invoke)
+
     def move_seekbar(self):
-        if self.player.can_seek is False or self.exit:
+        if self.exit or self.player.can_seek is False:
             return False
         self.seek_bar.set_value(self.player.get_property("position"))
-        # if self.player.playback_status == "playing":
-        #     self.image_box.rotate_more(self.rot)
-        #     if self.rot >= 360:
-        #         self.rot -= 360
-        #     self.rot += 45 // 2
         return True

@@ -1,28 +1,5 @@
 /* uncomment if you do have pywal configured */
 @import url("/home/muhammad/.cache/wal/colors-waybar.css");
-/* @define-color background #090909; */
-/* @define-color foreground #c3c2c2; */
-    /* Special */
-/* @define-color cursor #c3c2c2; */
-
-/* Colors */
-/* @define-color color0 #090909;
-@define-color color1 #103252;
-@define-color color2 #5C5C5D;
-@define-color color3 #B55331;
-@define-color color4 #C9A34E;
-@define-color color5 #345DA6;
-@define-color color6 #4F9AAE;
-@define-color color7 #c3c2c2;
-@define-color color8 #888787;
-@define-color color9 #103252;
-@define-color color10 #5C5C5D;
-@define-color color11 #B55331;
-@define-color color12 #C9A34E;
-@define-color color13 #345DA6;
-@define-color color14 #4F9AAE;
-@define-color color15 #c3c2c2;
- */
 
 @define-color window-bg alpha(@background, 0.9);
 @define-color module-bg alpha(@background, 0.4);
@@ -39,133 +16,50 @@
     all: unset;
     font-family: "roboto";
     font-weight: 500;
-    font-size: 14px;
+    font-size: 15px;
     color: white;
     /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
-
-scale {
-    margin-top: 10px;
-    margin-bottom: 5px;
-}
-
-scale trough {
-    border-style:solid;
-    border-radius: 400px;
-    min-height: 3px;
-    border-color: #D1CFCF;
-    background-color: #D1CFCF;
-}
-
-scale trough highlight {
-    border-style:solid;
-    border-width: 1px;
-    border-radius: 400px;
-    min-height: 3px;
-    border-color: @color3;
-    background-color: @color3;
-}
-
-
-scale trough:hover {
-    background-color: @color8;
-}
-
-#player-box {
-    border-radius: 10%;
-}
-
-#player-image {
-    border-radius: 100%;
-}
-
-
-#player-title {
-    font-family: "roboto";
-    font-weight: bold;
-    color: #000000;
-    /* text-shadow: 1px 1px 2px black; */
-    font-size: 14px;
-} 
-
-#player-artist {
-    font-family: "roboto";
-    font-size: 10px;
-    color: #7D7178;
-    /* text-shadow: 1px 1px 2px black; */
-
-}
-
-#button-box {
-    margin-bottom: 5px;
-    margin-right: 5px;
-}
-
-#player-button {
-    min-width: 20px;
-    min-height: 20px;
-    padding: 5px;
-    border-radius: 100%;
-}
-
-#player-button:hover {
-    background: #eee;
-    box-shadow: 0 0 2px -3px black;  
-}
-
-#player-button:active {
-    box-shadow: 0 0 4px -2px black; 
-}
-
 #main-window {
-    margin-bottom: 10px;
     border: solid 2px;
-    border-color: @border-color;
-    background-color: @window-bg;
-    border-radius: 10px;
-}
-
-button {
-    border-radius: 100px;
-    background-size: 400% 400%;
-}
-
-button:hover {
-    background-color: steelblue;
-}
-
-
-#workspaces {
-    margin: 3px;
-    padding: 6px;
-    background-color: @module-bg;
-    border-radius: 100px;
+    border-color: #171717;
+    background-color: #171717;
+    border-radius: 0px;
 }
 
 #workspaces > button {
-    padding: 0px 9px;
-    /* transition: min-width 0.15s cubic-bezier(0.2, 0.0, 0, 1.0); */
+    border-radius: 100%;
+    min-width: 15px;
     transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
-    background-color: @ws-inactive;
+    background-color: #CACACA;
+}
+
+#workspaces {
+    margin: 9px 0px 9px 10px;
 }
 
 #workspaces > button > label {
-    color: #30303e;
+    font-size: 12px;
+    color: #CACACA;
 }
 
 #workspaces > button.active {
-    min-width: 48px;
-    background-color: @ws-active;
+    border-radius: 10px;
+    min-width: 30px;
+    background-color: #51A4E7;
 }
 
 #workspaces > button.active > label {
-    font-weight: 900;
-    color: #bec0f8;
+    /* margin: 10px; */
+    color: #51A4E7;
 }
 
 #workspaces > button.empty {
-    background-color: @ws-empty;
+    background-color: #414141;
+}
+#workspaces > button.empty > label {
+    color: #414141;
 }
 
 #workspaces > button.urgent {
@@ -173,53 +67,15 @@ button:hover {
 }
 
 #workspaces > button:hover {
-    background-color: @ws-hover;
+    background-color: #646464;
 }
 
-#date-time,
-#hyprland-language,
-#hyprland-window {
-    background-color: @module-bg;
-    padding: 0px 8px;
-    margin: 3px;
-}
-
-#Mode > label,
-#date-time > label,
-menu > menuitem > label,
-#hyprland-language > label,
-#hyprland-window > label {
+#date-time > label {
     font-weight: 900;
 }
 
 #center-box {
     margin: 1px;
-}
-
-
-
-/* system tray */
-
-#system-tray {
-    margin: 3px;
-    padding: 0px 2px;
-    background-color: @module-bg;
-    border-radius: 100px;
-}
-
-#system-tray > button {
-    padding: 0px 2px;
-    margin: 3px;
-}
-
-
-#volume-circular-progress-bar,
-#ram-circular-progress-bar {
-    border: solid 10px @border-color;
-}
-
-#cpu-circular-progress-bar {
-    border: solid 0px alpha(@color9, 0.8);
 }
 
 #widgets-container {

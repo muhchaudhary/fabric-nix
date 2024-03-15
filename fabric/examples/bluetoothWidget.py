@@ -7,7 +7,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.wayland import Window
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.scrolled_window import ScrolledWindow
-from services.bluetooth import BluetoothClient, BluetoothDevice
+from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
 from fabric.utils import set_stylesheet_from_file, get_relative_path
 
 
@@ -24,7 +24,8 @@ class BtDeviceBox(CenterBox):
         self.device.connect("connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
 
-        self.add_left(Image(icon_name=device.icon, icon_size=6))  # type: ignore
+        self.add_left(Image(icon_name=device.icon + "-symbolic", icon_size=4))  # type: ignore
+        self.add_left(Box(size=10))
         self.add_left(Label(label=device.name))  # type: ignore
         self.add_right(self.connect_button)
 
@@ -47,24 +48,34 @@ class BtConnectionsList(Box):
             name="bt-box",
             **kwargs,
         )
-
         self.client = BluetoothClient()
         self.client.connect("device-added", self.new_device)
-        self.scan_button = Button()
+        self.scan_button = Button(
+            icon_image=Image(
+                icon_name="search-symbolic",
+                icon_size=4,
+            )
+        )
         self.scan_button.connect("clicked", lambda _: self.client.toggle_scan())
         self.client.connect(
             "notify::scanning",
-            lambda *args: self.scan_button.set_label("stop")
+            lambda *args: self.scan_button.get_image().set_style("color: yellow;")
             if self.client.scanning
-            else self.scan_button.set_label("scan"),
+            else self.scan_button.get_image().set_style("color: white;"),
         )
-        self.toggle_button = Button()
+        self.toggle_button = Button(
+            icon_image=Image(icon_name="bluetooth-active", icon_size=4)
+        )
         self.toggle_button.connect("clicked", lambda _: self.client.toggle_power())
         self.client.connect(
             "notify::enabled",
-            lambda *args: self.toggle_button.set_label("bluetooth on")
+            lambda *args: self.toggle_button.get_image().set_from_icon_name(
+                "bluetooth-active", 4
+            )
             if self.client.enabled
-            else self.toggle_button.set_label("bluetooth off"),
+            else self.toggle_button.get_image().set_from_icon_name(
+                "bluetooth-disabled", 4
+            ),
         )
 
         self.paired_box = Box(orientation="vertical")
@@ -73,7 +84,15 @@ class BtConnectionsList(Box):
         self.add(
             CenterBox(left_widgets=self.scan_button, right_widgets=self.toggle_button)
         )
-        self.add(Label("Paired Devices"))
+        self.add(
+            Box(
+                h_align="center",
+                children=[
+                    Label("Paired Devices"),
+                    Image(icon_name="bluetooth-paired", icon_size=4),
+                ],
+            )
+        )
         self.add(self.paired_box)
         self.add(Label("Available Devices"))
         self.add(

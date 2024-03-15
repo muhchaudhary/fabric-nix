@@ -9,8 +9,13 @@
 @define-color ws-hover @color1;
 @define-color ws-urgent @color11;
 
-
+#date > label,
 #clock > label {
+    color: rgba(0, 0, 0, 0.5);
+    /* text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.05),
+              1px -1px 1px rgba(0, 0, 0, 0.05),
+             -1px  1px  1px rgba(0, 0, 0, 0.05),
+              1px  1px  1px rgba(0, 0, 0, 0.05); */
     font-size: 128px;
     font-weight: 900;
 }
@@ -22,7 +27,7 @@
 
 #sysinfo-container {
     padding: 20px;
-    background-color: alpha(#000000, 0.2);
+    background-color: alpha(#000000, 0.6);
     border-radius: 1.5em;
     min-width: 10px;
 }

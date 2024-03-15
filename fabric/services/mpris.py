@@ -52,6 +52,7 @@ class MprisPlayer(Service):
 
     def update_status(self):
         for prop in [
+            "metadata",
             "title",
             "artist",
             "arturl",
@@ -72,7 +73,6 @@ class MprisPlayer(Service):
             self.notifier(prop.name)
 
     def notifier(self, name: str, args=None):
-        logger.info(f"notify? {name}")
         self.notify(name)
         self.emit("changed")
         return

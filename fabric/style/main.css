@@ -1,2 +1,219 @@
 @import "./style/bar.css";
 @import "./style/desktop_widget.css";
+@import "./style/player.css";
+
+
+:vars {
+    --background: #171717;
+    --accent: #58A8E8;
+}
+
+tooltip {
+    padding: 5px;
+    border-radius: 10px;
+    background-color: var(--background);
+}
+
+#panel-button {
+    padding-left: 10px;
+    padding-right: 10px;
+}
+
+#panel-button:hover {
+    background-color: #3e3e3e;
+    border-radius: 10px;
+}
+
+#panel-button:active>*>*>label,
+#panel-button:active>*>label,
+#panel-button:active {
+    background-color: var(--accent);
+    color: var(--background);
+}
+
+#quicksettings-slider {
+    min-width: 450px;
+}
+
+#quicksettings-slider trough {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    min-height: 15px;
+    background-color: #303030;
+}
+
+#quicksettings-slider trough:hover {
+    background-color: #4d4d4d;
+}
+
+#quicksettings-slider trough highlight {
+    border-radius: 400px;
+    background-color: var(--accent);
+}
+
+#quicksettings-slider slider:hover {
+    border-radius: 100%;
+    margin-right: 5px;
+    min-width: 15px;
+    min-height: 15px;
+    background-color: white;
+}
+
+#quicksettings-slider trough:hover slider{
+    border-radius: 100%;
+    margin-right: 5px;
+    min-width: 15px;
+    min-height: 15px;
+    background-color: white;
+}
+
+
+
+#battery-icon-charging,
+#battery-icon-critical,
+#battery-icon-low,
+#battery-label,
+#battery-icon {
+    color: var(--accent);
+    font-size: 25px;
+}
+
+#battery-icon-charging {
+    padding-right: 6px;
+}
+
+#battery-label-charging,
+#battery-icon-charging {
+    color: #00DE8C;
+}
+
+#battery-label-low,
+#battery-icon-low {
+    color: #EDFF7D;
+}
+
+#battery-label-critical,
+#battery-icon-critical {
+    color: #E76A8E;
+}
+
+#battery-label-charging,
+#battery-label-critical,
+#battery-label-low,
+#battery-label {
+    margin-top: 2px;
+    margin-right: 5px;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+
+#quicksettings {
+    background-color: var(--background);
+    border-radius: 10px;
+    padding: 10px;
+}
+
+#quicksettings-revealer,
+#quicksettings-toggle {
+    background-color: #3E3E3E;
+}
+
+#quicksettings-toggle-active,
+#quicksettings-toggle {
+    border-radius: 10px 0px 0px 10px;
+    min-width: 150px;
+}
+
+#quicksettings-revealer-active,
+#quicksettings-revealer {
+    border-radius: 0px 10px 10px 0px;
+}
+
+#quicksettings-revealer-active>label,
+#quicksettings-revealer>label {
+    font-size: 27px;
+    padding: 0px 8px 0px 8px;
+    border-radius: 0px 10px 10px 0px;
+
+}
+
+#submenu-button:hover,
+#quicksettings-toggle:hover,
+#quicksettings-revealer:hover {
+    background-color: #575757;
+}
+
+#quicksettings-revealer-active:hover,
+#quicksettings-toggle-active:hover {
+    background-color: rgb(215, 215, 215);
+}
+
+#submenu-button:active,
+#quicksettings-toggle-active,
+#quicksettings-toggle:active,
+#quicksettings-revealer-active,
+#quicksettings-revealer:active {
+    background-color: var(--accent);
+}
+
+#submenu-button:active>label,
+#quicksettings-revealer:active>label,
+#quicksettings-toggle:active>box>label,
+#quicksettings-toggle-active>box>label,
+#quicksettings-revealer-active>label {
+    color: var(--background);
+}
+
+
+#submenu-title {
+    border-style: solid;
+    border-bottom-width: 2px;
+    border-color: #3E3E3E;
+    margin-bottom: 5px;
+}
+
+#submenu-label {
+    margin-left: 5px;
+}
+
+#submenu-title-label {
+    font-size: 17px;
+}
+
+#submenu-item {
+    margin: 5px 5px 5px 5px;
+}
+
+#submenu-button {
+    background-color: #3E3E3E;
+    padding: 8px;
+    border-radius: 10px;
+}
+
+#submenu {
+    min-width: 450px;
+    background-color: #242424;
+    border-color: #242424;
+    border-style: solid;
+    border-width: 10px;
+    border-radius: 10px;
+}
+
+#panel-icon {
+    margin-left: 3px;
+    font-size: 20px;
+    margin-right: 3px;
+}
+
+#panel-text {
+    margin-top: 2px;
+    font-size: 15px;
+    font-weight: 900;
+}
+
+#bluetooth-icon>label {
+    color: #58A8E8;
+    font-family: "material-design-icons";
+    font-size: 25px;
+}

@@ -1,0 +1,71 @@
+#inner-player-box {
+    background-color: #ffffff;
+    border-radius: 20px;
+}
+
+scale {
+margin-top: 10px;
+margin-bottom: 5px;
+}
+
+scale trough {
+border-radius: 100px;
+min-height: 8px;
+background-color: #D1CFCF;
+}
+
+scale trough highlight {
+border-radius: 400px;
+}
+
+
+scale trough:hover {
+background-color: #BEBEBE;
+}
+
+#player-box {
+margin: 5px;
+}
+
+#player-title {
+font-family: "roboto";
+font-weight: 700;
+color: #000000;
+text-shadow: -1px -1px 0 #D1CFCF,
+              1px -1px 0 #D1CFCF,
+             -1px  1px 0 #D1CFCF,
+              1px  1px 0 #D1CFCF;
+font-size: 18px;
+}
+
+#player-artist {
+font-family: "roboto";
+font-weight: 500;
+font-size: 12.5px;
+color: #7D7178;
+/* text-shadow: -1px -1px 0 #D1CFCF,
+              1px -1px 0 #D1CFCF,
+             -1px  1px 0 #D1CFCF,
+              1px  1px 0 #D1CFCF; */
+}
+
+#button-box {
+margin-bottom: 5px;
+margin-right: 5px;
+}
+
+#player-button {
+min-width: 25px;
+min-height: 25px;
+padding: 8px;
+border-radius: 100%;
+}
+
+#player-button:hover {
+background: #F4F4F4;
+box-shadow: 0 0 2px -3px black;
+}
+
+#player-button:active {
+box-shadow: 0 0 4px -1px black;
+}
