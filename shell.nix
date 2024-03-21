@@ -13,6 +13,7 @@ in
       python311Packages.pillow
       python311Packages.colorthief
 
+      python311Packages.requests
       # non python aditional packages
       ruff
       playerctl # For mpirs
