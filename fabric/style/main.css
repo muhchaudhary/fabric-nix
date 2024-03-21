@@ -1,6 +1,7 @@
 @import "./style/bar.css";
 @import "./style/desktop_widget.css";
-@import "./style/player.css";
+/* @import "./style/player.css"; */
+@import "./style/player-dark.css";
 
 
 :vars {
@@ -12,6 +13,11 @@ tooltip {
     padding: 5px;
     border-radius: 10px;
     background-color: var(--background);
+}
+
+scale {
+    margin-top: 10px;
+    margin-bottom: 10px;
 }
 
 #panel-button {
@@ -101,15 +107,22 @@ tooltip {
 #battery-label-critical,
 #battery-label-low,
 #battery-label {
-    margin-top: 2px;
-    margin-right: 5px;
+    margin: 0px 5px -2px 2px;
     font-size: 15px;
     font-weight: 900;
 }
 
+#prayer-info {
+    min-width: 140px;
+}
 
+#prayer-info > * > * > * > *  {
+    font-size:  16px;
+}
+
+#prayer-info,
 #quicksettings {
-    background-color: var(--background);
+    background-color: alpha(var(--background), 0.8);
     border-radius: 10px;
     padding: 10px;
 }
@@ -202,7 +215,7 @@ tooltip {
 
 #panel-icon {
     margin-left: 3px;
-    font-size: 20px;
+    font-size: 25px;
     margin-right: 3px;
 }
 
@@ -210,10 +223,4 @@ tooltip {
     margin-top: 2px;
     font-size: 15px;
     font-weight: 900;
-}
-
-#bluetooth-icon>label {
-    color: #58A8E8;
-    font-family: "material-design-icons";
-    font-size: 25px;
 }

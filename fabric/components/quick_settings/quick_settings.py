@@ -8,6 +8,7 @@ from services.mpris import MprisPlayerManager
 from widgets.popup_window import PopupWindow
 from widgets.player import PlayerBoxHandler
 from widgets.bluetooth_box import BluetoothToggle
+from components.bar.widgets.prayer_times import PrayerTimes
 
 from fabric.bluetooth.service import BluetoothClient
 from fabric.audio.service import Audio
@@ -30,9 +31,12 @@ class QuickSettings(Box):
         self.audio_slider.connect("change-value", self.on_scale_move)
         audio.connect("speaker-changed", self.update_audio)
 
+        # self.prayer_times = PrayerTimes()
+        # self.add(self.prayer_times)
         self.add(Box(spacing=5,children=[Label(name="panel-text", label="󰓃"),self.audio_slider]))
         self.add(self.bluetooth_toggle)
         self.add(self.mprisBox)
+
 
     def update_audio(self, *args):
         self.audio_slider.set_value(audio.speaker.volume)

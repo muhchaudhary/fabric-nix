@@ -140,22 +140,27 @@ class PlayerBox(Box):
         self.skip_next_icon = Svg(
             svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-next.svg"),
             name="player-icon",
+            style="fill: white",
         )
         self.skip_prev_icon = Svg(
             svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-prev.svg"),
             name="player-icon",
+            style="fill: white",
         )
         self.shuffle_icon = Svg(
             svg_file=get_relative_path(PLAYER_ASSETS_PATH + "shuffle.svg"),
             name="player-icon",
+            style="fill: white",
         )
         self.play_icon = Svg(
             svg_file=get_relative_path(PLAYER_ASSETS_PATH + "play.svg"),
             name="player-icon",
+            style="fill: white",
         )
         self.pause_icon = Svg(
             svg_file=get_relative_path(PLAYER_ASSETS_PATH + "pause.svg"),
             name="player-icon",
+            style="fill: white",
         )
 
         self.play_pause_stack = Stack()
@@ -232,7 +237,6 @@ class PlayerBox(Box):
         )
         self.add_children(self.overlay_box)
 
-        self.player.connect("notify::metadata", lambda *args: self.move_on_metadata())
         invoke_repeater(1000, self.move_seekbar)
 
     def on_button_scale_release(self, scale, event):
@@ -261,13 +265,9 @@ class PlayerBox(Box):
         child = self.shuffle_button.get_child()
         status = self.player.shuffle
         if status is True:
-            self.shuffle_button.set_style(
-                "background-color: #eee ;box-shadow: 0 0 4px -2px black;"
-            )
-            child.set_style("fill: green;")  # type: ignore
+            child.set_style("fill: #1ED760;")  # type: ignore
         else:
-            self.shuffle_button.set_style("")
-            child.set_style("fill: black;")  # type: ignore
+            child.set_style("fill: white;")  # type: ignore
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
@@ -290,6 +290,7 @@ class PlayerBox(Box):
         self.update_colors(5)
         self.image_box.set_image(self.cover_path)
         self.image_box.set_style("border-radius: 100%")
+        self.move_on_metadata()
 
     def update_colors(self, n):
         colors = (0, 0, 0)
@@ -338,7 +339,6 @@ class PlayerBox(Box):
                     rot = math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
                 elif self.transition_type == "cos":
                     rot = -math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
-                    print(rot)
                 else:
                     return False
                 return True

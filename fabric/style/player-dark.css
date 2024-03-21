@@ -1,0 +1,86 @@
+@define-color player-bg #303030;
+@define-color title-text #ffffff;
+@define-color title-text-outline #171717;
+@define-color artist-text #d9d9d9;
+@define-color button-hover #585858;
+@define-color seek-border #8f8f8f;
+
+#random-element {
+    background-color: #d9d9d9;
+}
+
+#inner-player-box {
+    background-color: @player-bg;
+    border-radius: 20px;
+}
+
+#seek-bar {
+    border-width: 1px;
+    border-radius: 10px;
+    border-style: double;
+    border-color: @seek-border;
+    margin-top: 10px;
+    margin-bottom: 5px;
+}
+
+#seek-bar trough {
+    border-radius: 100px;
+    min-height: 8px;
+    background-color: #646464;
+}
+
+#seek-bar trough highlight {
+    border-radius: 400px;
+}
+
+
+#seek-bar trough:hover {
+    background-color: #4e4d4d;
+}
+
+#player-box {
+    margin: 5px;
+}
+
+#player-title {
+    font-family: "roboto";
+    font-weight: 700;
+    color: @title-text;
+    text-shadow: -1px -1px 0 @title-text-outline,
+        1px -1px 0 @title-text-outline,
+        -1px 1px 0 @title-text-outline,
+        1px 1px 0 @title-text-outline;
+    font-size: 18px;
+}
+
+#player-artist {
+    font-family: "roboto";
+    font-weight: 600;
+    font-size: 13px;
+    color: @artist-text;
+    text-shadow: -1px -1px 0 @title-text-outline,
+        1px -1px 0 @title-text-outline,
+        -1px 1px 0 @title-text-outline,
+        1px 1px 0 @title-text-outline;
+}
+
+#button-box {
+    margin-bottom: 5px;
+    margin-right: 5px;
+}
+
+#player-button {
+    min-width: 25px;
+    min-height: 25px;
+    padding: 8px;
+    border-radius: 100%;
+}
+
+#player-button:hover {
+    background-color: @button-hover;
+    box-shadow: 0 0 2px -3px white;
+}
+
+#player-button:active {
+    box-shadow: 0 0 4px -1px white;
+}
