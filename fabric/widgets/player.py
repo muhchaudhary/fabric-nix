@@ -55,6 +55,9 @@ class PlayerBoxHandler(Box):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
 
+def cubic_bezier(p0,p1,p2,p3,x):
+    return p0 * (1-x) ** 3 + p1*3*x*(1-x) ** 2 + p2*3*x**2 * (1-x) + p3*x**3
+
 
 class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
@@ -71,12 +74,10 @@ class PlayerBox(Box):
         self.player.connect("exit", self.on_player_exit)
 
         self.image_box = CircleImage(size=self.image_size, image_file=self.cover_path)
-        self.image_box.set_size_request(self.image_size, self.image_size)
-        self.transition_type = "None"
         self.image_stack = Box(
             h_align="start",
             v_align="start",
-            style="border-radius: 100%; box-shadow: 0 0 4px 0px black;",
+            style="border-radius: 100%; box-shadow: 0px 0 4px 0px black;",
         )
         self.image_stack.add_children(self.image_box)
 
@@ -236,12 +237,14 @@ class PlayerBox(Box):
             overlays=[self.inner_box, self.player_info_box, self.image_stack],
         )
         self.add_children(self.overlay_box)
+        self.set_style(f"min-height:{self.image_size + 4}px")
 
         invoke_repeater(1000, self.move_seekbar)
 
     def on_button_scale_release(self, scale, event):
         self.player.set_position(self.scale_new_pos)
         self.exit = False
+        self.move_seekbar()
         invoke_repeater(1000, self.move_seekbar)
 
     def on_scale_move(self, scale, event, moved_pos):
@@ -254,11 +257,11 @@ class PlayerBox(Box):
         self.destroy()
 
     def on_player_next(self, _):
-        self.transition_type = "sin"
+        self.image_box.set_transition_type("bezier")
         self.player.next()
 
     def on_player_prev(self, _):
-        self.transition_type = "cos"
+        self.image_box.set_transition_type("negbezier")
         self.player.previous()
 
     def shuffle_update(self, _, __):
@@ -289,8 +292,7 @@ class PlayerBox(Box):
     def update_image(self):
         self.update_colors(5)
         self.image_box.set_image(self.cover_path)
-        self.image_box.set_style("border-radius: 100%")
-        self.move_on_metadata()
+        self.rotate_animation()
 
     def update_colors(self, n):
         colors = (0, 0, 0)
@@ -325,27 +327,20 @@ class PlayerBox(Box):
             callback=self.img_callback,
         )
 
-    def move_on_metadata(self):
-        anim_time = 0
-        rot = 0
 
+    def rotate_animation(self):
+        anim_time = 0
         def invoke():
             nonlocal anim_time
-            nonlocal rot
-            if abs(rot) < 360:
-                anim_time += 1
+            if anim_time <= 1:
+                anim_time += 0.007
+                rot =  360 * cubic_bezier(0,1.31,1.13,1,anim_time)
                 self.image_box.rotate_more(rot)
-                if self.transition_type == "sin":
-                    rot = math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
-                elif self.transition_type == "cos":
-                    rot = -math.sin((1 / 360 * anim_time * math.pi) / 1) * 360
-                else:
-                    return False
                 return True
             self.image_box.rotate_more(0)
             return False
+        invoke_repeater(16, invoke)
 
-        invoke_repeater(10, invoke)
 
     def move_seekbar(self):
         if self.exit or self.player.can_seek is False:
