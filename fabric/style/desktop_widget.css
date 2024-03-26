@@ -11,7 +11,8 @@
 
 #date > label,
 #clock > label {
-    color: rgba(0, 0, 0, 0.5);
+    font-family:"Ubuntu Nerd Font";
+    color: rgba(255, 255, 255, 0.7);
     /* text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.05),
               1px -1px 1px rgba(0, 0, 0, 0.05),
              -1px  1px  1px rgba(0, 0, 0, 0.05),
@@ -19,6 +20,21 @@
     font-size: 128px;
     font-weight: 900;
 }
+#date,
+#clock {
+    padding: 0px 10px 0px 10px;
+    background-color: rgba(0, 0, 0, 0.005);
+}
+
+#date {
+    padding-top: 10px;
+    border-radius:25px 25px 0px 0px;
+}
+
+#clock {
+    border-radius:0px 0px 25px 25px;
+}
+
 
 #date > label {
     font-size: 48px;
