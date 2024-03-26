@@ -20,6 +20,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
         style_append: bool = False,
         style_add_brackets: bool = True,
         tooltip_text: str | None = None,
+        transition_type: str | None = "None",
         tooltip_markup: str | None = None,
         h_align: Literal["fill", "start", "end", "center", "baseline"]
         | Gtk.Align
@@ -30,7 +31,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
         h_expand: bool = False,
         v_expand: bool = False,
         name: str | None = None,
-        size: tuple[int] | int | None = None,
+        size: int = 144,
         **kwargs,
     ):
         Gtk.DrawingArea.__init__(
@@ -54,67 +55,58 @@ class CircleImage(Gtk.DrawingArea, Widget):
             name,
             None,
         )
+
+        self.transition_type = transition_type
         self.image_file = image_file
         self.rotation = 0
-        self.size = (
-            size
-            if size is not None
-            else (self.image.get_width(), self.image.get_height())
-        )
+        self.size: int = size
         self.image = (
-            GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                self.image_file, self.size, self.size, True
+            GdkPixbuf.Pixbuf.new_from_file_at_size(
+                self.image_file,
+                -1,
+                self.size,
             )
             if self.image_file is not None
             else None
         )
-        self.set_size_request(
-            *self.do_calculate_new_size(
-                self.image.get_width() if self.image else 0,
-                self.image.get_height() if self.image else 0,
-                *(
-                    self.size
-                    if isinstance(self.size, (tuple, list))
-                    else (self.size, self.size)
-                ),
-            )
-        ) if self.size is not None else None
+        self.set_size_request(self.size, self.size)
         self.do_connect_signals_for_kwargs(kwargs)
         self.connect("draw", self.draw)
 
     def draw(self, wdiget: Gtk.DrawingArea, ctx: cairo.Context):
-        # Expects a square image
-        # TODO: fix that lol
         ctx.save()
         ctx.arc(self.size / 2, self.size / 2, self.size / 2, 0, 2 * math.pi)
         ctx.translate(self.size * 0.5, self.size * 0.5)
         ctx.rotate(self.rotation * math.pi / 180.0)
-        ctx.translate(-self.size * 0.5, -self.size * 0.5)
+        ctx.translate(-self.size * 0.5 - self.image.get_width() // 2 + self.image.get_height() // 2, -self.size * 0.5)
         Gdk.cairo_set_source_pixbuf(ctx, self.image, 0, 0) if self.image else None
         ctx.clip()
         ctx.paint()
         ctx.restore()
 
     def rotate_more(self, rot):
-        self.rotation = rot
+        direction = 1 if self.transition_type == "negbezier" else -1
+
+        self.rotation = direction * rot
         self.queue_draw()
 
+
+    def set_transition_type(self, new_transition):
+        self.transition_type = new_transition
+
     def set_image(self, new_image_file):
-        if new_image_file != "":
-            self.image = GdkPixbuf.Pixbuf.new_from_file(new_image_file)
-            self.image.scale(
-                self.image,
-                0,
-                0,
-                self.image.get_width(),
-                self.image.get_height(),
-                0,
-                0,
-                self.size / self.image.get_width(),
-                self.size / self.image.get_height(),
-                GdkPixbuf.InterpType.HYPER,
+        if new_image_file == "":
+            return
+        self.image = (
+            GdkPixbuf.Pixbuf.new_from_file_at_size(
+                new_image_file,
+                -1,
+                self.size,
             )
-            self.queue_draw()
+            if self.image_file is not None
+            else None
+        )
+        self.queue_draw()
 
     def do_calculate_new_size(
         self, base_width, base_height, desired_width, desired_height
