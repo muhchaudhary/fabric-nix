@@ -21,7 +21,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/linuxmint/cinnamon-desktop/archive/refs/tags/master.mint22.tar.gz";
-    hash = "sha256-JO30J1ZzM0lerXWXsKI08lm14Bmlm93gT78zlwiz/vU=";
+    hash = "sha256-lZjJqNqVTFMZLyoozoX8aACEqqBTfPMDvJWBwxrvLms=";
   };
 
   nativeBuildInputs = [meson ninja pkg-config gobject-introspection];
