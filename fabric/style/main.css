@@ -5,14 +5,14 @@
 
 
 :vars {
-    --background: #171717;
-    --accent: #58A8E8;
+    --accent: #64D9FF;
+    --bg: #171717;
 }
 
 tooltip {
     padding: 5px;
     border-radius: 10px;
-    background-color: var(--background);
+    background-color: var(--bg);
 }
 
 scale {
@@ -21,20 +21,29 @@ scale {
 }
 
 #panel-button {
-    padding-left: 10px;
-    padding-right: 10px;
+    margin: 0px 1px 0px 1px;
+    padding: 0px 5px 0px 5px;
+    border-style: solid;
+    border-width: 2px;
+    border-radius: 10px;
+    border-color: transparent;
 }
 
 #panel-button:hover {
     background-color: #3e3e3e;
-    border-radius: 10px;
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
+#panel-button label {
+    font-weight: 800;
+}
+
+#panel-button:active label,
 #panel-button:active>*>*>label,
 #panel-button:active>*>label,
 #panel-button:active {
     background-color: var(--accent);
-    color: var(--background);
+    color: var(--bg);
 }
 
 #quicksettings-slider {
@@ -65,7 +74,7 @@ scale {
     background-color: white;
 }
 
-#quicksettings-slider trough:hover slider{
+#quicksettings-slider trough:hover slider {
     border-radius: 100%;
     margin-right: 5px;
     min-width: 15px;
@@ -90,17 +99,17 @@ scale {
 
 #battery-label-charging,
 #battery-icon-charging {
-    color: #00DE8C;
+    color: #00E200;
 }
 
 #battery-label-low,
 #battery-icon-low {
-    color: #EDFF7D;
+    color: #FAD800;
 }
 
 #battery-label-critical,
 #battery-icon-critical {
-    color: #E76A8E;
+    color: #FF2A04;
 }
 
 #battery-label-charging,
@@ -116,14 +125,60 @@ scale {
     min-width: 140px;
 }
 
-#prayer-info > * > * > * > *  {
-    font-size:  16px;
+#prayer-info>*>*>*>* {
+    font-size: 16px;
+}
+
+
+#workspaces>button {
+    border-radius: 100%;
+    min-width: 10px;
+    margin: 13px 2px 13px 2px;
+    transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
+    background-color: #e6e6e6;
+}
+
+#workspaces {
+    margin: 0px 5px 0px 5px;
+}
+
+/* #workspaces>button>label {
+    font-size: 14px;
+    color: #CACACA;
+} */
+
+#workspaces>button.active {
+    border-radius: 5px;
+    min-width: 30px;
+    margin: 10px 1px 10px 1px;
+    background-color: var(--accent);
+}
+
+#workspaces>button.empty {
+    min-width: 9px;
+    margin: 14px 2px 14px 2px;
+    background-color: #7B8089;
+}
+
+#workspaces>button.empty>label {
+    color: #414141;
+}
+
+#workspaces>button.urgent {
+    background-color: @ws-urgent;
+}
+
+#workspaces>button:hover {
+    background-color: #646464;
 }
 
 #prayer-info,
 #quicksettings {
-    background-color: alpha(var(--background), 0.8);
-    border-radius: 10px;
+    background-color: var(--bg);
+    border-radius: 20px;
+    border-style: solid;
+    border-width: 5px;
+    border-color: rgba(255, 255, 255, 0.2);
     padding: 10px;
 }
 
@@ -155,11 +210,12 @@ scale {
 #quicksettings-toggle:hover,
 #quicksettings-revealer:hover {
     background-color: #575757;
+    /* background-color: red; */
 }
 
 #quicksettings-revealer-active:hover,
 #quicksettings-toggle-active:hover {
-    background-color: rgb(215, 215, 215);
+    background-image: linear-gradient( rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) 100%);
 }
 
 #submenu-button:active,
@@ -175,7 +231,7 @@ scale {
 #quicksettings-toggle:active>box>label,
 #quicksettings-toggle-active>box>label,
 #quicksettings-revealer-active>label {
-    color: var(--background);
+    color: var(--bg);
 }
 
 

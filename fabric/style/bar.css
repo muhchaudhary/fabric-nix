@@ -28,48 +28,6 @@
     border-radius: 0px;
 }
 
-#workspaces > button {
-    border-radius: 100%;
-    min-width: 15px;
-    transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
-    background-color: #CACACA;
-}
-
-#workspaces {
-    margin: 9px 0px 9px 10px;
-}
-
-#workspaces > button > label {
-    font-size: 12px;
-    color: #CACACA;
-}
-
-#workspaces > button.active {
-    border-radius: 10px;
-    min-width: 30px;
-    background-color: #51A4E7;
-}
-
-#workspaces > button.active > label {
-    /* margin: 10px; */
-    color: #51A4E7;
-}
-
-#workspaces > button.empty {
-    background-color: #414141;
-}
-#workspaces > button.empty > label {
-    color: #414141;
-}
-
-#workspaces > button.urgent {
-    background-color: @ws-urgent;
-}
-
-#workspaces > button:hover {
-    background-color: #646464;
-}
-
 #date-time > label {
     font-weight: 900;
 }
