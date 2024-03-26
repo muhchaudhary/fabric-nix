@@ -57,13 +57,13 @@ class BatteryIndicator(Box):
         self.buttons = Button(
             name="panel-button",
         )
-        self.buttons.add(
+        self.buttons.add( # type: ignore
             Box(
-                children=[self.battery_percent_revealer, self.battery_icon],
+                children=[self.battery_percent_revealer,
+                          self.battery_icon,
+                          ],
             )
         )
-
-        self.buttons.connect("clicked", self.on_click)
 
         self.buttons.connect(
             "clicked",
@@ -97,10 +97,10 @@ class BatteryIndicator(Box):
         if charging:
             self.battery_icon.set_name("battery-icon-charging")
             self.battery_percent.set_name("battery-label-charging")
-        elif 30 < int(round(percent, -1)) <= 50:
+        elif 30 < int(round(percent)) < 50:
             self.battery_icon.set_name("battery-icon-low")
             self.battery_percent.set_name("battery-label-low")
-        elif int(round(percent, -1)) <= 30:
+        elif int(round(percent)) <= 30:
             self.battery_icon.set_name("battery-icon-critical")
             self.battery_percent.set_name("battery-label-critical")
         else:
