@@ -1,39 +1,11 @@
 import psutil
 import datetime
+import config
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.button import Button
 from fabric.widgets.revealer import Revealer
 from fabric.utils.fabricator import Fabricate
-
-icons = {
-    0: "󱃍",
-    10: "󰁺",
-    20: "󰁻",
-    30: "󰁼",
-    40: "󰁽",
-    50: "󰁾",
-    60: "󰁿",
-    70: "󰂀",
-    80: "󰂁",
-    90: "󰂂",
-    100: "󰁹",
-}
-
-charging_icons = {
-    0: "󰢟",
-    10: "󰢜",
-    20: "󰂆",
-    30: "󰂇",
-    40: "󰂈",
-    50: "󰢝",
-    60: "󰂉",
-    70: "󰢞",
-    80: "󰂊",
-    90: "󰂋",
-    100: "󰂅",
-}
-
 
 class BatteryIndicator(Box):
     def __init__(self, **kwargs):
@@ -90,9 +62,9 @@ class BatteryIndicator(Box):
         )
 
         if charging:
-            self.battery_icon.set_label(charging_icons[int(round(percent, -1))])
+            self.battery_icon.set_label(config.battery_charging_icons[int(round(percent, -1))])
         else:
-            self.battery_icon.set_label(icons[int(round(percent, -1))])
+            self.battery_icon.set_label(config.battery_icons[int(round(percent, -1))])
 
         if charging:
             self.battery_icon.set_name("battery-icon-charging")
