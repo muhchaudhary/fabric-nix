@@ -60,6 +60,3 @@ class PopupWindow(Window):
             self.currtimeout += 50
             return True
         GLib.timeout_add(100, popup_func)
-
-    def popup_rest(self):
-        self.currtimeout = 0
