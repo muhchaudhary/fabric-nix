@@ -1,9 +1,9 @@
 import fabric
-from fabric.utils import set_stylesheet_from_file, get_relative_path, monitor_file
+import config
+from fabric.utils import set_stylesheet_from_file, get_relative_path
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
-from components.quick_settings.quick_settings import AudioOverlay
-import gi
+from components.OSD.SystemOSD import SystemOSD
 
 
 # from overview.overview import Overview
@@ -16,11 +16,12 @@ def apply_style(*args):
 
 
 if __name__ == "__main__":
-    logger.disable("fabric.hyprland.widgets")
-    logger.disable("fabric.audio.service")
     bar = StatusBar()
     clockWidget = ClockWidget()
-    audioOverlay = AudioOverlay()
+    systemOverlay = SystemOSD()
+
+    # For system shortcuts
+    sc = config.sc
 
     apply_style()
 
