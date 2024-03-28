@@ -14,7 +14,14 @@
     eachSystem = f:
       nixpkgs.lib.genAttrs (import systems) (
         system:
-          f nixpkgs.legacyPackages.${system}
+          f (import nixpkgs {
+            inherit system;
+            overlays = [
+              (final: _: let
+                gtk-session-lock = gtk-session-lock.packages.${system}.default;
+              in {inherit gtk-session-lock;})
+            ];
+          })
       );
   in {
     devShells = eachSystem (pkgs: let
@@ -23,18 +30,18 @@
     in {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
+          # Custom Packages
           fabric
           gir-cvc
-          gtk-session-lock.packages.${system}
 
           # add aditional python packages here
           python311Packages.psutil
           python311Packages.colorthief
           python311Packages.requests
+          ruff # Formatter
 
           # non python aditional packages
-          gtk-session-lock # for ext-session-lock
-          ruff
+          gtk-session-lock # For gtk lock screen
           playerctl # For mpirs
           gnome.gnome-bluetooth # For bluetooth
           networkmanager # For network
