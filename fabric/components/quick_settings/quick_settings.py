@@ -21,7 +21,6 @@ class QuickSettings(Box):
             min_value=0, max_value=100, name="quicksettings-slider"
         )
         self.audio_slider.connect("change-value", self.on_scale_move)
-        self.audio_slider.connect("button-release-event", self.unlock_overlay)
         config.audio.connect("speaker-changed", self.update_audio)
 
         self.add(
@@ -36,11 +35,7 @@ class QuickSettings(Box):
     def update_audio(self, *args):
         self.audio_slider.set_value(config.audio.speaker.volume)
 
-    def unlock_overlay(self, *args):
-        config.inhibit_overlay = False
-
     def on_scale_move(self, scale, event, moved_pos):
-        config.inhibit_overlay = True
         config.audio.speaker.volume = moved_pos
 
 
