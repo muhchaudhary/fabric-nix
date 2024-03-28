@@ -35,9 +35,7 @@ buildPythonPackage rec {
   doCheck = false;
 
   nativeBuildInputs = [
-    wrapGAppsHook
     gobject-introspection
-    pkg-config
   ];
 
   propagatedBuildInputs = [
