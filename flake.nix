@@ -18,8 +18,10 @@
             inherit system;
             overlays = [
               (final: _: let
-                gtk-session-lock = gtk-session-lock.packages.${system}.default;
-              in {inherit gtk-session-lock;})
+                gtk-session-lock' = gtk-session-lock.packages.${system}.default;
+              in {
+                inherit gtk-session-lock';
+              })
             ];
           })
       );
@@ -41,7 +43,7 @@
           ruff # Formatter
 
           # non python aditional packages
-          gtk-session-lock # For gtk lock screen
+          gtk-session-lock' # For gtk lock screen
           playerctl # For mpirs
           gnome.gnome-bluetooth # For bluetooth
           networkmanager # For network
