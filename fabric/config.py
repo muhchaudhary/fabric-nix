@@ -10,9 +10,6 @@ bluetooth_client = BluetoothClient()
 audio = Audio()
 sc = ScreenRecorder()
 
-# Global variables
-inhibit_overlay = False
-
 # Icons
 bluetooth_icons = {
     "bluetooth": "󰂯",
