@@ -11,7 +11,6 @@
   setuptools,
   pycairo,
   pygobject3,
-  pygobject-stubs,
   libdbusmenu-gtk3,
   click,
   pkg-config,
@@ -39,6 +38,7 @@ buildPythonPackage rec {
   ];
 
   propagatedBuildInputs = [
+    librsvg
     glib
     cairo
     libdbusmenu-gtk3
@@ -46,11 +46,9 @@ buildPythonPackage rec {
     gtk3
     setuptools # added for pyproject
     pygobject3
-    pygobject-stubs
     pycairo
     loguru
     gdk-pixbuf
-    librsvg
     click
   ];
 
