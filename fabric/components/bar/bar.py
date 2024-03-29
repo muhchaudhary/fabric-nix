@@ -6,6 +6,7 @@ from fabric.hyprland.widgets import ActiveWindow
 from fabric.utils.string_formatter import FormattedString
 from components.bar.widgets.battery_indicator import BatteryIndicator
 from components.quick_settings.quick_settings import QuickSettingsButton
+from fabric.system_tray import SystemTray
 
 
 class StatusBar(Window):
@@ -36,11 +37,12 @@ class StatusBar(Window):
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
+        self.system_tray = SystemTray(name="system-tray")
 
-        self.center_box.right_widgets.add_children(
-            [self.quick_settings, self.battery, self.date_time]
+        self.center_box.end_container.add_children(
+            [self.system_tray,self.quick_settings, self.battery, self.date_time]
         )
-        self.center_box.left_widgets.add_children(
+        self.center_box.start_container.add_children(
             [self.workspaces, self.prayer_times, self.active_window]
         )
 
@@ -50,7 +52,7 @@ class StatusBar(Window):
             open_inspector=True,
             exclusive=True,
             visible=True,
-            children=self.center_box
+            children=self.center_box,
         )
 
         self.show_all()

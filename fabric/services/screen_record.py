@@ -18,11 +18,9 @@ class ScreenRecorder(Service):
         file_path = self.screenshot_path + str(time) + ".png"
         command = f"wayshot -f {file_path}"
         if not fullscreen:
-            command += " -s "
-            out = exec_shell_command("slurp").replace("\n", "")
-            command += '"' + out + '"'
+            command += f" -s \"{exec_shell_command('slurp')}\" "
         print(command)
-        obj = exec_shell_command(command)
+        exec_shell_command(command)
 
     def screen_record(self, fullscreen = False):
         pass

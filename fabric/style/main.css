@@ -20,6 +20,7 @@ scale {
     margin-bottom: 10px;
 }
 
+#system-tray>button,
 #panel-button {
     margin: 0px 1px 0px 1px;
     padding: 0px 5px 0px 5px;
@@ -27,8 +28,15 @@ scale {
     border-width: 2px;
     border-radius: 10px;
     border-color: transparent;
+    -gtk-icon-shadow:
+        -1px -1px 0 var(--bg),
+         1px  1px 0 var(--bg),
+        -1px  1px 0 var(--bg),
+         1px -1px 0 var(--bg);
+
 }
 
+#system-tray>button:hover,
 #panel-button:hover {
     background-color: #3e3e3e;
     border-color: rgba(255, 255, 255, 0.1);
@@ -38,6 +46,7 @@ scale {
     font-weight: 800;
 }
 
+#system-tray>button:active,
 #panel-button:active label,
 #panel-button:active>*>*>label,
 #panel-button:active>*>label,
@@ -210,12 +219,11 @@ scale {
 #quicksettings-toggle:hover,
 #quicksettings-revealer:hover {
     background-color: #575757;
-    /* background-color: red; */
 }
 
 #quicksettings-revealer-active:hover,
 #quicksettings-toggle-active:hover {
-    background-image: linear-gradient( rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.5) 100%);
+    background-image: linear-gradient(rgba(255, 255, 255, 0.5) 0%, rgba(255, 255, 255, 0.5) 100%);
 }
 
 #submenu-button:active,
@@ -269,11 +277,13 @@ scale {
     border-radius: 10px;
 }
 
+#system-tray,
 #panel-icon {
     margin-left: 3px;
     font-size: 25px;
     margin-right: 3px;
 }
+
 
 #panel-text {
     margin-top: 2px;

@@ -29,9 +29,9 @@ class BtDeviceBox(CenterBox):
         self.device.connect("connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
 
-        self.add_left(Image(icon_name=device.icon + "-symbolic", icon_size=5, name="submenu-icon"))  # type: ignore
-        self.add_left(Label(label=device.name, name="submenu-label"))  # type: ignore
-        self.add_right(self.connect_button)
+        self.add_start(Image(icon_name=device.icon + "-symbolic", icon_size=5, name="submenu-icon"))  # type: ignore
+        self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore
+        self.add_end(self.connect_button)
 
     def on_device_connecting(self, device:BluetoothDevice, connecting):
         if connecting:
@@ -97,15 +97,15 @@ class BluetoothToggle(Box):
                 children=[
                     CenterBox(
                         name="submenu-title",
-                        left_widgets=Label(
+                        start_children=Label(
                             name="submenu-title-label",
                             label=bluetooth_icons["bluetooth"] + " Bluetooth",
                         ),
-                        right_widgets=self.scan_button,
+                        end_children=self.scan_button,
                     ),
                     self.paired_box,
                     CenterBox(
-                        left_widgets=Label("Available Devices"),
+                        start_children=Label("Available Devices"),
                     ),
                     self.available_box,
                 ],

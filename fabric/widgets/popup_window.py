@@ -1,6 +1,5 @@
 from fabric.widgets.wayland import Window
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.label import Label
 from fabric.widgets.box import Box
 
 from gi.repository import GLib
@@ -42,6 +41,9 @@ class PopupWindow(Window):
     def toggle_popup(self):
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)
+
+    # def toggle_popup_timeout(self):
+
 
     def popup_timeout(self):
         if self.popup_running:

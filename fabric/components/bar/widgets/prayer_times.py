@@ -111,11 +111,11 @@ class PrayerTimes(Box):
         self.on_prayer_update(None,self.prayer_info_service.refresh())
         self.prayer_info_service.connect("update", self.on_prayer_update)
 
-        self.add(CenterBox(left_widgets=self.fajr, right_widgets=self.fajr_time))
-        self.add(CenterBox(left_widgets=self.zhr, right_widgets=self.zhr_time))
-        self.add(CenterBox(left_widgets=self.asr, right_widgets=self.asr_time))
-        self.add(CenterBox(left_widgets=self.mgrb, right_widgets=self.mgrb_time))
-        self.add(CenterBox(left_widgets=self.isha, right_widgets=self.isha_time))
+        self.add(CenterBox(start_children=self.fajr, end_children=self.fajr_time))
+        self.add(CenterBox(start_children=self.zhr, end_children=self.zhr_time))
+        self.add(CenterBox(start_children=self.asr, end_children=self.asr_time))
+        self.add(CenterBox(start_children=self.mgrb, end_children=self.mgrb_time))
+        self.add(CenterBox(start_children=self.isha, end_children=self.isha_time))
 
     def on_prayer_update(self, _, prayer_info):
         self.fajr.set_label(prayer_info["Fajr"][0])

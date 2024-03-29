@@ -1,6 +1,5 @@
-import math
-from loguru import logger
 import os
+from loguru import logger
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
@@ -19,7 +18,7 @@ from fabric.utils import (
 )
 from utls.accent import grab_color
 
-CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
+CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
@@ -55,8 +54,14 @@ class PlayerBoxHandler(Box):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
 
-def cubic_bezier(p0,p1,p2,p3,x):
-    return p0 * (1-x) ** 3 + p1*3*x*(1-x) ** 2 + p2*3*x**2 * (1-x) + p3*x**3
+
+def cubic_bezier(p0, p1, p2, p3, x):
+    return (
+        p0 * (1 - x) ** 3
+        + p1 * 3 * x * (1 - x) ** 2
+        + p2 * 3 * x**2 * (1 - x)
+        + p3 * x**3
+    )
 
 
 class PlayerBox(Box):
@@ -68,7 +73,6 @@ class PlayerBox(Box):
         self.image_size = 160
         self.player_height = 140
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
-        self.scale_new_pos = 0
 
         # Exit Logic
         self.player.connect("exit", self.on_player_exit)
@@ -101,14 +105,14 @@ class PlayerBox(Box):
             self.track_title,
             "label",
             GObject.BindingFlags.DEFAULT,
-            lambda _, x: x if x != "" else "No Title",
+            lambda _, x: x if x != "" else "No Title" # type: ignore
         )
         self.player.bind_property(
             "artist",
             self.track_artist,
             "label",
             GObject.BindingFlags.DEFAULT,
-            lambda _, x: x if x != "" else "No Artist",
+            lambda _, x: x if x != "" else "No Artist", # type: ignore
         )
 
         self.track_title.set_line_wrap(True)
@@ -187,9 +191,9 @@ class PlayerBox(Box):
         self.player.bind_property("can-shuffle", self.shuffle_button, "visible")
 
         self.button_box.add_center(self.play_pause_button)
-        self.button_box.add_left(self.prev_button)
-        self.button_box.add_left(self.shuffle_button)
-        self.button_box.add_right(self.next_button)
+        self.button_box.add_start(self.prev_button)
+        self.button_box.add_start(self.shuffle_button)
+        self.button_box.add_end(self.next_button)
 
         # Seek Bar
         self.seek_bar = Scale(
@@ -201,7 +205,7 @@ class PlayerBox(Box):
             name="seek-bar",
         )
         self.seek_bar.connect("change-value", self.on_scale_move)
-        self.seek_bar.connect("button-release-event", self.on_button_scale_release)
+        # self.seek_bar.connect("button-release-event", self.on_button_scale_release)
         self.player.connect(
             "notify::length",
             lambda _, x: self.seek_bar.set_range(0, self.player.length)
@@ -241,19 +245,12 @@ class PlayerBox(Box):
 
         invoke_repeater(1000, self.move_seekbar)
 
-    def on_button_scale_release(self, scale, event):
-        self.player.set_position(self.scale_new_pos)
-        self.exit = False
-        self.move_seekbar()
-        invoke_repeater(1000, self.move_seekbar)
-
-    def on_scale_move(self, scale, event, moved_pos):
-        self.exit = True
-        self.scale_new_pos = moved_pos
+    def on_scale_move(self, scale: Scale, event, moved_pos: int):
+        scale.set_value(moved_pos)
+        self.player.set_position(moved_pos)
 
     def on_player_exit(self, _, value):
         self.exit = value
-        # del self.player sort of works but idk if has any edge cases
         self.destroy()
 
     def on_player_next(self, _):
@@ -298,7 +295,7 @@ class PlayerBox(Box):
         colors = (0, 0, 0)
         try:
             colors = grab_color(self.cover_path, n)
-        except:
+        except Exception:
             logger.error("[PLAYER] could not grab color")
 
         bg = f"background-color: rgb{colors};"
@@ -318,7 +315,7 @@ class PlayerBox(Box):
             # messy,make it handele this better
             self.update_image()
             return
-        Gio.File.new_for_uri(uri=url).copy_async(
+        Gio.File.new_for_uri(uri=url).copy_async( #type: ignore
             destination=Gio.File.new_for_path(self.cover_path),
             flags=Gio.FileCopyFlags.OVERWRITE,
             io_priority=GLib.PRIORITY_DEFAULT,
@@ -327,20 +324,20 @@ class PlayerBox(Box):
             callback=self.img_callback,
         )
 
-
     def rotate_animation(self):
         anim_time = 0
+
         def invoke():
             nonlocal anim_time
             if anim_time <= 1:
                 anim_time += 0.007
-                rot =  360 * cubic_bezier(0,1.31,1.13,1,anim_time)
+                rot = 360 * cubic_bezier(0, 1.31, 1.13, 1, anim_time)
                 self.image_box.rotate_more(rot)
                 return True
             self.image_box.rotate_more(0)
             return False
-        invoke_repeater(16, invoke)
 
+        invoke_repeater(16, invoke)
 
     def move_seekbar(self):
         if self.exit or self.player.can_seek is False:
