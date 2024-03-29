@@ -8,7 +8,6 @@
   outputs = {
     systems,
     nixpkgs,
-    gtk-session-lock,
     ...
   } @ inputs: let
     eachSystem = f:
@@ -18,9 +17,9 @@
             inherit system;
             overlays = [
               (final: _: let
-                gtk-session-lock' = gtk-session-lock.packages.${system}.default;
+                gtk-session-lock = inputs.gtk-session-lock.packages.${system}.default;
               in {
-                inherit gtk-session-lock';
+                inherit gtk-session-lock;
               })
             ];
           })
@@ -40,20 +39,24 @@
           python311Packages.psutil
           python311Packages.colorthief
           python311Packages.requests
+          python311Packages.lxml
+          python311Packages.pam
+
           ruff # Formatter
+          nix-update # Ease of use updater
+        ];
+        nativeBuildInputs = with pkgs; [
+          gobject-introspection
 
           # non python aditional packages
-          gtk-session-lock' # For gtk lock screen
+          gtk-session-lock # For gtk lock screen
           playerctl # For mpirs
           gnome.gnome-bluetooth # For bluetooth
           networkmanager # For network
         ];
-        nativeBuildInputs = with pkgs; [
-          gobject-introspection
-        ];
-        shellHook = ''
-          export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
-        '';
+        # shellHook = ''
+        #   export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
+        # '';
       };
     });
   };
