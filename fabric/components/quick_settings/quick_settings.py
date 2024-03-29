@@ -3,12 +3,11 @@ from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.scale import Scale
 from fabric.widgets.button import Button
+from fabric.widgets.image import Image
 
 from widgets.popup_window import PopupWindow
 from widgets.player import PlayerBoxHandler
 from widgets.bluetooth_box import BluetoothToggle
-
-
 
 
 class QuickSettings(Box):
@@ -43,10 +42,18 @@ class QuickSettingsButton(Button):
     def __init__(self, **kwargs):
         super().__init__(name="panel-button", **kwargs)
 
-        self.bluetooth_icon = Label(name="panel-icon")
-        config.bluetooth_client.connect("notify::enabled", self.bluetooth_set)
+        self.bluetooth_icon = Image(
+            name="panel-icon",
+            icon_name=config.bluetooth_icons_names["bluetooth"],
+            pixel_size=20,
+        )
+        config.bluetooth_client.bind_property(
+            "enabled",
+            self.bluetooth_icon,
+            "visible",
+        )
 
-        self.audio_icon = Label(name="panel-icon")
+        self.audio_icon = Image(name="panel-icon")
         config.audio.connect("speaker-changed", self.update_audio)
 
         self.add(Box(children=[self.bluetooth_icon, self.audio_icon]))
@@ -55,25 +62,22 @@ class QuickSettingsButton(Button):
     def update_audio(self, *args):
         vol = config.audio.speaker.volume
         if config.audio.speaker.is_muted:
-            self.audio_icon.set_label(config.audio_icons["mute"])
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], -1)
             return
         if 66 <= vol:
-            self.audio_icon.set_label(config.audio_icons["high"])
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["high"], -1)
         elif 33 <= vol < 66:
-            self.audio_icon.set_label(config.audio_icons["medium"])
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["medium"], -1)
         elif 0 < vol < 33:
-            self.audio_icon.set_label(config.audio_icons["low"])
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["low"], -1)
         else:
-            self.audio_icon.set_label(config.audio_icons["off"])
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["off"], -1)
 
-    def bluetooth_set(self, *args):
-        status = config.bluetooth_client.get_property("enabled")
-        self.bluetooth_icon.set_label(
-            config.bluetooth_icons["bluetooth"]
-        ) if status else self.bluetooth_icon.set_label("")
+        self.audio_icon.set_pixel_size(28)
 
     def on_click(self, *args):
         QuickSettingsPopup.toggle_popup()
+
 
 QuickSettingsPopup = PopupWindow(
     transition_duration=100,

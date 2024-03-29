@@ -1,6 +1,6 @@
 import fabric
 import config
-from fabric.utils import set_stylesheet_from_file, get_relative_path
+from fabric.utils import set_stylesheet_from_file, get_relative_path, monitor_file
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.OSD.SystemOSD import SystemOSD
@@ -20,6 +20,8 @@ if __name__ == "__main__":
     clockWidget = ClockWidget()
     systemOverlay = SystemOSD()
 
+    file = monitor_file(get_relative_path("style/main.css"))
+    file.connect("changed", lambda *args: apply_style())
     # For system shortcuts
     sc = config.sc
 
