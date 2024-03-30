@@ -80,7 +80,7 @@ class QuickSettingsButton(Button):
 
 
 QuickSettingsPopup = PopupWindow(
-    transition_duration=100,
+    transition_duration=200,
     anchor="top right",
     transition_type="slide-down",
     child=QuickSettings(),
