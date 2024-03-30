@@ -1,4 +1,3 @@
-"""dead simple desktop widget that shows the time and date."""
 import fabric
 import os
 import psutil

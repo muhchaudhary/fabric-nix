@@ -37,10 +37,9 @@ class StatusBar(Window):
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
-        self.system_tray = SystemTray(name="system-tray")
 
         self.center_box.end_container.add_children(
-            [self.system_tray,self.quick_settings, self.battery, self.date_time]
+            [self.quick_settings, self.battery, self.date_time]
         )
         self.center_box.start_container.add_children(
             [self.workspaces, self.prayer_times, self.active_window]
