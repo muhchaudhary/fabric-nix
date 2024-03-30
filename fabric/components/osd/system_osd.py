@@ -22,15 +22,17 @@ class SystemOSD(PopupWindow):
         self.kbd_backlight = 0
         self.vol = 0
 
-        self.kbd_monitor = monitor_file("/sys/class/leds/tpacpi::kbd_backlight/brightness")
-        self.kbd_monitor.connect("changed", lambda *args: print("B"))
-        print(self.max_kbd_backlight)
+        self.kbd_monitor = monitor_file(
+            "/sys/class/leds/tpacpi::kbd_backlight/brightness"
+        )
 
-        self.overlay_fill_box = Box()
+        self.kbd_monitor.connect("changed", lambda *args: print("B"))
+
+        self.overlay_fill_box = Box(name="osd-box")
         self.icon = Image()
 
         super().__init__(
-            transition_duration=100,
+            transition_duration=150,
             anchor="right",
             transition_type="slide-left",
             child=Box(
@@ -47,9 +49,7 @@ class SystemOSD(PopupWindow):
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
         self.overlay_fill_box.set_style(
-            "min-width: 25px; min-height: 200px;"
-            + f"background-image: linear-gradient(to top, #64D9FF {round(self.vol)}%, #303030 {round(self.vol)}%);"
-            + "border-radius: 200px; padding-right: 15px; margin-bottom:5px;"
+            f"background-image: linear-gradient(to top, #64D9FF {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);"
         )
 
     def update_label_brightness(self):
@@ -65,22 +65,17 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            "min-width: 25px; min-height: 200px;"
-            + f"background-image: linear-gradient(to top, #64D9FF {brightness}%, #303030 {brightness}%);"
-            + "border-radius: 200px; padding-right: 15px; margin-bottom:5px;"
+            f"background-image: linear-gradient(to top, #64D9FF {brightness}%, alpha(#303030, 0.7) {brightness}%);"
         )
 
     def update_label_keyboard(self, _, file, *args):
-        print("Bing0")
         brightness = round(
             int(file.load_bytes()[0].get_data()) / int(self.max_kbd_backlight) * 100
         )
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            "min-width: 25px; min-height: 200px;"
-            + f"background-image: linear-gradient(to top, #64D9FF {brightness}%, #303030 {brightness}%);"
-            + "border-radius: 200px; padding-right: 15px; margin-bottom:5px;"
+            f"background-image: linear-gradient(to top, #64D9FF {brightness}%, alpha(#303030, 0.8) {brightness}%);"
         )
         self.toggle_popup()
 

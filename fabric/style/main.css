@@ -30,9 +30,9 @@ scale {
     border-color: transparent;
     -gtk-icon-shadow:
         -1px -1px 0 var(--bg),
-         1px  1px 0 var(--bg),
-        -1px  1px 0 var(--bg),
-         1px -1px 0 var(--bg);
+        1px 1px 0 var(--bg),
+        -1px 1px 0 var(--bg),
+        1px -1px 0 var(--bg);
 
 }
 
@@ -183,7 +183,7 @@ scale {
 
 #prayer-info,
 #quicksettings {
-    background-color: var(--bg);
+    background-color: alpha(var(--bg), 0.7);
     border-radius: 20px;
     border-style: solid;
     border-width: 5px;
@@ -289,4 +289,11 @@ scale {
     margin-top: 2px;
     font-size: 15px;
     font-weight: 900;
+}
+
+#osd-box {
+    min-width: 25px;
+    min-height: 200px;
+    border-radius: 25px;
+    margin-bottom: 15px;
 }
