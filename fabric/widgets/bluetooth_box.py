@@ -157,12 +157,9 @@ class BluetoothToggle(Box):
 
     def device_connected(self,device: BluetoothDevice,_):
         connection = device.connected
-        print("CONNECTION:", connection)
         if connection:
             self.bluetooth_toggle_name.set_label(device.name)
         else:
-            print(self.bluetooth_toggle_name.get_label())
-            print(device.name)
             if self.bluetooth_toggle_name.get_label() == device.name:
                 connected_devices = self.client.connected_devices
                 if connected_devices:
