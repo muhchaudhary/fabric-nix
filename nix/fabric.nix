@@ -2,22 +2,16 @@
   lib,
   fetchFromGitHub,
   buildPythonPackage,
-  cairo,
   gtk3,
   glib,
   gtk-layer-shell,
   gobject-introspection,
-  loguru,
-  setuptools,
-  pycairo,
-  pygobject3,
+  python3Packages,
   libdbusmenu-gtk3,
-  click,
   pkg-config,
   wrapGAppsHook,
   gdk-pixbuf,
   librsvg,
-  src,
 }:
 buildPythonPackage rec {
   pname = "fabric";
@@ -25,8 +19,8 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Fabric-Development";
     repo = "fabric";
-    rev = "9adb28d7659d9068ff05f1410767334608fa4095";
-    sha256 = "sha256-U9lA+nht23tXoSredZEnXOzW/lTH0rr29nQF5zP9eEo=";
+    rev = "2a8cb9d68250aa1f242c557e172c031fbf35332b";
+    sha256 = "sha256-lioVBi+w7jjc6c0nXl+3juTgvr66jXvhF6hQ7F4feGY=";
   };
   format = "setuptools";
 
@@ -35,21 +29,23 @@ buildPythonPackage rec {
 
   nativeBuildInputs = [
     gobject-introspection
+    python3Packages.setuptools
   ];
 
   propagatedBuildInputs = [
-    librsvg
     glib
-    cairo
     libdbusmenu-gtk3
-    gtk-layer-shell
     gtk3
-    setuptools # added for pyproject
-    pygobject3
-    pycairo
-    loguru
+    gtk-layer-shell
     gdk-pixbuf
-    click
+    librsvg
+
+    # defined in requirements.txt
+    python3Packages.click
+    python3Packages.loguru
+    python3Packages.pycairo
+    python3Packages.pygobject3
+    python3Packages.pygobject-stubs
   ];
 
   meta = with lib; {
