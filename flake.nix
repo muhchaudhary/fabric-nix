@@ -36,14 +36,13 @@
           gir-cvc
 
           # add aditional python packages here
-          python311Packages.psutil
-          python311Packages.colorthief
-          python311Packages.requests
-          python311Packages.lxml
-          python311Packages.pam
+          python3Packages.psutil
+          python3Packages.colorthief
+          python3Packages.requests
+          python3Packages.lxml
+          python3Packages.pam
 
           ruff # Formatter
-          nix-update # Ease of use updater
         ];
         nativeBuildInputs = with pkgs; [
           gobject-introspection
