@@ -52,6 +52,7 @@
           playerctl # For mpirs
           gnome.gnome-bluetooth # For bluetooth
           networkmanager # For network
+          libgweather # For weather
         ];
         # shellHook = ''
         #   export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
