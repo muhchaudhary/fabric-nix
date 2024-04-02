@@ -11,6 +11,7 @@ from services.mpris import MprisPlayer, MprisPlayerManager
 from widgets.circleimage import CircleImage
 from fabric.widgets.scale import Scale
 from gi.repository import Gio, GLib, GObject
+from utls.bezier import CubicBezier
 
 from fabric.utils import (
     get_relative_path,
@@ -64,6 +65,9 @@ def cubic_bezier(p0, p1, p2, p3, x):
     )
 
 
+myBezier = CubicBezier(0.25, 0.75, 0.5, 1.25)
+
+
 class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
         super().__init__(h_align="start", name="player-box", **kwargs)
@@ -105,14 +109,14 @@ class PlayerBox(Box):
             self.track_title,
             "label",
             GObject.BindingFlags.DEFAULT,
-            lambda _, x: x if x != "" else "No Title" # type: ignore
+            lambda _, x: x if x != "" else "No Title",  # type: ignore
         )
         self.player.bind_property(
             "artist",
             self.track_artist,
             "label",
             GObject.BindingFlags.DEFAULT,
-            lambda _, x: x if x != "" else "No Artist", # type: ignore
+            lambda _, x: x if x != "" else "No Artist",  # type: ignore
         )
 
         self.track_title.set_line_wrap(True)
@@ -315,7 +319,7 @@ class PlayerBox(Box):
             # messy,make it handele this better
             self.update_image()
             return
-        Gio.File.new_for_uri(uri=url).copy_async( #type: ignore
+        Gio.File.new_for_uri(uri=url).copy_async(  # type: ignore
             destination=Gio.File.new_for_path(self.cover_path),
             flags=Gio.FileCopyFlags.OVERWRITE,
             io_priority=GLib.PRIORITY_DEFAULT,
@@ -331,7 +335,7 @@ class PlayerBox(Box):
             nonlocal anim_time
             if anim_time <= 1:
                 anim_time += 0.007
-                rot = 360 * cubic_bezier(0, 1.31, 1.13, 1, anim_time)
+                rot = 360 * myBezier.solve(anim_time)
                 self.image_box.rotate_more(rot)
                 return True
             self.image_box.rotate_more(0)

@@ -26,8 +26,8 @@ class ClockWidget(Window):
         self.main_box = Box(
             name = "clockbox",
             children=[
-                DateTime(format_list=["%A. %d %B"], name="date", interval=10000),
-                DateTime(format_list=["%I:%M"], name="clock"),
+                DateTime(format_list=["%A %B %d"], name="date", interval=10000),
+                DateTime(format_list=["%I:%M %p"], name="clock"),
             ],
             orientation="v",
         )

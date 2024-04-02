@@ -145,10 +145,13 @@ class PrayerTimesButton(Button):
         PrayerTimesPopup.toggle_popup()
 
 
+prayer_times = PrayerTimes()
+
 PrayerTimesPopup = PopupWindow(
     transition_duration=100,
     anchor="top left",
     transition_type="slide-down",
-    child=PrayerTimes(),
+    child=prayer_times,
+    enable_inhibitor=True,
 )
 

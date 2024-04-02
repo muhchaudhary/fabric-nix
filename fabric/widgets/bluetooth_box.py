@@ -29,11 +29,13 @@ class BtDeviceBox(CenterBox):
         self.device.connect("connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
 
-        self.add_start(Image(icon_name=device.icon + "-symbolic", icon_size=5, name="submenu-icon"))  # type: ignore
+        self.add_start(
+            Image(icon_name=device.icon + "-symbolic", icon_size=5, name="submenu-icon")
+        )  # type: ignore
         self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore
         self.add_end(self.connect_button)
 
-    def on_device_connecting(self, device:BluetoothDevice, connecting):
+    def on_device_connecting(self, device: BluetoothDevice, connecting):
         if connecting:
             self.connect_button.set_label("connecting...")
         elif device.connected:
@@ -49,9 +51,7 @@ class BtDeviceBox(CenterBox):
 
 class BluetoothToggle(Box):
     def __init__(self, client: BluetoothClient, **kwargs):
-        super().__init__(
-            spacing=2, name="quicksettings-option", orientation="vertical", **kwargs
-        )
+        super().__init__(spacing=2, orientation="vertical", **kwargs)
         self.client = client
 
         # Boxes to hold the devices
@@ -86,7 +86,12 @@ class BluetoothToggle(Box):
             name="quicksettings-revealer", label=bluetooth_icons["menu-right"]
         )
         self.reveal_button.connect("clicked", self.toggle_reveal)
-        self.bt_buttons = Box(children=[self.bluetooth_toggle, self.reveal_button])
+        self.bt_buttons = Box(
+            name="quicksettings-option",
+            h_align="start",
+            v_align="start",
+            children=[self.bluetooth_toggle, self.reveal_button],
+        )
 
         # Revealer
         self.revealer = Revealer(
@@ -155,7 +160,7 @@ class BluetoothToggle(Box):
         else:
             self.available_box.add(BtDeviceBox(device))
 
-    def device_connected(self,device: BluetoothDevice,_):
+    def device_connected(self, device: BluetoothDevice, _):
         connection = device.connected
         if connection:
             self.bluetooth_toggle_name.set_label(device.name)

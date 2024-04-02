@@ -5,7 +5,7 @@
 
 
 :vars {
-    --accent: #64D9FF;
+    --accent: #8dd9d0;
     --bg: #171717;
 }
 
@@ -21,6 +21,7 @@ scale {
 }
 
 #system-tray>button,
+#panel-button-active,
 #panel-button {
     margin: 0px 1px 0px 1px;
     padding: 0px 5px 0px 5px;
@@ -29,16 +30,20 @@ scale {
     border-radius: 10px;
     border-color: transparent;
     -gtk-icon-shadow:
-        -1px -1px 0 var(--bg),
-        1px 1px 0 var(--bg),
-        -1px 1px 0 var(--bg),
-        1px -1px 0 var(--bg);
+        -0.5px -0.5px 0 var(--bg),
+        0.5px 0.5px 0 var(--bg),
+        -0.5px 0.5px 0 var(--bg),
+        0.5px -0.5px 0 var(--bg);
 
 }
 
+/* #panel-button image {
+
+} */
+
 #system-tray>button:hover,
 #panel-button:hover {
-    background-color: #3e3e3e;
+    background-color: alpha(mix(var(--bg), white, 0.1), 0.6);
     border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -47,48 +52,79 @@ scale {
 }
 
 #system-tray>button:active,
+#panel-button-active,
+#panel-button-active image,
 #panel-button:active label,
+#panel-button:active image,
 #panel-button:active>*>*>label,
 #panel-button:active>*>label,
 #panel-button:active {
     background-color: var(--accent);
     color: var(--bg);
+    -gtk-icon-shadow:
+        -0px -0px 0 var(--bg),
+        0px 0px 0 var(--bg),
+        -0px 0px 0 var(--bg),
+        0px -0px 0 var(--bg);
 }
 
 #quicksettings-slider {
-    min-width: 450px;
+    /* min-width: 400px; */
+    margin-left: 10px;
+    margin-right: 20px;
 }
 
 #quicksettings-slider trough {
     margin-top: 5px;
     margin-bottom: 5px;
-    min-height: 15px;
-    background-color: #303030;
+    min-height: 25px;
+    background-color: alpha(#303030, 0.7);
+    border-radius: 20px;
+}
+
+#quicksettings-slider trough highlight:disabled {
+    background-color: alpha(rgb(176, 176, 176), 0.8);
+}
+
+#quicksettings-slider slider:disabled {
+    background-color: alpha(rgb(176, 176, 176), 1);
+
 }
 
 #quicksettings-slider trough:hover {
-    background-color: #4d4d4d;
+    background-color: alpha(#4d4d4d, 0.7);
 }
 
 #quicksettings-slider trough highlight {
-    border-radius: 400px;
+    border-radius: 20px 0px 0px 20px;
     background-color: var(--accent);
 }
 
-#quicksettings-slider slider:hover {
+#quicksettings-slider slider {
     border-radius: 100%;
-    margin-right: 5px;
-    min-width: 15px;
-    min-height: 15px;
-    background-color: white;
+    min-width: 25px;
+    min-height: 25px;
+    box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+    background-color: mix(var(--accent), white, 0.3);
 }
 
-#quicksettings-slider trough:hover slider {
-    border-radius: 100%;
-    margin-right: 5px;
-    min-width: 15px;
-    min-height: 15px;
-    background-color: white;
+#quicksettings-box {
+    background-color: alpha(#615e5e, 0.5);
+    border-radius: 20px;
+}
+
+
+#quicksettings-box>box>button {
+    margin: 10px -10px 10px 5px;
+}
+
+/* #quicksettings-box>box>button>*>*>* {
+    -gtk-icon-transform: scale(1);
+
+} */
+
+#quicksettings-slider slider:hover {
+    background-color: mix(var(--accent), white, 0.6);
 }
 
 
@@ -186,8 +222,8 @@ scale {
     background-color: alpha(var(--bg), 0.7);
     border-radius: 20px;
     border-style: solid;
-    border-width: 5px;
-    border-color: rgba(255, 255, 255, 0.2);
+    border-width: 2px;
+    border-color: alpha(var(--accent), 0.4);
     padding: 10px;
 }
 
@@ -242,7 +278,6 @@ scale {
     color: var(--bg);
 }
 
-
 #submenu-title {
     border-style: solid;
     border-bottom-width: 2px;
@@ -279,9 +314,9 @@ scale {
 
 #system-tray,
 #panel-icon {
-    margin-left: 3px;
+    margin-left: 2px;
     font-size: 25px;
-    margin-right: 3px;
+    margin-right: 2px;
 }
 
 

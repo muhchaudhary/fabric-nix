@@ -22,10 +22,9 @@
 }
 
 #main-window {
-    border: solid 2px;
-    border-color: #171717;
-    background-color: #171717;
-    border-radius: 0px;
+    /* border: solid 2px; */
+    /* border-color: #171717; */
+    background-color: alpha(#171717, 0.7);
 }
 
 #date-time > label {

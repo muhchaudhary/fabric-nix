@@ -48,7 +48,6 @@ class StatusBar(Window):
         super().__init__(
             layer="top",
             anchor="left top right",
-            open_inspector=True,
             exclusive=True,
             visible=True,
             children=self.center_box,

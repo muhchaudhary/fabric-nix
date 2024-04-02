@@ -6,6 +6,8 @@ from fabric.widgets.image import Image
 from widgets.popup_window import PopupWindow
 
 
+accent = "#8dd9d0"
+
 class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
         self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
@@ -49,7 +51,7 @@ class SystemOSD(PopupWindow):
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, #64D9FF {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);"
         )
 
     def update_label_brightness(self):
@@ -65,7 +67,7 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, #64D9FF {brightness}%, alpha(#303030, 0.7) {brightness}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
         )
 
     def update_label_keyboard(self, _, file, *args):
@@ -75,7 +77,7 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, #64D9FF {brightness}%, alpha(#303030, 0.8) {brightness}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
         )
         self.toggle_popup()
 
