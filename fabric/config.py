@@ -1,7 +1,9 @@
+from fabric.audio.service import Audio
+from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.screen_record import ScreenRecorder
-from fabric.audio.service import Audio
 from fabric.bluetooth.service import BluetoothClient
+
 
 
 # Services
@@ -9,6 +11,7 @@ mprisplayer = MprisPlayerManager()
 bluetooth_client = BluetoothClient()
 audio = Audio()
 sc = ScreenRecorder()
+brightness = Brightness()
 
 # Icons
 bluetooth_icons = {
@@ -24,7 +27,7 @@ bluetooth_icons_names = {
 audio_icons = {"mute": "󰝟", "off": "󰖁", "high": "󰕾", "low": "󰕿", "medium": "󰖀"}
 audio_icons_names = {
     "mute": "audio-volume-muted",
-    "off": "audio-volume-off",
+    "off": "audio-volume-muted",
     "low": "audio-volume-low",
     "medium": "audio-volume-medium",
     "high": "audio-volume-high",
