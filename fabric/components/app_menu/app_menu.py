@@ -7,7 +7,6 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.box import Box
-from gi.repository import Gdk
 from thefuzz import process, fuzz
 
 
@@ -110,19 +109,26 @@ class AppMenu(PopupWindow):
             enable_inhibitor=True,
             keyboard_mode="on-demand",
         )
-        self.revealer.connect("notify::child-revealed", lambda *args: self.search_app_entry.grab_focus_without_selecting() if args[0].get_child_revealed() else None)
+        self.revealer.connect(
+            "notify::child-revealed",
+            lambda *args: self.search_app_entry.grab_focus_without_selecting()
+            if args[0].get_child_revealed()
+            else None,
+        )
         # GLib.idle_add(lambda *args: self.search_app_entry.grab_focus_without_selecting())
 
     def keypress(self, entry: Entry, event_key):
         if event_key.get_keycode()[1] == 9:
-            self.toggle_popup()
+            self.on_inhibit_click()
         if entry.get_text() == " " or entry.get_text() == "":
             self.buttons_box.set_visible(True)
             return
         self.buttons_box.set_visible(False)
         self.searched_buttons_box.set_visible(True)
         self.searched_buttons_box.reset_children()
-        lister = process.extract(entry.get_text(), self.app_names, scorer=fuzz.ratio)
+        lister = process.extract(
+            entry.get_text(), self.app_names, scorer=fuzz.partial_ratio, limit=10
+        )
         for elem in lister:
             name = elem[0]
             appL = AppInfo(self.application_buttons[name])

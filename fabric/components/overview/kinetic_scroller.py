@@ -6,16 +6,18 @@ from fabric.service import Signal, SignalContainer
 import math
 from loguru import logger
 
+
 class KineticScroll(EventBox):
     __gsignals__ = SignalContainer(
         Signal("smooth-scroll-event", "run-first", None, (float,)),
-        Signal("normal-scroll-event", "run-first", None, (float,))
+        Signal("normal-scroll-event", "run-first", None, (float,)),
     )
+
     def __init__(self, multiplier: float, min_value: int, max_value: int, **kwargs):
         super().__init__(
             # TODO add normal scrolling later
             events="smooth-scroll",
-            **kwargs
+            **kwargs,
         )
         self._mult = multiplier
         self._min = min_value
@@ -28,7 +30,7 @@ class KineticScroll(EventBox):
         self.samples = [0] * self.n_samples
         self.connect("scroll-event", self.on_scroll_event)
 
-    #currently will only handle smooth scroll events
+    # currently will only handle smooth scroll events
     def on_scroll_event(self, widget, event):
         self.is_scrolling = True
         val_y = event.delta_y
@@ -47,14 +49,16 @@ class KineticScroll(EventBox):
             self.ticks = 0
             logger.info(f"Velocity: {sum(self.samples) / self.n_samples}")
             self.is_scrolling = False
-            invoke_repeater(8, self.on_scroll_event_end, sum(self.samples) / self.n_samples)
+            invoke_repeater(
+                8, self.on_scroll_event_end, sum(self.samples) / self.n_samples
+            )
 
     # kinetic scroll simulation
     def on_scroll_event_end(self, velocity):
         if self.is_scrolling:
             return False
 
-        new_velocity = self.easing_function(abs(velocity),self.ticks)
+        new_velocity = self.easing_function(abs(velocity), self.ticks)
 
         if self.scroll_value + new_velocity >= self._max:
             self.scroll_value = self._max
@@ -73,5 +77,5 @@ class KineticScroll(EventBox):
         return True if abs(new_velocity) > 0.2 else False
 
     def easing_function(self, velocity, time):
-        return velocity * math.exp(-2*(1/velocity) * time)
+        return velocity * math.exp(-2 * (1 / velocity) * time)
         # return -1/3 * time + velocity

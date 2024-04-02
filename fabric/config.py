@@ -5,7 +5,6 @@ from services.screen_record import ScreenRecorder
 from fabric.bluetooth.service import BluetoothClient
 
 
-
 # Services
 mprisplayer = MprisPlayerManager()
 bluetooth_client = BluetoothClient()

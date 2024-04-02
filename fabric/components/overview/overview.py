@@ -1,5 +1,4 @@
 import fabric
-from loguru import logger
 from fabric.widgets.box import Box
 from fabric.widgets.wayland import Window
 from fabric.widgets.centerbox import CenterBox

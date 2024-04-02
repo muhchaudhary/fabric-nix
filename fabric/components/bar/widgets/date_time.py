@@ -1,24 +1,27 @@
-import time
-import gi
 import json
+import time
+
+import gi
 from loguru import logger
+
+from fabric.hyprland.service import Connection, SignalEvent
+from fabric.utils import bulk_connect
+from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
-from fabric.hyprland.service import Connection, SignalEvent
-from fabric.utils.string_formatter import FormattedString
-from fabric.utils import bulk_connect
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import (
-    Gtk,
+from gi.repository import (   # noqa: E402
     Gdk,
     GLib,
+    Gtk,
 )
+
 
 class DateTime(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button",**kwargs)
+        super().__init__(name="panel-button", **kwargs)
         self.interval = 1000
         self.format = "%a %b %d  %I:%M %p"
         self.update_label()
@@ -98,8 +101,6 @@ class WorkspaceButton(Button):
         return
 
 
-
-
 class WorkspacesEventBox(EventBox):
     """
     a subclass of Gtk.EventBox that is designed to hold buttons for workspaces.
@@ -156,6 +157,7 @@ class WorkspacesEventBox(EventBox):
 
 
 connection = Connection()
+
 
 class Workspaces(WorkspacesEventBox):
     """
@@ -353,4 +355,3 @@ class Workspaces(WorkspacesEventBox):
                     f"[Workspaces] Unknown scroll direction ({event.direction})"
                 )
         return
-

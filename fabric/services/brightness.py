@@ -1,7 +1,9 @@
 import os
-from fabric.service import Service, Signal, SignalContainer, Property
-from fabric.utils import exec_shell_command, monitor_file
+
 from gi.repository import GLib
+
+from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.utils import exec_shell_command, monitor_file
 
 
 def exec_brightnessctl(args: str):
@@ -44,7 +46,9 @@ class Brightness(Service):
         self.screen_monitor = monitor_file(self.screen_backlight_path + "/brightness")
         self.screen_monitor.connect(
             "changed",
-            lambda _, file, *args: self.emit("screen", round(int(file.load_bytes()[0].get_data()))),
+            lambda _, file, *args: self.emit(
+                "screen", round(int(file.load_bytes()[0].get_data()))
+            ),
         )
         super().__init__(**kwargs)
 
@@ -70,4 +74,3 @@ class Brightness(Service):
             self.emit("kbd", value)
         except GLib.Error as e:
             print(e.message)
-

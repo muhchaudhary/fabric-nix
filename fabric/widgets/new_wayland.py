@@ -8,7 +8,7 @@ from fabric.utils import extract_margin_from_string, extract_edges_from_string
 
 gi.require_version("Gtk", "3.0")
 gi.require_version("GtkLayerShell", "0.1")
-from gi.repository import Gtk, Gdk, GtkLayerShell
+from gi.repository import Gtk, Gdk, GtkLayerShell  # noqa: E402
 
 
 class Window(Window):
@@ -173,7 +173,7 @@ class Window(Window):
         return self._keyboard_mode
 
     @keyboard_mode.setter
-    def keyboard_mode(self, value:str | GtkLayerShell.KeyboardMode):
+    def keyboard_mode(self, value: str | GtkLayerShell.KeyboardMode):
         self._keyboard_mode = value
         self.set_keyboard_mode(value)
 
@@ -253,7 +253,7 @@ class Window(Window):
     ) -> None:
         if not isinstance(keyboard_mode, (str, GtkLayerShell.Layer)):
             raise TypeError(
-                f"keyboard_mode must be str or GtkLayerShell.KeyboardMode, but got {type(layer)}"
+                f"keyboard_mode must be str or GtkLayerShell.KeyboardMode, but got {type(keyboard_mode)}"
             )
         if isinstance(keyboard_mode, str):
             keyboard_mode = {

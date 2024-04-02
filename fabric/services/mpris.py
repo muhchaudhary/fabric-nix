@@ -1,8 +1,9 @@
 import gi
-from loguru import logger
-from fabric.service import Service, Signal, SignalContainer, Property
-from fabric.utils import bulk_connect
 from gi.repository import GLib  # type: ignore
+from loguru import logger
+
+from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.utils import bulk_connect
 
 
 class PlayerctlImportError(ImportError):

@@ -89,7 +89,6 @@ class PopupWindow(Window):
         if self.enable_inhibitor:
             self.inhibitor.set_visible(self.visible)
 
-
     def toggle_popup(self):
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)

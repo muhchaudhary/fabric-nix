@@ -78,7 +78,12 @@ class CircleImage(Gtk.DrawingArea, Widget):
         ctx.arc(self.size / 2, self.size / 2, self.size / 2, 0, 2 * math.pi)
         ctx.translate(self.size * 0.5, self.size * 0.5)
         ctx.rotate(self.rotation * math.pi / 180.0)
-        ctx.translate(-self.size * 0.5 - self.image.get_width() // 2 + self.image.get_height() // 2, -self.size * 0.5)
+        ctx.translate(
+            -self.size * 0.5
+            - self.image.get_width() // 2
+            + self.image.get_height() // 2,
+            -self.size * 0.5,
+        )
         Gdk.cairo_set_source_pixbuf(ctx, self.image, 0, 0) if self.image else None
         ctx.clip()
         ctx.paint()
@@ -89,7 +94,6 @@ class CircleImage(Gtk.DrawingArea, Widget):
 
         self.rotation = direction * rot
         self.queue_draw()
-
 
     def set_transition_type(self, new_transition):
         self.transition_type = new_transition

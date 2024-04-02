@@ -1,11 +1,14 @@
-import psutil
 import datetime
+
 import config
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.button import Button
-from fabric.widgets.revealer import Revealer
+import psutil
+
 from fabric.utils.fabricator import Fabricate
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
+
 
 class BatteryIndicator(Box):
     def __init__(self, **kwargs):
@@ -29,11 +32,12 @@ class BatteryIndicator(Box):
         self.buttons = Button(
             name="panel-button",
         )
-        self.buttons.add( # type: ignore
+        self.buttons.add(  # type: ignore
             Box(
-                children=[self.battery_percent_revealer,
-                          self.battery_icon,
-                          ],
+                children=[
+                    self.battery_percent_revealer,
+                    self.battery_icon,
+                ],
             )
         )
 
@@ -62,7 +66,9 @@ class BatteryIndicator(Box):
         )
 
         if charging:
-            self.battery_icon.set_label(config.battery_charging_icons[int(round(percent, -1))])
+            self.battery_icon.set_label(
+                config.battery_charging_icons[int(round(percent, -1))]
+            )
         else:
             self.battery_icon.set_label(config.battery_icons[int(round(percent, -1))])
 

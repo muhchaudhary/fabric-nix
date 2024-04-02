@@ -1,14 +1,12 @@
 import config
+from widgets.bluetooth_box import BluetoothToggle
+from widgets.player import PlayerBoxHandler
+from widgets.popup_window import PopupWindow
+
 from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.scale import Scale
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
-
-from widgets.popup_window import PopupWindow
-from widgets.player import PlayerBoxHandler
-from widgets.bluetooth_box import BluetoothToggle
-from fabric.widgets.overlay import Overlay
+from fabric.widgets.scale import Scale
 
 
 class QuickSettingsAudioScale(Box):
@@ -45,12 +43,11 @@ class QuickSettingsAudioScale(Box):
         icon_name = "-".join(str(config.audio.speaker.icon).split("-")[0:2])
         if icon_name != self.icon_name:
             self.icon_name = icon_name
-            self.icon.set_from_icon_name(icon_name + "-symbolic",1)
+            self.icon.set_from_icon_name(icon_name + "-symbolic", 1)
             self.icon.set_pixel_size(28)
 
     def mute_audio(self, *args):
         config.audio.speaker.is_muted = not config.audio.speaker.is_muted
-
 
     def on_scale_move(self, scale, event, moved_pos):
         config.audio.speaker.volume = moved_pos
@@ -103,9 +100,7 @@ class QuickSettingsButtonBox(Box):
 
 class QuickSettings(Box):
     def __init__(self, **kwargs):
-        super().__init__(
-            orientation="v", spacing=10, name="quicksettings", **kwargs
-        )
+        super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
         self.mprisBox = PlayerBoxHandler(config.mprisplayer)
         self.audio_slider_box = QuickSettingsAudioScale()
         self.screen_slider_box = QuickSettingsBrightnessScale()
@@ -124,7 +119,7 @@ class QuickSettingsButton(Button):
             name="panel-icon",
             icon_name=config.bluetooth_icons_names["bluetooth"],
             pixel_size=20,
-            style="color: #51A4E7;"
+            style="color: #51A4E7;",
         )
         config.bluetooth_client.bind_property(
             "enabled",
@@ -157,10 +152,11 @@ class QuickSettingsButton(Button):
     def on_click(self, *args):
         QuickSettingsPopup.toggle_popup()
 
+
 QuickSettingsPopup = PopupWindow(
     transition_duration=200,
     anchor="top right",
     transition_type="slide-down",
     child=QuickSettings(),
-    enable_inhibitor=True
+    enable_inhibitor=True,
 )

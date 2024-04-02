@@ -5,6 +5,7 @@ CUBIC_BEZIER_SPLINE_SAMPLES = 11
 # https://github.com/WebKit/WebKit/blob/main/Source/WebCore/platform/graphics/UnitBezier.h
 # https://chromium.googlesource.com/chromium/src/+/master/ui/gfx/geometry/cubic_bezier.cc
 
+
 class CubicBezier:
     def __init__(self, p1x: float, p1y: float, p2x: float, p2y: float):
         self._cx = 3.0 * p1x

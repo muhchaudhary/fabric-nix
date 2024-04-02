@@ -8,6 +8,7 @@ from widgets.popup_window import PopupWindow
 
 accent = "#8dd9d0"
 
+
 class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
         self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"

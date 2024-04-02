@@ -1,16 +1,17 @@
-import os
-import json
 import datetime
-import requests
+import json
+import os
 
-from fabric.widgets.button import Button
-from widgets.popup_window import PopupWindow
-from fabric.widgets.label import Label
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.box import Box
-from fabric.service import Service, Signal, SignalContainer, Property
-from fabric.utils import invoke_repeater
+import requests
 from gi.repository import GLib
+from widgets.popup_window import PopupWindow
+
+from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.utils import invoke_repeater
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
 
 city = "Waterloo"
 country = "Canada"
@@ -108,7 +109,7 @@ class PrayerTimes(Box):
         self.isha_time = Label()
 
         # Initilize
-        self.on_prayer_update(None,self.prayer_info_service.refresh())
+        self.on_prayer_update(None, self.prayer_info_service.refresh())
         self.prayer_info_service.connect("update", self.on_prayer_update)
 
         self.add(CenterBox(start_children=self.fajr, end_children=self.fajr_time))
@@ -133,9 +134,10 @@ class PrayerTimes(Box):
         self.isha.set_label(prayer_info["Isha"][0])
         self.isha_time.set_label(prayer_info["Isha"][1])
 
+
 class PrayerTimesButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button",**kwargs)
+        super().__init__(name="panel-button", **kwargs)
         self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
@@ -154,4 +156,3 @@ PrayerTimesPopup = PopupWindow(
     child=prayer_times,
     enable_inhibitor=True,
 )
-

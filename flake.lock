@@ -5,11 +5,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1711532623,
-        "narHash": "sha256-/4lovJRFklH0OyWsp7sBBo7QJ4oxJGmsGAVSUC9Pzwg=",
+        "lastModified": 1712076127,
+        "narHash": "sha256-gNrkqi83Y9D4QwsV31u05O0FAunE5dVKc0mp5F9k2Zw=",
         "owner": "Cu3PO42",
         "repo": "gtk-session-lock",
-        "rev": "00599bf6f8d754fff3dafd000f112ebac90eb6a9",
+        "rev": "99bd4566b2818cfe44e699be15adabaad500a4eb",
         "type": "github"
       },
       "original": {

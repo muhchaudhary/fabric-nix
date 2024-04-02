@@ -1,7 +1,9 @@
-from fabric.service import Service, Signal, SignalContainer
-from gi.repository import GLib
-from fabric.utils import exec_shell_command
 import datetime
+
+from gi.repository import GLib
+
+from fabric.service import Service
+from fabric.utils import exec_shell_command
 
 
 class ScreenRecorder(Service):
@@ -22,5 +24,5 @@ class ScreenRecorder(Service):
         print(command)
         exec_shell_command(command)
 
-    def screen_record(self, fullscreen = False):
+    def screen_record(self, fullscreen=False):
         pass

@@ -1,5 +1,4 @@
 import gi
-gi.require_version("GWeather", "4.0")
-import gi.repository.GWeather as Gweather
-# from gi.repository import GWeather
 
+gi.require_version("GWeather", "4.0")
+# from gi.repository import GWeather

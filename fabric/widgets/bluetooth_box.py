@@ -4,7 +4,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.revealer import Revealer
 from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
-from fabric.widgets.scrolled_window import ScrolledWindow
 from fabric.widgets.image import Image
 
 bluetooth_icons = {
