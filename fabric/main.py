@@ -16,6 +16,8 @@ def apply_style(*args):
 
 
 if __name__ == "__main__":
+    logger.disable("fabric.hyprland.widgets")
+    logger.disable("components.bar.widgets.date_time")
     bar = StatusBar()
     clockWidget = ClockWidget()
     systemOverlay = SystemOSD()
