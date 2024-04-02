@@ -45,7 +45,7 @@ class QuickSettingsAudioScale(Box):
         icon_name = "-".join(str(config.audio.speaker.icon).split("-")[0:2])
         if icon_name != self.icon_name:
             self.icon_name = icon_name
-            self.icon.set_from_icon_name(icon_name + "-symbolic", -1)
+            self.icon.set_from_icon_name(icon_name + "-symbolic",1)
             self.icon.set_pixel_size(28)
 
     def mute_audio(self, *args):
@@ -141,16 +141,16 @@ class QuickSettingsButton(Button):
     def update_audio(self, *args):
         vol = config.audio.speaker.volume
         if config.audio.speaker.is_muted:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], -1)
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], 1)
             return
         if 66 <= vol:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["high"], -1)
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["high"], 1)
         elif 33 <= vol < 66:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["medium"], -1)
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["medium"], 1)
         elif 0 < vol < 33:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["low"], -1)
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["low"], 1)
         else:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["off"], -1)
+            self.audio_icon.set_from_icon_name(config.audio_icons_names["off"], 1)
 
         self.audio_icon.set_pixel_size(20)
 

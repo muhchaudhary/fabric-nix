@@ -1,4 +1,5 @@
-from fabric.widgets.wayland import Window
+# from fabric.widgets.wayland import Window
+from widgets.new_wayland import Window
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.box import Box
 from typing import Literal
@@ -9,8 +10,8 @@ from gi.repository import GLib
 class inhibitOverlay(Window):
     def __init__(self, size: int = 1920):
         self.eventbox = EventBox(
-            events=["button-press", "key-press"],
-            style="background-color: alpha(white, 0.005);",
+            events=["button-press", "key-release"],
+            # style="background-color: alpha(white, 0.005);",
             size=(size),
         )
         self.eventbox.set_can_focus(True)
@@ -21,9 +22,9 @@ class inhibitOverlay(Window):
             visible=False,
             exclusive=False,
             children=self.eventbox,
+            keyboard_mode="on-demand",
         )
         self.eventbox.set_can_focus(True)
-        self.connect("key-press-event", lambda *args: print(args))
 
 
 class PopupWindow(Window):
@@ -43,6 +44,7 @@ class PopupWindow(Window):
         visible: bool = False,
         anchor: str = "top right",
         enable_inhibitor: bool = False,
+        keyboard_mode: str = "on-demand",
         *kwargs,
     ):
         self.timeout = 1000
@@ -65,22 +67,34 @@ class PopupWindow(Window):
             visible=False,
             exclusive=False,
             children=self.box,
+            keyboard_mode=keyboard_mode,
             *kwargs,
         )
         if enable_inhibitor:
             self.inhibitor = inhibitOverlay()
             self.inhibitor.connect("button-press-event", self.on_inhibit_click)
+            self.inhibitor.connect("key-release-event", self.on_key_release)
         self.show_all()
 
+    def on_key_release(self, entry, event_key):
+        if event_key.get_keycode()[1] == 9:
+            self.visible = False
+            self.revealer.set_reveal_child(self.visible)
+            if self.enable_inhibitor:
+                self.inhibitor.set_visible(self.visible)
+
     def on_inhibit_click(self, *_):
-        self.toggle_popup()
+        self.visible = False
+        self.revealer.set_reveal_child(self.visible)
+        if self.enable_inhibitor:
+            self.inhibitor.set_visible(self.visible)
+
 
     def toggle_popup(self):
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)
         if self.enable_inhibitor:
             self.inhibitor.set_visible(self.visible)
-        return False
 
     def popup_timeout(self):
         if self.popup_running:

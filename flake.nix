@@ -41,6 +41,7 @@
           python3Packages.requests
           python3Packages.lxml
           python3Packages.pam
+          python3Packages.thefuzz
 
           ruff # Formatter
         ];
