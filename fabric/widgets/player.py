@@ -1,23 +1,24 @@
 import os
-from loguru import logger
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.overlay import Overlay
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
-from fabric.widgets.stack import Stack
-from fabric.widgets.svg import Svg
-from services.mpris import MprisPlayer, MprisPlayerManager
-from widgets.circleimage import CircleImage
-from fabric.widgets.scale import Scale
+
 from gi.repository import Gio, GLib, GObject
-from utls.bezier import CubicBezier
+from loguru import logger
+from services.mpris import MprisPlayer, MprisPlayerManager
+from utils.accent import grab_color
+from utils.bezier import CubicBezier
+from widgets.circleimage import CircleImage
 
 from fabric.utils import (
     get_relative_path,
     invoke_repeater,
 )
-from utls.accent import grab_color
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
+from fabric.widgets.scale import Scale
+from fabric.widgets.stack import Stack
+from fabric.widgets.svg import Svg
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -344,7 +345,7 @@ class PlayerBox(Box):
         invoke_repeater(16, invoke)
 
     def move_seekbar(self):
-        if self.exit or self.player.can_seek is False:
+        if self.exit or not self.player.can_seek:
             return False
         self.seek_bar.set_value(self.player.get_property("position"))
         return True

@@ -1,9 +1,9 @@
-from fabric.audio.service import Audio
 from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.screen_record import ScreenRecorder
-from fabric.bluetooth.service import BluetoothClient
 
+from fabric.audio.service import Audio
+from fabric.bluetooth.service import BluetoothClient
 
 # Services
 mprisplayer = MprisPlayerManager()

@@ -1,10 +1,10 @@
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.button import Button
-from fabric.widgets.revealer import Revealer
 from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
 
 bluetooth_icons = {
     "bluetooth": "󰂯",

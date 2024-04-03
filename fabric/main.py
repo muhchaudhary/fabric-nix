@@ -1,13 +1,14 @@
-import fabric
 import config
-from fabric.utils import set_stylesheet_from_file, get_relative_path, monitor_file
+from components.app_menu.app_menu import appMenu
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
-from components.app_menu.app_menu import appMenu
 
 # from overview.overview import Overview
 from loguru import logger
+
+import fabric
+from fabric.utils import get_relative_path, monitor_file, set_stylesheet_from_file
 
 
 def apply_style(*args):

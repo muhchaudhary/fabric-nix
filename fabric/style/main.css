@@ -203,6 +203,7 @@ scale {
     min-width: 9px;
     margin: 14px 2px 14px 2px;
     background-color: #7B8089;
+
 }
 
 #workspaces>button.empty>label {
@@ -210,7 +211,7 @@ scale {
 }
 
 #workspaces>button.urgent {
-    background-color: @ws-urgent;
+    background-color: mix(var(--accent), red, 0.5);
 }
 
 #workspaces>button:hover {

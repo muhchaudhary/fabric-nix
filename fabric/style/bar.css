@@ -1,16 +1,4 @@
 /* uncomment if you do have pywal configured */
-@import url("/home/muhammad/.cache/wal/colors-waybar.css");
-
-@define-color window-bg alpha(@background, 0.9);
-@define-color module-bg alpha(@background, 0.4);
-@define-color border-color @color11;
-@define-color ws-active @color9;
-@define-color ws-inactive @color3;
-@define-color ws-empty @color8;
-@define-color ws-hover @color1;
-@define-color ws-urgent @color11;
-
-
 * {
     /* unsets everything so we can style everything from scratch. */
     all: unset;

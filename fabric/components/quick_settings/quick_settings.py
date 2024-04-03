@@ -62,6 +62,10 @@ class QuickSettingsBrightnessScale(Box):
             **kwargs,
         )
         # self.label = Label("Display", h_align="start")
+        if config.brightness.max_screen == -1:
+            self.set_name("disabled")
+            self.set_visible(False)
+            return
         self.brightness_slider = Scale(
             min_value=0,
             max_value=config.brightness.max_screen,

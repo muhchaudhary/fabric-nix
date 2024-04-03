@@ -18,9 +18,16 @@ screen = str(exec_shell_command("ls -w1 /sys/class/backlight")).split("\n")[0]
 leds = str(exec_shell_command("ls -w1 /sys/class/leds")).split("\n")
 
 kbd = ""
-
 if "tpacpi::kbd_backlight" in leds:
     kbd = "tpacpi::kbd_backlight"
+
+
+class NoBrightnessError(ImportError):
+    def __init__(self, *args):
+        super().__init__(
+            "Playerctl is not installed, please install it first",
+            *args,
+        )
 
 
 class Brightness(Service):
@@ -38,7 +45,6 @@ class Brightness(Service):
         if os.path.exists(self.screen_backlight_path + "/max_brightness"):
             with open(self.screen_backlight_path + "/max_brightness", "r") as f:
                 self.max_screen = int(f.read())
-
         if os.path.exists(self.kbd_backlight_path + "/max_brightness"):
             with open(self.kbd_backlight_path + "/max_brightness", "r") as f:
                 self.max_kbd = int(f.read())
@@ -54,7 +60,9 @@ class Brightness(Service):
 
     @Property(value_type=int, flags="read-write")
     def screen_brightness(self) -> int:
-        return int(exec_brightnessctl(f"--device '{screen}' get"))
+        if screen:
+            return int(exec_brightnessctl(f"--device '{screen}' get"))
+        return -1
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):
@@ -67,6 +75,8 @@ class Brightness(Service):
             print(e.message)
 
     def set_kbd(self, value: int):
+        if not kbd:
+            return -1
         if value < 0 or value > self.max_kbd:
             return
         try:

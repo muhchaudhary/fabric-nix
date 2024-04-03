@@ -13,6 +13,10 @@ from fabric.widgets.revealer import Revealer
 class BatteryIndicator(Box):
     def __init__(self, **kwargs):
         super().__init__(v_align="center", h_align="start", **kwargs)
+        if not psutil.sensors_battery():
+            self.set_visible(False)
+            return
+
         self.battery = Fabricate(
             value=[-1, -1, False],
             poll_from=lambda *args: self.poll_batt(),

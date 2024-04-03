@@ -12,7 +12,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import (   # noqa: E402
+from gi.repository import (  # noqa: E402
     Gdk,
     GLib,
     Gtk,

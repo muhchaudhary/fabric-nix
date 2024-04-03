@@ -90,7 +90,7 @@ class MprisPlayer(Service):
 
     def toggle_shuffle(self):
         self._player.set_shuffle(
-            not self._player.props.shuffle  # type: ignore
+            not self._player.get_property("shuffle")
         ) if self.can_shuffle else None
 
     def play_pause(self):

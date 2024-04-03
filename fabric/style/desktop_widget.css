@@ -1,14 +1,3 @@
-@import url("/home/muhammad/.cache/wal/colors-waybar.css");
-
-@define-color window-bg alpha(@background, 0.9);
-@define-color module-bg alpha(@background, 0.4);
-@define-color border-color @color11;
-@define-color ws-active @color9;
-@define-color ws-inactive @color3;
-@define-color ws-empty @color8;
-@define-color ws-hover @color1;
-@define-color ws-urgent @color11;
-
 #date > label,
 #clock > label {
     font-family:"Ubuntu Nerd Font";
@@ -56,7 +45,7 @@
 
 #cpu-circular-progress-bar,
 #ram-circular-progress-bar {
-    border-color: @foreground;
+    border-color: green;
     color: alpha(#767676, 0.3);
     min-width: 1em;
 }
