@@ -7,7 +7,7 @@ from widgets.popup_window import PopupWindow
 from config import brightness
 
 
-accent = "#8dd9d0"
+accent = "#B82DD7"
 
 
 class SystemOSD(PopupWindow):
@@ -20,12 +20,6 @@ class SystemOSD(PopupWindow):
         self.disp_backlight = 0
         self.kbd_backlight = 0
         self.vol = 0
-
-        # self.kbd_monitor = monitor_file(
-        #     "/sys/class/leds/tpacpi::kbd_backlight/brightness"
-        # )
-
-        # self.kbd_monitor.connect("changed", lambda *args: print("B"))
 
         self.overlay_fill_box = Box(name="osd-box")
         self.icon = Image()
@@ -52,31 +46,43 @@ class SystemOSD(PopupWindow):
         )
 
     def update_label_brightness(self):
-        if not self.brightness.max_screen == -1:
-            return
-        brightness = self.brightness.screen_brightness / self.max_disp_backlight * 100
+        brightness = (
+            int(
+                os.read(
+                    os.open(self.disp_backlight_path + "brightness", os.O_RDONLY), 6
+                )
+            )
+            / self.max_disp_backlight
+            * 100
+        )
+
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
             f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
         )
 
-    def update_label_keyboard(self, _, file, *args):
-        if not self.brightness.max_kbd == -1:
-            return
-        brightness = round(
-            int(file.load_bytes()[0].get_data()) / int(self.max_kbd_backlight) * 100
+    def update_label_keyboard(self, *args):
+        brightness = (
+            int(
+                os.read(
+                    os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6
+                )
+            )
+            / self.max_kbd_backlight
+            * 100
         )
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
             f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
         )
-        self.toggle_popup()
 
     def enable_popup(self, type: str):
         if type == "sound":
             self.update_label_audio()
         elif type == "brightness":
             self.update_label_brightness()
+        elif type == "kbd":
+            self.update_label_keyboard()
 
         self.popup_timeout()

@@ -32,6 +32,96 @@ class DateTime(Button):
         return True
 
 
+class ActiveWindow(Button):
+    def __init__(
+        self,
+        formatter: FormattedString = FormattedString(
+            "{test_title(win_title)}",
+            test_title=lambda x, max_length=20: "Desktop"
+            if len(x) == 0
+            else (x if len(x) <= max_length else x[: max_length - 3] + "..."),
+        ),
+        # TODO: add the argument hints for the superclass
+        **kwargs,
+    ):
+        super().__init__(**kwargs)
+        self.formatter = formatter
+        bulk_connect(
+            connection,
+            {
+                "ready": self.on_ready,
+                "activewindow": self.on_activewindow,
+                "closewindow": self.on_closewindow,
+            },
+        )
+        self.show()
+
+    def initialize_active_window(self):
+        win_data: dict = json.loads(
+            str(
+                (
+                    connection.send_command(
+                        "j/activewindow",
+                    )
+                ).reply.decode()
+            )
+        )
+        win_class = win_data.get("class")
+        win_title = win_data.get("title")
+        win_initialTitle = win_data.get("initialTitle")
+        if win_class is None:
+            win_class = ""
+        if win_initialTitle is None:
+            win_initialTitle = ""
+        if win_title is None:
+            if win_class is not None:
+                win_title = win_class
+            else:
+                win_title = ""
+        return (
+            GLib.idle_add(
+                self.set_label,
+                self.formatter.get_formatted(
+                    win_class=win_class,
+                    win_title=win_title,
+                    win_initialTitle=win_initialTitle,
+                ),
+            ),
+        )
+
+    def on_ready(self, obj):
+        self.initialize_active_window()
+        return logger.info("[ActiveWindow] Connected to the hyprland socket")
+
+    def on_closewindow(self, obj, event: SignalEvent):
+        self.initialize_active_window()
+        return logger.info(f"[ActiveWindow] Closed window 0x{event.data[0]}")
+
+    def on_activewindow(self, obj: Connection, event: SignalEvent):
+        win_data: dict = json.loads(
+            str(
+                (
+                    obj.send_command(
+                        "j/activewindow",
+                    )
+                ).reply.decode()
+            )
+        )
+        GLib.idle_add(
+            self.set_label,
+            self.formatter.get_formatted(
+                win_class=event.data[0],
+                win_title=event.data[1],
+                win_initialTitle=win_data.get("initialTitle")
+                if win_data.get("initialTitle")
+                else "",
+            ),
+        )
+        return logger.info(
+            f"[ActiveWindow] Activated window {event.data[0]}, {event.data[1]}"
+        )
+
+
 class WorkspaceButton(Button):
     def __init__(
         self,

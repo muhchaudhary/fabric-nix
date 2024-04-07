@@ -1,11 +1,13 @@
 import os
 
+import gi
 from gi.repository import GLib
 
 from fabric.service import Property, Service, Signal, SignalContainer
 from fabric.utils import exec_shell_command, monitor_file
 
 
+# In the future, use GUdev to get ehe brightness devices
 def exec_brightnessctl(args: str):
     return exec_shell_command(f"brightnessctl {args}")
 
@@ -60,9 +62,8 @@ class Brightness(Service):
 
     @Property(value_type=int, flags="read-write")
     def screen_brightness(self) -> int:
-        if screen:
-            return int(exec_brightnessctl(f"--device '{screen}' get"))
-        return -1
+        # could just also read the file
+        return int(exec_brightnessctl(f"--device '{screen}' get"))
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):

@@ -65,6 +65,7 @@ class PrayerTimesService(Service):
         current_day = datetime.datetime.today().strftime("%d-%m-%Y")
 
         if retrived_day != current_day:
+            print("Getting Fresh Data")
             data = requests.get(api_request)
             with open(PRAYER_TIMES_FILE, "wb") as outfile:
                 outfile.write(data.content)
