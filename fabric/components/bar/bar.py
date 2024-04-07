@@ -1,9 +1,9 @@
 from components.bar.widgets.battery_indicator import BatteryIndicator
-from components.bar.widgets.date_time import DateTime, WorkspaceButton, Workspaces
+from components.bar.widgets.date_time import DateTime, WorkspaceButton, Workspaces, ActiveWindow
 from components.bar.widgets.prayer_times import PrayerTimesButton
 from components.quick_settings.quick_settings import QuickSettingsButton
 
-from fabric.hyprland.widgets import ActiveWindow
+# from fabric.hyprland.widgets import ActiveWindow
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.wayland import Window
@@ -30,7 +30,7 @@ class StatusBar(Window):
         self.active_window = ActiveWindow(
             name="panel-button",
             formatter=FormattedString(
-                "{test_title(win_title)}",
+                "{test_title(win_initialTitle)}",
                 test_title=lambda x, max_length=40: "Desktop"
                 if len(x) == 0
                 else (x if len(x) <= max_length else x[: max_length - 3] + "..."),

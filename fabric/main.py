@@ -1,8 +1,15 @@
 import config
+import gi
 from components.app_menu.app_menu import appMenu
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
+
+import fabric
+from fabric.utils import get_relative_path, monitor_file, set_stylesheet_from_file
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
 
 # from overview.overview import Overview
 from loguru import logger
@@ -15,6 +22,8 @@ def apply_style(*args):
     logger.info("[Main] CSS applied")
     return set_stylesheet_from_file(get_relative_path("style/main.css"))
 
+def quit_fabric():
+    Gtk.main_quit()
 
 if __name__ == "__main__":
     logger.disable("fabric.hyprland.widgets")
@@ -32,3 +41,4 @@ if __name__ == "__main__":
     apply_style()
 
     fabric.start()
+

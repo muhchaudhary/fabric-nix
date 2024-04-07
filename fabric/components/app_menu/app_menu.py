@@ -1,13 +1,15 @@
 import subprocess
-from fabric.utils.applications import Application, get_desktop_applications
-from fabric.widgets.entry import Entry
-from fabric.widgets.scrolled_window import ScrolledWindow
+
+from thefuzz import fuzz, process
 from widgets.popup_window import PopupWindow
+
+from fabric.utils.applications import Application, get_desktop_applications
+from fabric.widgets.box import Box
 from fabric.widgets.button import Button
+from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.box import Box
-from thefuzz import process, fuzz
+from fabric.widgets.scrolled_window import ScrolledWindow
 
 
 class AppInfo(Button):
@@ -53,8 +55,11 @@ class AppInfo(Button):
         self.add(self.button_box)
 
     def launch_app(self):
+        # print(
+        #     [x for x in self.app.command_line.split(" ") if x[0] != "%"],
+        # )
         subprocess.Popen(
-            [x for x in self.app.command_line.split(" ") if x != "%U"],
+            [x for x in self.app.command_line.split(" ") if x[0] != "%"],
             start_new_session=True,
         )
 
@@ -115,7 +120,6 @@ class AppMenu(PopupWindow):
             if args[0].get_child_revealed()
             else None,
         )
-        # GLib.idle_add(lambda *args: self.search_app_entry.grab_focus_without_selecting())
 
     def keypress(self, entry: Entry, event_key):
         if event_key.get_keycode()[1] == 9:
@@ -134,8 +138,5 @@ class AppMenu(PopupWindow):
             appL = AppInfo(self.application_buttons[name])
             self.searched_buttons_box.add_children(appL)
             appL.connect("clicked", lambda *args: appMenu.toggle_popup())
-        print(lister)
-        print(entry.get_text())
-
 
 appMenu = AppMenu()
