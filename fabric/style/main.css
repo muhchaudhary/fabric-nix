@@ -5,7 +5,7 @@
 
 
 :vars {
-    --accent: #8dd9d0;
+    --accent: #B82DD7;
     --bg: #171717;
 }
 
@@ -43,7 +43,7 @@ scale {
 
 #system-tray>button:hover,
 #panel-button:hover {
-    background-color: alpha(mix(var(--bg), white, 0.1), 0.6);
+    background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
     border-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -77,8 +77,9 @@ scale {
 #quicksettings-slider trough {
     margin-top: 5px;
     margin-bottom: 5px;
+    padding-right: 12.5px;
     min-height: 25px;
-    background-color: alpha(#303030, 0.7);
+    background-color: alpha(#5f5a5a, 0.7);
     border-radius: 20px;
 }
 
@@ -92,12 +93,13 @@ scale {
 }
 
 #quicksettings-slider trough:hover {
-    background-color: alpha(#4d4d4d, 0.7);
+    background-color: alpha(#888888, 0.7);
 }
 
 #quicksettings-slider trough highlight {
     border-radius: 20px 0px 0px 20px;
     background-color: var(--accent);
+    margin-right: -12.5px;
 }
 
 #quicksettings-slider slider {
@@ -105,7 +107,9 @@ scale {
     min-width: 25px;
     min-height: 25px;
     box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+    margin-left:25px;
     background-color: mix(var(--accent), white, 0.3);
+    /* background-color: alpha(red, 0.2); */
 }
 
 #quicksettings-box {
@@ -113,6 +117,9 @@ scale {
     border-radius: 20px;
 }
 
+#quicksettings-slider slider:hover {
+    background-color: mix(var(--accent), white, 0.6);
+}
 
 #quicksettings-box>box>button {
     margin: 10px -10px 10px 5px;
@@ -123,9 +130,6 @@ scale {
 
 } */
 
-#quicksettings-slider slider:hover {
-    background-color: mix(var(--accent), white, 0.6);
-}
 
 
 
