@@ -42,6 +42,7 @@
           python3Packages.lxml
           python3Packages.pam
           python3Packages.thefuzz
+          python3Packages.evdev
 
           ruff # Formatter
         ];
@@ -54,6 +55,7 @@
           gnome.gnome-bluetooth # For bluetooth
           networkmanager # For network
           libgweather # For weather
+          libgudev # For uevent monitoring
         ];
         # shellHook = ''
         #   export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
