@@ -1,13 +1,12 @@
 import os
 import config
 from fabric.widgets.box import Box
-from fabric.utils import monitor_file
 from fabric.widgets.image import Image
 from widgets.popup_window import PopupWindow
 from config import brightness
 
 
-accent = "#B82DD7"
+accent = "#458588"
 
 
 class SystemOSD(PopupWindow):

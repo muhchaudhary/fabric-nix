@@ -1,13 +1,5 @@
 
-* {
-    /* unsets everything so we can style everything from scratch. */
-    all: unset;
-    font-family: "roboto";
-    font-weight: 500;
-    font-size: 15px;
-    color: white;
-    /* we can use webcss variables, fabric compiles that to gtk css. */
-}
+
 
 #main-window {
     /* border: solid 2px; */

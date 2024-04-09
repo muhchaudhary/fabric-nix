@@ -5,12 +5,23 @@
 @define-color button-hover #585858;
 @define-color seek-border #8f8f8f;
 
+* {
+    /* unsets everything so we can style everything from scratch. */
+    all: unset;
+    font-family: "roboto";
+    font-weight: 500;
+    font-size: 15px;
+    color: @text_color;
+    /* we can use webcss variables, fabric compiles that to gtk css. */
+}
+
+
 #random-element {
     background-color: #d9d9d9;
 }
 
 #inner-player-box {
-    background-color: @player-bg;
+    background-color: alpha(@bg_color, 0.7);
     border-radius: 20px;
 }
 
@@ -45,7 +56,7 @@
 #player-title {
     font-family: "roboto";
     font-weight: 700;
-    color: @title-text;
+    color: @text_color;
     text-shadow: -1px -1px 0 @title-text-outline,
         1px -1px 0 @title-text-outline,
         -1px 1px 0 @title-text-outline,
@@ -57,7 +68,8 @@
     font-family: "roboto";
     font-weight: 600;
     font-size: 13px;
-    color: @artist-text;
+    /* color: @artist-text; */
+    color: @text_color_secondary;
     text-shadow: -1px -1px 0 @title-text-outline,
         1px -1px 0 @title-text-outline,
         -1px 1px 0 @title-text-outline,

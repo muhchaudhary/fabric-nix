@@ -12,7 +12,7 @@
 #date>label,
 #clock>label {
     /* font-family: "Ubuntu Nerd Font"; */
-    color: alpha(#ffffff, 0.8);
+    color: alpha(#3C3836, 0.8);
     /* text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.05),
               1px -1px 1px rgba(0, 0, 0, 0.05),
              -1px  1px  1px rgba(0, 0, 0, 0.05),

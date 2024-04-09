@@ -3,11 +3,28 @@
 /* @import "./style/player.css"; */
 @import "./style/player-dark.css";
 
-
 :vars {
-    --accent: #B82DD7;
-    --bg: #171717;
+    --accent: #458588;
+    --bg: #282828;
+    --text-color: #EBDBB2;
+    --text-color-secondary: #D5C4A1;
 }
+
+@define-color text_color var(--text-color);
+@define-color text_color_secondary var(--text-color-secondary);
+@define-color accent_color var(--accent);
+@define-color bg_color var(--bg);
+
+* {
+    /* unsets everything so we can style everything from scratch. */
+    all: unset;
+    font-family: "roboto";
+    font-weight: 500;
+    font-size: 15px;
+    color: var(--text-color);
+    /* we can use webcss variables, fabric compiles that to gtk css. */
+}
+
 
 tooltip {
     padding: 5px;
@@ -29,11 +46,11 @@ scale {
     border-width: 2px;
     border-radius: 10px;
     border-color: transparent;
-    -gtk-icon-shadow:
+    /* -gtk-icon-shadow:
         -0.5px -0.5px 0 var(--bg),
         0.5px 0.5px 0 var(--bg),
         -0.5px 0.5px 0 var(--bg),
-        0.5px -0.5px 0 var(--bg);
+        0.5px -0.5px 0 var(--bg); */
 
 }
 
@@ -54,14 +71,10 @@ scale {
 #panel-button:active image,
 #panel-button:active>*>*>label,
 #panel-button:active>*>label,
+#panel-button-active> box > label,
 #panel-button:active {
     background-color: var(--accent);
     color: var(--bg);
-    -gtk-icon-shadow:
-        -0px -0px 0 var(--bg),
-        0px 0px 0 var(--bg),
-        -0px 0px 0 var(--bg),
-        0px -0px 0 var(--bg);
 }
 
 #quicksettings-slider {
@@ -180,7 +193,7 @@ scale {
     min-width: 10px;
     margin: 13px 2px 13px 2px;
     transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
-    background-color: #e6e6e6;
+    background-color: var(--text-color);
 }
 
 #workspaces {
@@ -252,7 +265,7 @@ scale {
 
 }
 
-#system-tray-menu>menuitem menu > menuitem:hover,
+#system-tray-menu>menuitem menu>menuitem:hover,
 #system-tray-menu>menuitem:hover,
 #submenu-button:hover,
 #quicksettings-toggle:hover,
@@ -298,18 +311,18 @@ scale {
     font-size: 17px;
 }
 
-#system-tray-menu>menuitem menu > menuitem,
+#system-tray-menu>menuitem menu>menuitem,
 #system-tray-menu>menuitem,
 #submenu-item {
     margin: 5px 5px 5px 5px;
 }
 
-#system-tray-menu>menuitem menu > menuitem:disabled,
+#system-tray-menu>menuitem menu>menuitem:disabled,
 #system-tray-menu>menuitem:disabled {
     background-color: var(--bg);
 }
 
-#system-tray-menu>menuitem menu > menuitem,
+#system-tray-menu>menuitem menu>menuitem,
 #system-tray-menu>menuitem,
 #submenu-button {
     background-color: #3E3E3E;
