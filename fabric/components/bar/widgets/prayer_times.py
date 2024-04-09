@@ -13,7 +13,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
-city = "Waterloo"
+city = "Mississauga"
 country = "Canada"
 api_request = (
     f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
@@ -143,9 +143,17 @@ class PrayerTimesButton(Button):
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
+        PrayerTimesPopup.revealer.connect(
+            "notify::reveal-child",
+            lambda *args: self.set_name("panel-button-active")
+            if PrayerTimesPopup.visible
+            else self.set_name("panel-button"),
+        )
 
-    def on_click(self, *args):
-        PrayerTimesPopup.toggle_popup()
+    def on_click(self, button, *args):
+        PrayerTimesPopup.toggle_popup_offset(
+            button.get_allocation().x, button.get_allocated_width()
+        )
 
 
 prayer_times = PrayerTimes()

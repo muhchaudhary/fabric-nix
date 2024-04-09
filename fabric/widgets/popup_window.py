@@ -95,6 +95,13 @@ class PopupWindow(Window):
         if self.enable_inhibitor:
             self.inhibitor.set_visible(self.visible)
 
+    def toggle_popup_offset(self, offset, toggle_width):
+        self.visible = not self.visible
+        self.revealer.set_reveal_child(self.visible)
+        self.revealer.set_margin_start(offset - (self.revealer.get_allocated_width() - toggle_width) / 2)
+        if self.enable_inhibitor:
+            self.inhibitor.set_visible(self.visible)
+
     def popup_timeout(self):
         if self.popup_running:
             self.currtimeout = 0
