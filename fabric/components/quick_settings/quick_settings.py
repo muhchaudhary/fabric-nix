@@ -136,6 +136,12 @@ class QuickSettingsButton(Button):
 
         self.add(Box(children=[self.bluetooth_icon, self.audio_icon]))
         self.connect("clicked", self.on_click)
+        QuickSettingsPopup.revealer.connect(
+            "notify::reveal-child",
+            lambda *args: self.set_name("panel-button-active")
+            if QuickSettingsPopup.visible
+            else self.set_name("panel-button"),
+        )
 
     def update_audio(self, *args):
         vol = config.audio.speaker.volume
@@ -162,5 +168,5 @@ QuickSettingsPopup = PopupWindow(
     anchor="top right",
     transition_type="slide-down",
     child=QuickSettings(),
-    enable_inhibitor=False,
+    enable_inhibitor=True,
 )
