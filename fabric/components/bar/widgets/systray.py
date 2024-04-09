@@ -6,6 +6,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from loguru import logger
+from fabric.utils import invoke_repeater
 
 
 class SystemTrayButton(Button):
@@ -14,8 +15,7 @@ class SystemTrayButton(Button):
         self.icon_size = icon_size
         super().__init__(**kwargs)
 
-        self._sys_item.connect("icon-changed", self.on_icon_change)
-        self._sys_item.connect("status-changed", self.on_status_change)
+        self._sys_item.connect("changed", self.on_icon_change)
 
         self.on_icon_change()
         self.connect("button-press-event", self.on_button_click)
@@ -37,15 +37,13 @@ class SystemTrayButton(Button):
                 logger.error(f"Failed to find Dbusmenu for {self._sys_item.bus_name}")
 
     def on_icon_change(self, _=None):
-        tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size)
+        print(self._sys_item.get_status())
+        tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size + 5)
         self.set_image(
             Image(pixbuf=tray_icon_pixbuf)
         ) if tray_icon_pixbuf is not None else self.set_image(
             Image(icon_name="missing", pixel_size=self.icon_size)
         )
-
-    def on_status_change(self, _, status: str):
-        self.on_icon_change()
 
 
 class SystemTrayBox(Box):
@@ -91,12 +89,31 @@ class SystemTrayRevealer(Box):
         self.add(self.revealer)
         self.add(self.reveal_button)
 
+        deg = 45
         self.reveal_button.connect(
             "clicked",
             lambda *args: [
                 self.revealer.set_reveal_child(not self.revealer.get_reveal_child()),
-                self.button_image.set_from_icon_name("pan-end-symbolic", 1)
-                if self.revealer.get_reveal_child()
-                else self.button_image.set_from_icon_name("pan-start-symbolic", 1),
+                self.animate_spin(self.revealer.get_reveal_child()),
             ],
         )
+
+    def animate_spin(self, open):
+        deg = 0 if open else 180
+        direction = -1
+        if open:
+            direction = 1
+
+        def do_animate():
+            nonlocal deg
+            deg += direction * 10
+            self.button_image.set_style(
+                f"-gtk-icon-transform: rotate({deg}deg);"
+            )
+            if open and deg >= 180:
+                return False
+            if not open and deg <= 0:
+                return False
+            return True
+
+        invoke_repeater(15, do_animate)
