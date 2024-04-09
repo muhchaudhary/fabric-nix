@@ -37,10 +37,6 @@ scale {
 
 }
 
-/* #panel-button image {
-
-} */
-
 #system-tray>button:hover,
 #panel-button:hover {
     background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
@@ -107,7 +103,7 @@ scale {
     min-width: 25px;
     min-height: 25px;
     box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
-    margin-left:25px;
+    margin-left: 25px;
     background-color: mix(var(--accent), white, 0.3);
     /* background-color: alpha(red, 0.2); */
 }
@@ -256,10 +252,14 @@ scale {
 
 }
 
+#system-tray-menu>menuitem menu > menuitem:hover,
+#system-tray-menu>menuitem:hover,
 #submenu-button:hover,
 #quicksettings-toggle:hover,
 #quicksettings-revealer:hover {
-    background-color: #575757;
+    background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
+    border-color: rgba(255, 255, 255, 0.1);
+
 }
 
 #quicksettings-revealer-active:hover,
@@ -298,23 +298,34 @@ scale {
     font-size: 17px;
 }
 
+#system-tray-menu>menuitem menu > menuitem,
+#system-tray-menu>menuitem,
 #submenu-item {
     margin: 5px 5px 5px 5px;
 }
 
+#system-tray-menu>menuitem menu > menuitem:disabled,
+#system-tray-menu>menuitem:disabled {
+    background-color: var(--bg);
+}
+
+#system-tray-menu>menuitem menu > menuitem,
+#system-tray-menu>menuitem,
 #submenu-button {
     background-color: #3E3E3E;
     padding: 8px;
     border-radius: 10px;
 }
 
+#system-tray-menu>menuitem menu,
+#system-tray-menu,
 #submenu {
     min-width: 450px;
-    background-color: #242424;
-    border-color: #242424;
-    border-style: solid;
-    border-width: 10px;
-    border-radius: 10px;
+    background-color: alpha(var(--bg), 0.7);
+    border-radius: 20px;
+    border-width: 5px;
+    border-color: alpha(var(--accent), 0.4);
+    padding: 10px;
 }
 
 #system-tray,

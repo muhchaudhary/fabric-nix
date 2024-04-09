@@ -12,8 +12,8 @@ accent = "#B82DD7"
 
 class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
-        # self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
-        # self.kbd_backlight_path = "/sys/class/leds/tpacpi::kbd_backlight/"
+        self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
+        self.kbd_backlight_path = "/sys/class/leds/tpacpi::kbd_backlight/"
         self.max_disp_backlight = brightness.max_screen
         self.max_kbd_backlight = brightness.max_kbd
         self.brightness = brightness
@@ -46,15 +46,7 @@ class SystemOSD(PopupWindow):
         )
 
     def update_label_brightness(self):
-        brightness = (
-            int(
-                os.read(
-                    os.open(self.disp_backlight_path + "brightness", os.O_RDONLY), 6
-                )
-            )
-            / self.max_disp_backlight
-            * 100
-        )
+        brightness = self.brightness.screen_brightness / self.max_disp_backlight * 100
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
@@ -64,9 +56,7 @@ class SystemOSD(PopupWindow):
     def update_label_keyboard(self, *args):
         brightness = (
             int(
-                os.read(
-                    os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6
-                )
+                os.read(os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6)
             )
             / self.max_kbd_backlight
             * 100

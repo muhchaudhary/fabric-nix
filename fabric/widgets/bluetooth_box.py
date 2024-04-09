@@ -17,7 +17,7 @@ bluetooth_icons = {
 
 class BtDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        super().__init__(spacing=2, name="submenu-item", **kwargs)
+        super().__init__(spacing=2, name="submenu-item", h_expand=True, **kwargs)
         self.device = device
         self.device.connect("closed", lambda _: self.destroy())
 
@@ -48,23 +48,74 @@ class BtDeviceBox(CenterBox):
         ) if self.device.connected else self.connect_button.set_label("disconnected")
 
 
+class BluetoothReveal(Revealer):
+    def __init__(self, client: BluetoothClient, **kwargs):
+        super().__init__(
+            h_expand=True, transition_duration=100, transition_type="slide-down"
+        )
+        self.client: BluetoothClient = client
+        # Scan Button
+        self.scan_button = Button(label=bluetooth_icons["scan"], name="submenu-button")
+        self.scan_button.connect("clicked", lambda _: self.client.toggle_scan())
+
+        self.paired_box = Box(orientation="vertical", h_expand=True)
+        self.available_box = Box(orientation="vertical", h_expand=True)
+
+
+        self.box_child = Box(
+            orientation="v",
+            h_expand=True,
+            name="submenu",
+            children=[
+                CenterBox(
+                    h_expand=True,
+                    name="submenu-title",
+                    start_children=Label(
+                        name="submenu-title-label",
+                        label=bluetooth_icons["bluetooth"] + " Bluetooth",
+                    ),
+                    end_children=self.scan_button,
+                ),
+                self.paired_box,
+                CenterBox(
+                    start_children=Label("Available Devices"),
+                ),
+                self.available_box,
+            ],
+        )
+
+    def new_device(self, client: BluetoothClient, address):
+        device: BluetoothDevice = client.get_device_from_addr(address)
+        if device.paired:
+            self.paired_box.add(BtDeviceBox(device))
+        else:
+            self.available_box.add(BtDeviceBox(device))
+
+
+
 class BluetoothToggle(Box):
     def __init__(self, client: BluetoothClient, **kwargs):
-        super().__init__(spacing=2, orientation="vertical", **kwargs)
+        super().__init__(
+            spacing=2,
+            orientation="vertical",
+            h_expand=True,
+            **kwargs,
+        )
         self.client = client
-
-        # Boxes to hold the devices
-        self.paired_box = Box(orientation="vertical")
-        self.available_box = Box(orientation="vertical")
 
         # Scan Button
         self.scan_button = Button(label=bluetooth_icons["scan"], name="submenu-button")
         self.scan_button.connect("clicked", lambda _: self.client.toggle_scan())
 
+
+        # Boxes to hold the devices
+        self.paired_box = Box(orientation="vertical", h_expand=True)
+        self.available_box = Box(orientation="vertical", h_expand=True)
+
         # Bluetooth Button
         self.bluetooth_toggle = Button(name="quicksettings-toggle")
-        self.bluetooth_toggle_icon = Label(
-            name="panel-icon", label=bluetooth_icons["bluetooth"]
+        self.bluetooth_toggle_icon = Image(
+            name="panel-icon", icon_name="bluetooth-active-symbolic", pixel_size=16
         )
         self.bluetooth_toggle_name = Label(name="panel-text", label="Not Connected")
         self.bluetooth_toggle_children = Box(
@@ -94,12 +145,15 @@ class BluetoothToggle(Box):
 
         # Revealer
         self.revealer = Revealer(
+            h_expand=True,
             children=Box(
                 orientation="v",
-                h_align="start",
+                # h_align="start",
+                h_expand=True,
                 name="submenu",
                 children=[
                     CenterBox(
+                        h_expand=True,
                         name="submenu-title",
                         start_children=Label(
                             name="submenu-title-label",
@@ -141,15 +195,20 @@ class BluetoothToggle(Box):
 
     def toggle_bluetooth(self, *args):
         if self.client.enabled:
-            self.bluetooth_toggle_icon.set_label(bluetooth_icons["bluetooth"])
+            self.bluetooth_toggle_icon.set_from_icon_name(
+                "bluetooth-active-symbolic", 1
+            )
             self.bluetooth_toggle_name.set_label("Not Connected")
             self.bluetooth_toggle.set_name("quicksettings-toggle-active")
             self.reveal_button.set_name("quicksettings-revealer-active")
         else:
-            self.bluetooth_toggle_icon.set_label(bluetooth_icons["bluetooth-off"])
+            self.bluetooth_toggle_icon.set_from_icon_name(
+                "bluetooth-disabled-symbolic", 1
+            )
             self.bluetooth_toggle_name.set_label("Disabled")
             self.bluetooth_toggle.set_name("quicksettings-toggle")
             self.reveal_button.set_name("quicksettings-revealer")
+        self.bluetooth_toggle_icon.set_pixel_size(16)
 
     def new_device(self, client: BluetoothClient, address):
         device: BluetoothDevice = client.get_device_from_addr(address)

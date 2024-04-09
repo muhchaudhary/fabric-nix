@@ -95,7 +95,7 @@ class QuickSettingsButtonBox(Box):
             orientation="v",
             h_align="start",
             v_align="start",
-            # h_expand=True,
+            h_expand=True,
             **kwargs,
         )
         self.bluetooth_toggle = BluetoothToggle(config.bluetooth_client)
@@ -123,7 +123,7 @@ class QuickSettingsButton(Button):
             name="panel-icon",
             icon_name=config.bluetooth_icons_names["bluetooth"],
             pixel_size=20,
-            style="color: #51A4E7;",
+            # style="color: #51A4E7;",
         )
         config.bluetooth_client.bind_property(
             "enabled",
@@ -162,5 +162,5 @@ QuickSettingsPopup = PopupWindow(
     anchor="top right",
     transition_type="slide-down",
     child=QuickSettings(),
-    enable_inhibitor=True,
+    enable_inhibitor=False,
 )

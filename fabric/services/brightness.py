@@ -1,5 +1,4 @@
 import os
-
 import gi
 from gi.repository import GLib
 
@@ -63,7 +62,9 @@ class Brightness(Service):
     @Property(value_type=int, flags="read-write")
     def screen_brightness(self) -> int:
         # could just also read the file
-        return int(exec_brightnessctl(f"--device '{screen}' get"))
+        return int(
+            os.read(os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6)
+        )
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):
