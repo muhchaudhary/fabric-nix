@@ -18,7 +18,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
-from fabric.widgets.svg import Svg
+from fabric.widgets.image import Image
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -147,32 +147,32 @@ class PlayerBox(Box):
             name="button-box",
         )
 
-        self.skip_next_icon = Svg(
-            svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-next.svg"),
+        icon_size = 24
+        self.skip_next_icon = Image(
+            icon_name="media-skip-forward-symbolic",
             name="player-icon",
-            style="fill: white",
+            pixel_size=icon_size,
         )
-        self.skip_prev_icon = Svg(
-            svg_file=get_relative_path(PLAYER_ASSETS_PATH + "skip-prev.svg"),
+        self.skip_prev_icon = Image(
+            icon_name="media-skip-backward-symbolic",
             name="player-icon",
-            style="fill: white",
+            pixel_size=icon_size,
         )
-        self.shuffle_icon = Svg(
-            svg_file=get_relative_path(PLAYER_ASSETS_PATH + "shuffle.svg"),
+        self.shuffle_icon = Image(
+            icon_name="media-playlist-shuffle-symbolic",
             name="player-icon",
-            style="fill: white",
+            pixel_size=icon_size,
         )
-        self.play_icon = Svg(
-            svg_file=get_relative_path(PLAYER_ASSETS_PATH + "play.svg"),
+        self.play_icon = Image(
+            icon_name="media-playback-start-symbolic",
             name="player-icon",
-            style="fill: white",
+            pixel_size=icon_size,
         )
-        self.pause_icon = Svg(
-            svg_file=get_relative_path(PLAYER_ASSETS_PATH + "pause.svg"),
+        self.pause_icon = Image(
+            icon_name="media-playback-pause-symbolic",
             name="player-icon",
-            style="fill: white",
+            pixel_size=icon_size,
         )
-
         self.play_pause_stack = Stack()
         self.play_pause_stack.add_named(self.play_icon, "play")
         self.play_pause_stack.add_named(self.pause_icon, "pause")
@@ -270,9 +270,9 @@ class PlayerBox(Box):
         child = self.shuffle_button.get_child()
         status = self.player.shuffle
         if status is True:
-            child.set_style("fill: #1ED760;")  # type: ignore
+            child.set_style("color: #1ED760;")  # type: ignore
         else:
-            child.set_style("fill: white;")  # type: ignore
+            child.set_style("")  # type: ignore
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
