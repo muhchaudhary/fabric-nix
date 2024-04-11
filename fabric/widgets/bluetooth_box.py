@@ -115,7 +115,7 @@ class BluetoothToggle(Box):
         # Bluetooth Button
         self.bluetooth_toggle = Button(name="quicksettings-toggle")
         self.bluetooth_toggle_icon = Image(
-            name="panel-icon", icon_name="bluetooth-active-symbolic", pixel_size=16
+            name="panel-icon", icon_name="bluetooth-active-symbolic", pixel_size=20
         )
         self.bluetooth_toggle_name = Label(name="panel-text", label="Not Connected")
         self.bluetooth_toggle_children = Box(
@@ -168,7 +168,7 @@ class BluetoothToggle(Box):
                     self.available_box,
                 ],
             ),
-            transition_duration=100,
+            transition_duration=350,
             transition_type="slide-down",
         )
 
@@ -208,7 +208,7 @@ class BluetoothToggle(Box):
             self.bluetooth_toggle_name.set_label("Disabled")
             self.bluetooth_toggle.set_name("quicksettings-toggle")
             self.reveal_button.set_name("quicksettings-revealer")
-        self.bluetooth_toggle_icon.set_pixel_size(16)
+        self.bluetooth_toggle_icon.set_pixel_size(20)
 
     def new_device(self, client: BluetoothClient, address):
         device: BluetoothDevice = client.get_device_from_addr(address)
