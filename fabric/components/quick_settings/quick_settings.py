@@ -1,12 +1,12 @@
-import config
-from widgets.bluetooth_box import BluetoothToggle
-from widgets.player import PlayerBoxStack
-from widgets.popup_window import PopupWindow
-
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.scale import Scale
+
+import config
+from widgets.bluetooth_box import BluetoothToggle
+from widgets.player import PlayerBoxStack
+from widgets.popup_window import PopupWindow
 
 
 class QuickSettingsAudioScale(Box):

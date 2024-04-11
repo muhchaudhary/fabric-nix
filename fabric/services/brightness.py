@@ -1,8 +1,8 @@
 import os
-from gi.repository import GLib
 
 from fabric.service import Property, Service, Signal, SignalContainer
 from fabric.utils import exec_shell_command, monitor_file
+from gi.repository import GLib
 
 
 # In the future, use GUdev to get ehe brightness devices

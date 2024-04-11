@@ -1,11 +1,11 @@
-import datetime
 import asyncio
+import datetime
 import subprocess
 
-from gi.repository import GLib
-from loguru import logger
 from fabric.service import Service
 from fabric.utils import exec_shell_command
+from gi.repository import GLib
+from loguru import logger
 
 
 def exec_shell_command_async(cmd: str) -> bool:

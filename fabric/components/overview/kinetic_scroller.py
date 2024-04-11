@@ -1,9 +1,10 @@
 # Testing file for kinetic motion to scrolling
 
-from fabric.widgets.eventbox import EventBox
-from fabric.utils import clamp, invoke_repeater
-from fabric.service import Signal, SignalContainer
 import math
+
+from fabric.service import Signal, SignalContainer
+from fabric.utils import clamp, invoke_repeater
+from fabric.widgets.eventbox import EventBox
 from loguru import logger
 
 

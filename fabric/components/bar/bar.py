@@ -1,3 +1,8 @@
+# from fabric.hyprland.widgets import ActiveWindow
+from fabric.utils.string_formatter import FormattedString
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.wayland import Window
+
 from components.bar.widgets.battery_indicator import BatteryIndicator
 from components.bar.widgets.date_time import (
     ActiveWindow,
@@ -8,11 +13,6 @@ from components.bar.widgets.date_time import (
 from components.bar.widgets.prayer_times import PrayerTimesButton
 from components.bar.widgets.systray import SystemTrayRevealer
 from components.quick_settings.quick_settings import QuickSettingsButton
-
-# from fabric.hyprland.widgets import ActiveWindow
-from fabric.utils.string_formatter import FormattedString
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.wayland import Window
 
 
 class StatusBar(Window):

@@ -2,14 +2,13 @@ import json
 import time
 
 import gi
-from loguru import logger
-
 from fabric.hyprland.service import Connection, SignalEvent
 from fabric.utils import bulk_connect
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
+from loguru import logger
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import (  # noqa: E402

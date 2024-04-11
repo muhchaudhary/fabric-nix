@@ -1,13 +1,13 @@
 import datetime
 
-import config
 import psutil
-
 from fabric.utils.fabricator import Fabricate
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
+
+import config
 
 
 class BatteryIndicator(Box):

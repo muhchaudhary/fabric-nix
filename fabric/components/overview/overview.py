@@ -1,10 +1,10 @@
 import fabric
 from fabric.widgets.box import Box
-from fabric.widgets.wayland import Window
 from fabric.widgets.centerbox import CenterBox
-from kinetic_scroller import KineticScroll
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.scale import Scale
+from fabric.widgets.wayland import Window
+from kinetic_scroller import KineticScroll
 
 
 class Overview(Window):

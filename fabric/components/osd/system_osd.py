@@ -1,10 +1,11 @@
 import os
-import config
+
 from fabric.widgets.box import Box
 from fabric.widgets.image import Image
-from widgets.popup_window import PopupWindow
-from config import brightness
 
+import config
+from config import brightness
+from widgets.popup_window import PopupWindow
 
 accent = "#458588"
 

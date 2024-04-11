@@ -1,19 +1,16 @@
-import config
+import fabric
 import gi
+from fabric.utils import get_relative_path, monitor_file, set_stylesheet_from_file
+from loguru import logger
+
+import config
 from components.app_menu.app_menu import appMenu
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
 
-import fabric
-from fabric.utils import get_relative_path, monitor_file, set_stylesheet_from_file
-
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
-
-# from overview.overview import Overview
-from loguru import logger
-
+from gi.repository import Gtk  # noqa: E402
 
 
 def apply_style(*args):

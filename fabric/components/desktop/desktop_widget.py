@@ -1,5 +1,3 @@
-from loguru import logger
-
 import fabric
 from fabric.utils import (
     get_relative_path,
@@ -9,6 +7,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.date_time import DateTime
 from fabric.widgets.wayland import Window
+from loguru import logger
 
 PYWAL = False
 CIRCULAR_PROG_SIZE = 150

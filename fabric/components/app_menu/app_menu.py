@@ -1,8 +1,5 @@
 import subprocess
 
-from thefuzz import fuzz, process
-from widgets.popup_window import PopupWindow
-
 from fabric.utils.applications import Application, get_desktop_applications
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -10,6 +7,9 @@ from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolled_window import ScrolledWindow
+from thefuzz import fuzz, process
+
+from widgets.popup_window import PopupWindow
 
 
 class AppInfo(Button):

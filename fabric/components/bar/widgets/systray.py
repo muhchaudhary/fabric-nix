@@ -1,12 +1,11 @@
-from gi.repository import Gdk
-
 from fabric.system_tray.service import SystemTray, SystemTrayItem
+from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
+from gi.repository import Gdk
 from loguru import logger
-from fabric.utils import invoke_repeater
 
 
 class SystemTrayButton(Button):

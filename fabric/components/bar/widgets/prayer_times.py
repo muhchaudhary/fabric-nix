@@ -3,15 +3,15 @@ import json
 import os
 
 import requests
-from gi.repository import GLib
-from widgets.popup_window import PopupWindow
-
 from fabric.service import Property, Service, Signal, SignalContainer
 from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
+from gi.repository import GLib
+
+from widgets.popup_window import PopupWindow
 
 city = "Mississauga"
 country = "Canada"

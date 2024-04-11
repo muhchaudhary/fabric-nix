@@ -1,10 +1,12 @@
 # from fabric.widgets.wayland import Window
-from widgets.new_wayland import Window
-from fabric.widgets.revealer import Revealer
-from fabric.widgets.box import Box
 from typing import Literal
+
+from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
+from fabric.widgets.revealer import Revealer
 from gi.repository import GLib
+
+from fabric.widgets.wayland import Window
 
 
 class inhibitOverlay(Window):
