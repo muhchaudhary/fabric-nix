@@ -1,6 +1,6 @@
 import config
 from widgets.bluetooth_box import BluetoothToggle
-from widgets.player import PlayerBoxHandler
+from widgets.player import PlayerBoxHandler, PlayerBoxStack
 from widgets.popup_window import PopupWindow
 
 from fabric.widgets.box import Box
@@ -105,7 +105,8 @@ class QuickSettingsButtonBox(Box):
 class QuickSettings(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
-        self.mprisBox = PlayerBoxHandler(config.mprisplayer)
+        # self.mprisBox = PlayerBoxHandler(config.mprisplayer)
+        self.mprisBox = PlayerBoxStack(config.mprisplayer)
         self.audio_slider_box = QuickSettingsAudioScale()
         self.screen_slider_box = QuickSettingsBrightnessScale()
         self.buttons_box = QuickSettingsButtonBox()
@@ -164,7 +165,7 @@ class QuickSettingsButton(Button):
 
 
 QuickSettingsPopup = PopupWindow(
-    transition_duration=200,
+    transition_duration=400,
     anchor="top right",
     transition_type="slide-down",
     child=QuickSettings(),

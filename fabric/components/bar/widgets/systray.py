@@ -37,7 +37,6 @@ class SystemTrayButton(Button):
                 logger.error(f"Failed to find Dbusmenu for {self._sys_item.bus_name}")
 
     def on_icon_change(self, _=None):
-        print(self._sys_item.get_status())
         tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size + 5)
         self.set_image(
             Image(pixbuf=tray_icon_pixbuf)
@@ -83,13 +82,12 @@ class SystemTrayRevealer(Box):
 
         self.revealer = Revealer(
             transition_type="slide-left",
-            transition_duration=150,
+            transition_duration=300,
             children=self.revealed_box,
         )
         self.add(self.revealer)
         self.add(self.reveal_button)
 
-        deg = 45
         self.reveal_button.connect(
             "clicked",
             lambda *args: [
@@ -116,4 +114,4 @@ class SystemTrayRevealer(Box):
                 return False
             return True
 
-        invoke_repeater(15, do_animate)
+        invoke_repeater(10, do_animate)

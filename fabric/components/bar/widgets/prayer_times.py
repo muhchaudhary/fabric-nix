@@ -159,7 +159,7 @@ class PrayerTimesButton(Button):
 prayer_times = PrayerTimes()
 
 PrayerTimesPopup = PopupWindow(
-    transition_duration=100,
+    transition_duration=350,
     anchor="top left",
     transition_type="slide-down",
     child=prayer_times,
