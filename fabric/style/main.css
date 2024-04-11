@@ -162,38 +162,31 @@ scale {
 
 
 
-
-#battery-icon-charging,
-#battery-icon-critical,
-#battery-icon-low,
 #battery-label,
 #battery-icon {
     color: var(--accent);
     font-size: 25px;
 }
 
-#battery-icon-charging {
+#battery-icon.charging {
     padding-right: 6px;
 }
 
-#battery-label-charging,
-#battery-icon-charging {
-    color: #00E200;
+#battery-label.charging,
+#battery-icon.charging {
+    color: var(--green);
 }
 
-#battery-label-low,
-#battery-icon-low {
-    color: #FAD800;
+#battery-label.low,
+#battery-icon.low {
+    color: var(--yellow);
 }
 
-#battery-label-critical,
-#battery-icon-critical {
-    color: #FF2A04;
+#battery-label.critical,
+#battery-icon.critical {
+    color: var(--red);
 }
 
-#battery-label-charging,
-#battery-label-critical,
-#battery-label-low,
 #battery-label {
     margin: 0px 5px -2px 2px;
     font-size: 15px;

@@ -25,7 +25,7 @@ class BatteryIndicator(Box):
         self.battery.connect("changed", self.update_battery)
 
         self.battery_icon = Label(name="battery-icon")
-
+        self.current_class = ""
         self.battery_percent = Label(name="battery-label")
 
         self.battery_percent_revealer = Revealer(
@@ -77,17 +77,26 @@ class BatteryIndicator(Box):
             self.battery_icon.set_label(config.battery_icons[int(round(percent, -1))])
 
         if charging:
-            self.battery_icon.set_name("battery-icon-charging")
-            self.battery_percent.set_name("battery-label-charging")
+            if self.current_class != "charging":
+                self.current_class = "charging"
+                self.battery_icon.set_style_classes([self.current_class])
+                self.battery_percent.set_style_classes([self.current_class])
         elif 30 < int(round(percent)) < 50:
-            self.battery_icon.set_name("battery-icon-low")
-            self.battery_percent.set_name("battery-label-low")
+            if self.current_class != "low":
+                self.current_class = "low"
+                self.battery_icon.set_style_classes([self.current_class])
+                self.battery_percent.set_style_classes([self.current_class])
+
         elif int(round(percent)) <= 30:
-            self.battery_icon.set_name("battery-icon-critical")
-            self.battery_percent.set_name("battery-label-critical")
+            if self.current_class != "critical":
+                self.current_class = "critical"
+                self.battery_icon.set_style_classes([self.current_class])
+                self.battery_percent.set_style_classes([self.current_class])
         else:
-            self.battery_icon.set_name("battery-icon")
-            self.battery_percent.set_name("battery-label")
+            if self.current_class != "":
+                self.current_class = ""
+                self.battery_icon.set_style_classes([])
+                self.battery_percent.set_style_classes([])
 
     def poll_batt(self):
         battery = psutil.sensors_battery()
