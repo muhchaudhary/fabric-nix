@@ -1,5 +1,4 @@
 import os
-import gi
 from gi.repository import GLib
 
 from fabric.service import Property, Service, Signal, SignalContainer

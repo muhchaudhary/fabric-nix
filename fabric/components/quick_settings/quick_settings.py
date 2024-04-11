@@ -1,6 +1,6 @@
 import config
 from widgets.bluetooth_box import BluetoothToggle
-from widgets.player import PlayerBoxHandler, PlayerBoxStack
+from widgets.player import PlayerBoxStack
 from widgets.popup_window import PopupWindow
 
 from fabric.widgets.box import Box

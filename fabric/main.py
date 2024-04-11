@@ -14,8 +14,6 @@ from gi.repository import Gtk
 # from overview.overview import Overview
 from loguru import logger
 
-import fabric
-from fabric.utils import get_relative_path, monitor_file, set_stylesheet_from_file
 
 
 def apply_style(*args):
