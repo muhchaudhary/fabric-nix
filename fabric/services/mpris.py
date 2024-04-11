@@ -16,7 +16,8 @@ class PlayerctlImportError(ImportError):
 
 try:
     gi.require_version("Playerctl", "2.0")
-    from gi.repository import Playerctl  # type: ignore
+    import gi.repository.Playerctl as Playerctl
+    # from gi.repository import Playerctl  # type: ignore
 except ValueError:
     raise PlayerctlImportError()
 
@@ -118,6 +119,10 @@ class MprisPlayer(Service):
         self._player.set_loop_status(loop_status) if loop_status else None
 
     # Properties
+    @Property(value_type=str, flags="readable")
+    def player_name(self) -> int:
+        return self._player.get_property("player-name")
+
     @Property(value_type=int, flags="readable")
     def position(self) -> int:
         return self._player.get_property("position")  # type: ignore
