@@ -28,14 +28,14 @@ class AppInfo(Button):
                     justfication="left",
                     ellipsization="end",
                 ),
-            ]
+            ],
         )
         self.app_description = Box(
             children=Label(
                 label=self.app.description,
                 justfication="left",
                 ellipsization="end",
-            )
+            ),
         )
         self.button_box = Box(
             spacing=5,
@@ -65,7 +65,7 @@ class AppInfo(Button):
 
     def launch_app_action(self, action: str):
         subprocess.Popen(
-            self.app.command_line.split(" ") + action.split(" "), start_new_session=True
+            self.app.command_line.split(" ") + action.split(" "), start_new_session=True,
         )
 
 
@@ -77,7 +77,7 @@ class AppMenu(PopupWindow):
             min_content_height=400,
         )
         self.applications = sorted(
-            get_desktop_applications(), key=lambda x: x.name.lower()
+            get_desktop_applications(), key=lambda x: x.name.lower(),
         )
         self.application_buttons = {}
         self.buttons_box = Box(
@@ -104,7 +104,7 @@ class AppMenu(PopupWindow):
                     self.buttons_box,
                     self.searched_buttons_box,
                 ],
-            )
+            ),
         )
         super().__init__(
             transition_duration=300,
@@ -131,7 +131,7 @@ class AppMenu(PopupWindow):
         self.searched_buttons_box.set_visible(True)
         self.searched_buttons_box.reset_children()
         lister = process.extract(
-            entry.get_text(), self.app_names, scorer=fuzz.partial_ratio, limit=10
+            entry.get_text(), self.app_names, scorer=fuzz.partial_ratio, limit=10,
         )
         for elem in lister:
             name = elem[0]

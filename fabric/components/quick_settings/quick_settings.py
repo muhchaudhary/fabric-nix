@@ -20,7 +20,7 @@ class QuickSettingsAudioScale(Box):
         # self.label = Label("Sound", h_align="start")
         self.icon_name = ""
         self.audio_slider = Scale(
-            min_value=0, max_value=100, name="quicksettings-slider", h_expand=True
+            min_value=0, max_value=100, name="quicksettings-slider", h_expand=True,
         )
         self.audio_slider.connect("change-value", self.on_scale_move)
         config.audio.connect("speaker-changed", self.update_audio)
@@ -36,9 +36,9 @@ class QuickSettingsAudioScale(Box):
         self.audio_slider.set_sensitive(not config.audio.speaker.is_muted)
         self.audio_slider.set_value(config.audio.speaker.volume)
         self.mute_button.set_name(
-            "panel-button-active"
+            "panel-button-active",
         ) if config.audio.speaker.is_muted else self.mute_button.set_name(
-            "panel-button"
+            "panel-button",
         )
         icon_name = "-".join(str(config.audio.speaker.icon).split("-")[0:2])
         if icon_name != self.icon_name:
@@ -149,7 +149,7 @@ class QuickSettingsButton(Button):
         if config.audio.speaker.is_muted:
             self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], 1)
             return
-        if 66 <= vol:
+        if vol >= 66:
             self.audio_icon.set_from_icon_name(config.audio_icons_names["high"], 1)
         elif 33 <= vol < 66:
             self.audio_icon.set_from_icon_name(config.audio_icons_names["medium"], 1)

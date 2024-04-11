@@ -114,7 +114,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
         self.queue_draw()
 
     def do_calculate_new_size(
-        self, base_width, base_height, desired_width, desired_height
+        self, base_width, base_height, desired_width, desired_height,
     ):
         try:
             aspect_ratio = base_width / base_height

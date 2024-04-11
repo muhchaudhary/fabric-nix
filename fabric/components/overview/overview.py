@@ -40,7 +40,7 @@ class Overview(Window):
             min_value=0,
             max_value=1000,
             children=CenterBox(
-                orientation="v", center_widgets=[self.scrollBox, Box(size=100)]
+                orientation="v", center_widgets=[self.scrollBox, Box(size=100)],
             ),
         )
         self.scroller.connect("scroll-event", self.on_scroll)

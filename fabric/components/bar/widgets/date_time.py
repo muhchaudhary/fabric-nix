@@ -62,8 +62,8 @@ class ActiveWindow(Button):
                     connection.send_command(
                         "j/activewindow",
                     )
-                ).reply.decode()
-            )
+                ).reply.decode(),
+            ),
         )
         win_class = win_data.get("class")
         win_title = win_data.get("title")
@@ -103,8 +103,8 @@ class ActiveWindow(Button):
                     obj.send_command(
                         "j/activewindow",
                     )
-                ).reply.decode()
-            )
+                ).reply.decode(),
+            ),
         )
         GLib.idle_add(
             self.set_label,
@@ -117,7 +117,7 @@ class ActiveWindow(Button):
             ),
         )
         return logger.info(
-            f"[ActiveWindow] Activated window {event.data[0]}, {event.data[1]}"
+            f"[ActiveWindow] Activated window {event.data[0]}, {event.data[1]}",
         )
 
 
@@ -152,47 +152,38 @@ class WorkspaceButton(Button):
             self.show()
         self.add_class("active")
         self.remove_class("urgent")
-        return
 
     def unset_active(self):
         self.active = False
         if not self.visible:
             self.hide()
         self.remove_class("active")
-        return
 
     def add_class(self, class_name: str):
         GLib.idle_add(self.get_style_context().add_class, class_name)
-        return
 
     def remove_class(self, class_name: str):
         GLib.idle_add(self.get_style_context().remove_class, class_name)
-        return
 
     def set_urgent(self):
         self._urgent = True
         self.add_class("urgent")
-        return
 
     def unset_urgent(self):
         self._urgent = False
         self.remove_class("urgent")
-        return
 
     def set_empty(self):
         self._empty = True
         self.add_class("empty")
-        return
 
     def unset_empty(self):
         self._empty = False
         self.remove_class("empty")
-        return
 
 
 class WorkspacesEventBox(EventBox):
-    """
-    a subclass of Gtk.EventBox that is designed to hold buttons for workspaces.
+    """a subclass of Gtk.EventBox that is designed to hold buttons for workspaces.
 
     provides methods for adding, removing, and managing child widgets within the box.
     """
@@ -249,8 +240,7 @@ connection = Connection()
 
 
 class Workspaces(WorkspacesEventBox):
-    """
-    a widget provides you the workspaces controls, it uses the hyprland IPC.
+    """a widget provides you the workspaces controls, it uses the hyprland IPC.
     """
 
     def __init__(
@@ -259,8 +249,7 @@ class Workspaces(WorkspacesEventBox):
         default_button: WorkspaceButton = None,
         **kwargs,
     ):
-        """
-        :param button_list: a list of `WorkspaceButton` objects, defaults to None and if none it will use a built-in list.
+        """:param button_list: a list of `WorkspaceButton` objects, defaults to None and if none it will use a built-in list.
         :type button_list: list[WorkspaceButton], optional
         """
         super().__init__(**kwargs)
@@ -275,7 +264,7 @@ class Workspaces(WorkspacesEventBox):
                     WorkspaceButton(),
                     WorkspaceButton(),
                     WorkspaceButton(),
-                ]
+                ],
             )
             if not buttons_list
             else self.setup_buttons(buttons_list)
@@ -305,19 +294,19 @@ class Workspaces(WorkspacesEventBox):
         return logger.info(f"[Workspaces] Active workspace changed to {event.data[0]}")
 
     def on_createworkspace(self, obj, event: SignalEvent):
-        button_obj = self.buttons_map.get((int(event.data[0]) - 1))
+        button_obj = self.buttons_map.get(int(event.data[0]) - 1)
         if not button_obj:
             return logger.info(
-                f"[Workspaces] we've received a createworkspace signal, but WorkspaceButton with id {event.data[0]} does not exist, skipping..."
+                f"[Workspaces] we've received a createworkspace signal, but WorkspaceButton with id {event.data[0]} does not exist, skipping...",
             )
         button_obj.unset_empty()
         return logger.info(f"[Workspaces] Workspace {event.data[0]} created")
 
     def on_destroyworkspace(self, obj, event):
-        button_obj = self.buttons_map.get((int(event.data[0]) - 1))
+        button_obj = self.buttons_map.get(int(event.data[0]) - 1)
         if not button_obj:
             return logger.info(
-                f"[Workspaces] we've received a destroyworkspace signal, but WorkspaceButton with id {event.data[0]} does not exist, skipping..."
+                f"[Workspaces] we've received a destroyworkspace signal, but WorkspaceButton with id {event.data[0]} does not exist, skipping...",
             )
         button_obj.set_empty()
         return logger.info(f"[Workspaces] Workspace {event.data[0]} destroyed")
@@ -327,21 +316,21 @@ class Workspaces(WorkspacesEventBox):
             str(
                 connection.send_command(
                     "j/clients",
-                ).reply.decode()
-            )
+                ).reply.decode(),
+            ),
         )
         clients_map = {client["address"]: client for client in clients}
         urgent_client = clients_map.get(f"0x{event.data[0]}")
         if not urgent_client or not urgent_client.get("workspace"):
             return logger.info(
-                f"[Workspaces] we've received an urgent signal, but received data ({event.data[0]}) is uncorrect, skipping..."
+                f"[Workspaces] we've received an urgent signal, but received data ({event.data[0]}) is uncorrect, skipping...",
             )
         urgent_workspace = int(urgent_client["workspace"]["id"])
         self.buttons_map.get(urgent_workspace - 1).set_urgent() if self.buttons_map.get(
-            urgent_workspace - 1
+            urgent_workspace - 1,
         ) is not None else None
         return logger.info(
-            f"[Workspaces] Workspace {urgent_workspace} setted to urgent"
+            f"[Workspaces] Workspace {urgent_workspace} setted to urgent",
         )
 
     def initialize_workspaces(self):
@@ -349,15 +338,15 @@ class Workspaces(WorkspacesEventBox):
             str(
                 connection.send_command(
                     "j/workspaces",
-                ).reply.decode()
-            )
+                ).reply.decode(),
+            ),
         )
         current_ws: int = json.loads(
             str(
                 connection.send_command(
                     "j/activeworkspace",
-                ).reply.decode()
-            )
+                ).reply.decode(),
+            ),
         )["id"]
         open_workspaces = tuple(
             workspace["id"] - 1 for workspace in open_ws
@@ -375,24 +364,22 @@ class Workspaces(WorkspacesEventBox):
         button_obj = self.buttons_map.get(workspace_id)
         if button_obj is not None and button_obj.can_appear:
             button_obj.unset_active()
-        return
 
     def set_active_workspace(self, workspace_id):
         if self._last_workspace_id is not None:
             # TODO: good place for log
             self.buttons_map.get(
-                self._last_workspace_id
+                self._last_workspace_id,
             ).unset_active() if self.buttons_map.get(
-                self._last_workspace_id
+                self._last_workspace_id,
             ) is not None else None
         button_obj = self.buttons_map.get(workspace_id)
         if button_obj and button_obj.can_appear:
             self._last_workspace_id = button_obj.id
             button_obj.set_active()
-        return
 
     def setup_buttons(
-        self, button_list: list[WorkspaceButton]
+        self, button_list: list[WorkspaceButton],
     ) -> list[WorkspaceButton]:
         workspaces_buttons = []
         for index, button in enumerate(button_list):
@@ -425,7 +412,6 @@ class Workspaces(WorkspacesEventBox):
             f"batch/dispatch workspace {button.id + 1}",
         )
         logger.info(f"[Workspaces] Moved to workspace {button.id + 1}")
-        return
 
     def scroll_handler(self, widget, event: Gdk.EventScroll):
         match event.direction:
@@ -441,6 +427,5 @@ class Workspaces(WorkspacesEventBox):
                 logger.info("[Workspaces] Moved to the previous workspace")
             case _:
                 logger.info(
-                    f"[Workspaces] Unknown scroll direction ({event.direction})"
+                    f"[Workspaces] Unknown scroll direction ({event.direction})",
                 )
-        return

@@ -51,7 +51,7 @@ class KineticScroll(EventBox):
             logger.info(f"Velocity: {sum(self.samples) / self.n_samples}")
             self.is_scrolling = False
             invoke_repeater(
-                8, self.on_scroll_event_end, sum(self.samples) / self.n_samples
+                8, self.on_scroll_event_end, sum(self.samples) / self.n_samples,
             )
 
     # kinetic scroll simulation

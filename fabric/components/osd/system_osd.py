@@ -42,7 +42,7 @@ class SystemOSD(PopupWindow):
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);",
         )
 
     def update_label_brightness(self):
@@ -50,13 +50,13 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);",
         )
 
     def update_label_keyboard(self, *args):
         brightness = (
             int(
-                os.read(os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6)
+                os.read(os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6),
             )
             / self.max_kbd_backlight
             * 100
@@ -64,7 +64,7 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);"
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);",
         )
 
     def enable_popup(self, type: str):

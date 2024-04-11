@@ -15,10 +15,10 @@ class PlayerctlImportError(ImportError):
 
 try:
     gi.require_version("Playerctl", "2.0")
-    import gi.repository.Playerctl as Playerctl
+    from gi.repository import Playerctl
     # from gi.repository import Playerctl  # type: ignore
 except ValueError:
-    raise PlayerctlImportError()
+    raise PlayerctlImportError
 
 # TODO: consider building my own mpris service using dbus rather than playerctl
 
@@ -39,14 +39,14 @@ class MprisPlayer(Service):
         super().__init__(**kwargs)
         for sn in ["playback-status", "loop-status", "shuffle", "volume", "seeked"]:
             self._signal_connectors[sn] = self._player.connect(
-                sn, lambda *args, sn=sn: self.notifier(sn, args)
+                sn, lambda *args, sn=sn: self.notifier(sn, args),
             )
 
         self._signal_connectors["exit"] = self._player.connect(
-            "exit", self.on_player_exit
+            "exit", self.on_player_exit,
         )
         self._signal_connectors["metadata"] = self._player.connect(
-            "metadata", lambda *args: self.update_status()
+            "metadata", lambda *args: self.update_status(),
         )
         GLib.idle_add(lambda *args: self.update_status_once())
 
@@ -75,7 +75,6 @@ class MprisPlayer(Service):
     def notifier(self, name: str, args=None):
         self.notify(name)
         self.emit("changed")  # type: ignore
-        return
 
     def on_player_exit(self, player):
         for id in self._signal_connectors.values():
@@ -90,7 +89,7 @@ class MprisPlayer(Service):
 
     def toggle_shuffle(self):
         self._player.set_shuffle(
-            not self._player.get_property("shuffle")
+            not self._player.get_property("shuffle"),
         ) if self.can_shuffle else None
 
     def play_pause(self):
@@ -113,7 +112,7 @@ class MprisPlayer(Service):
             "none": Playerctl.LoopStatus.NONE,
             "track": Playerctl.LoopStatus.TRACK,
             "playlist": Playerctl.LoopStatus.PLAYLIST,
-        }.get(status, None)
+        }.get(status)
 
         self._player.set_loop_status(loop_status) if loop_status else None
 

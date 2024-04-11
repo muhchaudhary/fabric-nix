@@ -45,7 +45,7 @@ class ScreenRecorder(Service):
             exec_shell_command_async(f"bash -c 'wl-copy < {file_path}' ")
             asyncio.run(self.send_screenshot_notification_file("file",file_path))
             return
-        subprocess.run(["wl-copy"], input=wayshot.stdout)
+        subprocess.run(["wl-copy"], input=wayshot.stdout, check=False)
         asyncio.run(self.send_screenshot_notification_file("stdout"))
 
     def screencast_start(self, fullscreen=False):
@@ -57,7 +57,6 @@ class ScreenRecorder(Service):
         command = f"wf-recorder -g {area} -f {file_path}"
 
         exec_shell_command_async(command)
-        pass
 
     def screencast_stop(self):
         exec_shell_command_async("killall -INT wf-recorder")

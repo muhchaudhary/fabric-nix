@@ -43,17 +43,17 @@ class Brightness(Service):
         self.max_screen = -1
 
         if os.path.exists(self.screen_backlight_path + "/max_brightness"):
-            with open(self.screen_backlight_path + "/max_brightness", "r") as f:
+            with open(self.screen_backlight_path + "/max_brightness") as f:
                 self.max_screen = int(f.read())
         if os.path.exists(self.kbd_backlight_path + "/max_brightness"):
-            with open(self.kbd_backlight_path + "/max_brightness", "r") as f:
+            with open(self.kbd_backlight_path + "/max_brightness") as f:
                 self.max_kbd = int(f.read())
 
         self.screen_monitor = monitor_file(self.screen_backlight_path + "/brightness")
         self.screen_monitor.connect(
             "changed",
             lambda _, file, *args: self.emit(
-                "screen", round(int(file.load_bytes()[0].get_data()))
+                "screen", round(int(file.load_bytes()[0].get_data())),
             ),
         )
         super().__init__(**kwargs)
@@ -62,7 +62,7 @@ class Brightness(Service):
     def screen_brightness(self) -> int:
         # could just also read the file
         return int(
-            os.read(os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6)
+            os.read(os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6),
         )
 
     @screen_brightness.setter
@@ -79,7 +79,7 @@ class Brightness(Service):
         if not kbd:
             return -1
         if value < 0 or value > self.max_kbd:
-            return
+            return None
         try:
             exec_brightnessctl_async(f"--device '{kbd}' set {value}")
             self.emit("kbd", value)

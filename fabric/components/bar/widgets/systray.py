@@ -30,7 +30,7 @@ class SystemTrayButton(Button):
             menu.set_name("system-tray-menu")
             if menu:
                 menu.popup_at_widget(
-                    button, Gdk.Gravity.SOUTH, Gdk.Gravity.NORTH, event
+                    button, Gdk.Gravity.SOUTH, Gdk.Gravity.NORTH, event,
                 )
             else:
                 logger.error(f"Failed to find Dbusmenu for {self._sys_item.bus_name}")
@@ -38,9 +38,9 @@ class SystemTrayButton(Button):
     def on_icon_change(self, _=None):
         tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size + 5)
         self.set_image(
-            Image(pixbuf=tray_icon_pixbuf)
+            Image(pixbuf=tray_icon_pixbuf),
         ) if tray_icon_pixbuf is not None else self.set_image(
-            Image(icon_name="missing", pixel_size=self.icon_size)
+            Image(icon_name="missing", pixel_size=self.icon_size),
         )
 
 
@@ -71,10 +71,10 @@ class SystemTrayRevealer(Box):
         super().__init__(**kwargs)
 
         self.button_image = Image(
-            icon_name="pan-start-symbolic", pixel_size=self.icon_size
+            icon_name="pan-start-symbolic", pixel_size=self.icon_size,
         )
         self.reveal_button = Button(
-            icon_image=self.button_image, name=super().get_name()
+            icon_image=self.button_image, name=super().get_name(),
         )
 
         self.revealed_box = SystemTrayBox(icon_size=self.icon_size)
@@ -105,7 +105,7 @@ class SystemTrayRevealer(Box):
             nonlocal deg
             deg += direction * 10
             self.button_image.set_style(
-                f"-gtk-icon-transform: rotate({deg}deg);"
+                f"-gtk-icon-transform: rotate({deg}deg);",
             )
             if open and deg >= 180:
                 return False

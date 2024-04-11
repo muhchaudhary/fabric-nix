@@ -42,13 +42,13 @@ class BatteryIndicator(Box):
                     self.battery_percent_revealer,
                     self.battery_icon,
                 ],
-            )
+            ),
         )
 
         self.buttons.connect(
             "clicked",
             lambda *args: self.battery_percent_revealer.set_reveal_child(
-                not self.battery_percent_revealer.get_child_revealed()
+                not self.battery_percent_revealer.get_child_revealed(),
             ),
         )
 
@@ -64,14 +64,14 @@ class BatteryIndicator(Box):
             str(int(round(percent)))
             + "% "
             + str(datetime.timedelta(seconds=secsleft))
-            + " left"
+            + " left",
         ) if not charging else self.buttons.set_tooltip_text(
-            str(int(round(percent))) + "% " + "Charging"
+            str(int(round(percent))) + "% " + "Charging",
         )
 
         if charging:
             self.battery_icon.set_label(
-                config.battery_charging_icons[int(round(percent, -1))]
+                config.battery_charging_icons[int(round(percent, -1))],
             )
         else:
             self.battery_icon.set_label(config.battery_icons[int(round(percent, -1))])
@@ -92,11 +92,10 @@ class BatteryIndicator(Box):
                 self.current_class = "critical"
                 self.battery_icon.set_style_classes([self.current_class])
                 self.battery_percent.set_style_classes([self.current_class])
-        else:
-            if self.current_class != "":
-                self.current_class = ""
-                self.battery_icon.set_style_classes([])
-                self.battery_percent.set_style_classes([])
+        elif self.current_class != "":
+            self.current_class = ""
+            self.battery_icon.set_style_classes([])
+            self.battery_percent.set_style_classes([])
 
     def poll_batt(self):
         battery = psutil.sensors_battery()
@@ -107,5 +106,5 @@ class BatteryIndicator(Box):
 
     def on_click(self, *args):
         self.battery_percent_revealer.set_reveal_child(
-            not self.battery_percent_revealer.get_child_revealed()
+            not self.battery_percent_revealer.get_child_revealed(),
         )

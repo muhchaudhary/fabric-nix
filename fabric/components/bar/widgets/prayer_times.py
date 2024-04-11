@@ -90,7 +90,6 @@ class PrayerTimesService(Service):
     def notifier(self, name: str, args=None):
         self.notify(name)
         self.emit("changed")
-        return
 
 
 class PrayerTimes(Box):
@@ -152,7 +151,7 @@ class PrayerTimesButton(Button):
 
     def on_click(self, button, *args):
         PrayerTimesPopup.toggle_popup_offset(
-            button.get_allocation().x, button.get_allocated_width()
+            button.get_allocation().x, button.get_allocated_width(),
         )
 
 
