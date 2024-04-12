@@ -1,11 +1,5 @@
 import os
-
-from gi.repository import Gio, GLib, GObject
-from loguru import logger
-from services.mpris import MprisPlayer, MprisPlayerManager
-from utils.accent import grab_color
-from utils.bezier import CubicBezier
-from widgets.circleimage import CircleImage
+from typing import List
 
 from fabric.utils import (
     get_relative_path,
@@ -14,11 +8,18 @@ from fabric.utils import (
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
-from fabric.widgets.image import Image
+from gi.repository import Gio, GLib, GObject
+from loguru import logger
+
+from services.mpris import MprisPlayer, MprisPlayerManager
+from utils.accent import grab_color
+from utils.bezier import CubicBezier
+from widgets.circleimage import CircleImage
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -30,8 +31,6 @@ if not os.path.exists(MEDIA_CACHE):
 
 PLAYER_ASSETS_PATH = "../assets/player/"
 
-# TODO move Box of playerBoxes here
-
 
 class PlayerBoxHandler(Box):
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
@@ -42,19 +41,153 @@ class PlayerBoxHandler(Box):
 
         for player in self.mpris_manager.players:  # type: ignore
             logger.info(
-                f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}"
+                f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}",
             )
             self.on_new_player(self.mpris_manager, player)
 
     def on_new_player(self, mpris_manager, player):
         logger.info(
-            f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}"
+            f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}",
         )
         super().add_children(PlayerBox(player=MprisPlayer(player)))
 
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
+
+
+# TODO: handle the switching of active classes better
+# TODO: fix lack of information on what player is current visible (add player icon)
+# TODO: rewrite player_buttons_box handling
+# TODO: check for memory leaks
+
+
+class PlayerBoxStack(Box):
+    def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
+        super().__init__(orientation="v")
+
+        # The player stack
+        self.player_stack = Stack(
+            transition_type="slide-left-right",
+            transition_duration=500,
+            name="player-stack",
+        )
+        self.hide()
+        self.current_stack_pos = 0
+
+        # Static buttons
+        self.next_player_button = Button(
+            name="panel-button",
+            icon_image=Image(icon_name="go-next-symbolic", pixel_size=24),
+        )
+        self.prev_player_button = Button(
+            name="panel-button",
+            icon_image=Image(icon_name="go-previous-symbolic", pixel_size=24),
+        )
+        self.next_player_button.connect(
+            "clicked",
+            lambda *args: self.on_player_clicked("next"),
+        )
+        self.prev_player_button.connect(
+            "clicked",
+            lambda *args: self.on_player_clicked("prev"),
+        )
+
+        # List to store player buttons
+        self.player_buttons = []
+
+        # Box to contain all the buttons
+        self.buttons_box = CenterBox(
+            start_children=self.prev_player_button,
+            end_children=self.next_player_button,
+        )
+
+        self.add_children([self.player_stack, self.buttons_box])
+
+        self.mpris_manager = mpris_manager
+        self.mpris_manager.connect("player-appeared", self.on_new_player)
+        self.mpris_manager.connect("player-vanished", self.on_lost_player)
+        for player in self.mpris_manager.players:  # type: ignore
+            logger.info(
+                f"[PLAYER MANAGER] player found: {player.get_property('player-name')}",
+            )
+            self.on_new_player(self.mpris_manager, player)
+
+    def on_player_clicked(self, type):
+        # unset active from prev active button
+        self.remove_class(self.player_buttons[self.current_stack_pos], "active")
+        if type == "next":
+            self.current_stack_pos = (
+                self.current_stack_pos + 1
+                if self.current_stack_pos != len(self.player_stack.get_children()) - 1
+                else 0
+            )
+        elif type == "prev":
+            self.current_stack_pos = (
+                self.current_stack_pos - 1
+                if self.current_stack_pos != 0
+                else len(self.player_stack.get_children()) - 1
+            )
+        # set new active button
+        self.add_class(self.player_buttons[self.current_stack_pos], "active")
+        self.player_stack.set_visible_child(
+            self.player_stack.get_children()[self.current_stack_pos],
+        )
+
+    def on_new_player(self, mpris_manager, player):
+        self.show()
+        self.player_stack.add_children(PlayerBox(player=MprisPlayer(player)))
+        self.make_new_player_button(self.player_stack.get_children()[-1])
+        logger.info(
+            f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
+        )
+
+    def on_lost_player(self, mpris_manager, player_name):
+        # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
+        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
+        players: List[PlayerBox] = self.player_stack.get_children()
+        if len(players) == 1 and player_name == players[0].player.player_name:
+            print("hiding please")
+            self.hide()
+            self.current_stack_pos = 0
+            return
+        if players[self.current_stack_pos].player.player_name == player_name:
+            self.current_stack_pos = max(0, self.current_stack_pos - 1)
+            self.player_stack.set_visible_child(
+                self.player_stack.get_children()[self.current_stack_pos],
+            )
+            return
+
+    def make_new_player_button(self, player_box):
+        new_button = Button(name="player-stack-button")
+
+        def on_player_button_click(button: Button):
+            self.remove_class(self.player_buttons[self.current_stack_pos], "active")
+            self.current_stack_pos = self.player_buttons.index(button)
+            self.add_class(button, "active")
+            self.player_stack.set_visible_child(player_box)
+
+        new_button.connect(
+            "clicked",
+            on_player_button_click,
+        )
+        self.player_buttons.append(new_button)
+
+        # This will automatically destroy our used button
+        player_box.connect(
+            "destroy",
+            lambda *args: [
+                new_button.destroy(),
+                self.player_buttons.pop(self.player_buttons.index(new_button)),
+            ],
+        )
+        self.buttons_box.add_center(self.player_buttons[-1])
+
+    def remove_class(self, widget, class_name: str):
+        GLib.idle_add(widget.get_style_context().remove_class, class_name)
+
+    def add_class(self, widget, class_name: str):
+        GLib.idle_add(widget.get_style_context().add_class, class_name)
 
 
 def cubic_bezier(p0, p1, p2, p3, x):
@@ -178,7 +311,8 @@ class PlayerBox(Box):
         self.play_pause_stack.add_named(self.pause_icon, "pause")
 
         self.play_pause_button = Button(
-            name="player-button", child=self.play_pause_stack
+            name="player-button",
+            child=self.play_pause_stack,
         )
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
         self.player.bind_property("can-pause", self.play_pause_button, "visible")
@@ -270,7 +404,7 @@ class PlayerBox(Box):
         child = self.shuffle_button.get_child()
         status = self.player.shuffle
         if status is True:
-            child.set_style("color: #1ED760;")  # type: ignore
+            child.set_style("color: #B8BB26;")  # type: ignore
         else:
             child.set_style("")  # type: ignore
 
