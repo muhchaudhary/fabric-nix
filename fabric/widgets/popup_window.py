@@ -75,7 +75,7 @@ class PopupWindow(Window):
             self.inhibitor = inhibitOverlay()
             self.inhibitor.connect("button-press-event", self.on_inhibit_click)
             self.inhibitor.connect("key-release-event", self.on_key_release)
-        self.show_all()
+        self.show()
 
     def on_key_release(self, entry, event_key):
         if event_key.get_keycode()[1] == 9:
