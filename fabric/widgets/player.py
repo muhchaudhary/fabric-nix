@@ -56,10 +56,8 @@ class PlayerBoxHandler(Box):
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
 
 
-# TODO: handle the switching of active classes better
 # TODO: fix lack of information on what player is current visible (add player icon)
 # TODO: rewrite player_buttons_box handling
-# TODO: check for memory leaks
 
 
 class PlayerBoxStack(Box):
@@ -136,11 +134,16 @@ class PlayerBoxStack(Box):
 
     def on_new_player(self, mpris_manager, player):
         self.show()
+        if len(self.player_stack.get_children()) == 0:
+            self.buttons_box.hide()
+        else:
+            self.buttons_box.show()
         self.player_stack.add_children(PlayerBox(player=MprisPlayer(player)))
         self.make_new_player_button(self.player_stack.get_children()[-1])
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
         )
+        self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
@@ -156,7 +159,8 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
             )
-            return
+        self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
+        self.buttons_box.hide() if len(players) == 2 else self.buttons_box.show()
 
     def make_new_player_button(self, player_box):
         new_button = Button(name="player-stack-button")
