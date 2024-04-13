@@ -1,27 +1,5 @@
-@define-color player-bg #303030;
-@define-color title-text #ffffff;
-@define-color title-text-outline #171717;
-@define-color artist-text #d9d9d9;
-@define-color button-hover #585858;
-@define-color seek-border #8f8f8f;
-
-* {
-    /* unsets everything so we can style everything from scratch. */
-    all: unset;
-    font-family: "roboto";
-    font-weight: 500;
-    font-size: 15px;
-    color: @text_color;
-    /* we can use webcss variables, fabric compiles that to gtk css. */
-}
-
-
-#random-element {
-    background-color: #d9d9d9;
-}
-
 #inner-player-box {
-    background-color: alpha(@bg_color, 0.7);
+    background-color: alpha(@bg_s, 0.7);
     border-radius: 20px;
 }
 
@@ -29,7 +7,7 @@
     border-width: 1px;
     border-radius: 10px;
     border-style: double;
-    border-color: @seek-border;
+    border-color: @fg;
     margin-top: 10px;
     margin-bottom: 5px;
 }
@@ -37,16 +15,16 @@
 #seek-bar trough {
     border-radius: 100px;
     min-height: 8px;
-    background-color: #646464;
+    background-color: @bg;
 }
 
 #seek-bar trough highlight {
-    border-radius: 400px;
+    border-radius: 20px;
 }
 
 
 #seek-bar trough:hover {
-    background-color: #4e4d4d;
+    background-color: @bg2;
 }
 
 #player-box {
@@ -56,11 +34,11 @@
 #player-title {
     font-family: "roboto";
     font-weight: 700;
-    color: @text_color;
-    text-shadow: -1px -1px 0 @title-text-outline,
-        1px -1px 0 @title-text-outline,
-        -1px 1px 0 @title-text-outline,
-        1px 1px 0 @title-text-outline;
+    color: @fg1;
+    text-shadow: -1px -1px 0 @bg3,
+        1px -1px 0 @bg3,
+        -1px 1px 0 @bg3,
+        1px 1px 0 @bg3;
     font-size: 18px;
 }
 
@@ -68,12 +46,11 @@
     font-family: "roboto";
     font-weight: 600;
     font-size: 13px;
-    /* color: @artist-text; */
-    color: @text_color_secondary;
-    text-shadow: -1px -1px 0 @title-text-outline,
-        1px -1px 0 @title-text-outline,
-        -1px 1px 0 @title-text-outline,
-        1px 1px 0 @title-text-outline;
+    color: @fg3;
+    text-shadow: -1px -1px 0 @bg3,
+        1px -1px 0 @bg3,
+        -1px 1px 0 @bg3,
+        1px 1px 0 @bg3;
 }
 
 #button-box {
@@ -89,10 +66,10 @@
 }
 
 #player-button:hover {
-    background-color: @button-hover;
-    box-shadow: 0 0 2px -3px white;
+    background-color: @bg3;
 }
 
 #player-button:active {
-    box-shadow: 0 0 4px -1px white;
+    background-color: @bg4;
+    box-shadow: 0 0 5px -3px @fg;
 }
