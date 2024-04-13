@@ -30,7 +30,10 @@ class SystemTrayButton(Button):
             menu.set_name("system-tray-menu")
             if menu:
                 menu.popup_at_widget(
-                    button, Gdk.Gravity.SOUTH, Gdk.Gravity.NORTH, event,
+                    button,
+                    Gdk.Gravity.SOUTH,
+                    Gdk.Gravity.NORTH,
+                    event,
                 )
             else:
                 logger.error(f"Failed to find Dbusmenu for {self._sys_item.bus_name}")
@@ -71,10 +74,12 @@ class SystemTrayRevealer(Box):
         super().__init__(**kwargs)
 
         self.button_image = Image(
-            icon_name="pan-start-symbolic", pixel_size=self.icon_size,
+            icon_name="pan-start-symbolic",
+            pixel_size=self.icon_size,
         )
         self.reveal_button = Button(
-            icon_image=self.button_image, name=super().get_name(),
+            icon_image=self.button_image,
+            # name="panel-button",
         )
 
         self.revealed_box = SystemTrayBox(icon_size=self.icon_size)

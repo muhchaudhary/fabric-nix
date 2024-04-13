@@ -47,7 +47,7 @@ class StatusBar(Window):
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
-        self.sys_tray = SystemTrayRevealer(icon_size=20, name = "panel-button")
+        self.sys_tray = SystemTrayRevealer(icon_size=20, name = "system-tray")
         self.center_box.end_container.add_children(
             [self.sys_tray, self.quick_settings, self.battery, self.date_time],
         )
