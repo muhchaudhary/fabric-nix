@@ -2,6 +2,7 @@ import subprocess
 
 from fabric.utils.applications import Application, get_desktop_applications
 from fabric.widgets.box import Box
+from fabric.widgets.flowbox import FlowBox
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
@@ -11,8 +12,13 @@ from thefuzz import fuzz, process
 
 from widgets.popup_window import PopupWindow
 
+import gi
 
-class AppInfo(Button):
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk
+
+
+class AppButton(Button):
     def __init__(self, app: Application, **kwargs):
         self.app: Application = app
         self.app_icon = (
@@ -55,17 +61,18 @@ class AppInfo(Button):
         self.add(self.button_box)
 
     def launch_app(self):
-        # print(
-        #     [x for x in self.app.command_line.split(" ") if x[0] != "%"],
-        # )
+        cmd = [x for x in self.app.command_line.split(" ") if x[0] != "%"]
         subprocess.Popen(
-            [x for x in self.app.command_line.split(" ") if x[0] != "%"],
+            cmd,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.STDOUT,
             start_new_session=True,
         )
 
     def launch_app_action(self, action: str):
         subprocess.Popen(
-            self.app.command_line.split(" ") + action.split(" "), start_new_session=True,
+            self.app.command_line.split(" ") + action.split(" "),
+            start_new_session=True,
         )
 
 
@@ -77,30 +84,31 @@ class AppMenu(PopupWindow):
             min_content_height=400,
         )
         self.applications = sorted(
-            get_desktop_applications(), key=lambda x: x.name.lower(),
+            get_desktop_applications(),
+            key=lambda x: x.name.lower(),
         )
         self.application_buttons = {}
         self.buttons_box = Box(
             orientation="v",
         )
         self.search_app_entry = Entry(
+            name="quicksettings",
             placeholder_text="Search for an App",
             editable=True,
             style="font-size: 30px;",
         )
         self.search_app_entry.connect("key-release-event", self.keypress)
         for app in self.applications:
-            appL = AppInfo(app)
-            self.application_buttons[app.name] = app
-            self.buttons_box.add_children(appL)
-            appL.connect("clicked", lambda *args: appMenu.toggle_popup())
+            appL = AppButton(app)
+            self.application_buttons[app.name] = appL
+            appL.connect("clicked", lambda *args: self.toggle_popup())
+            self.buttons_box.add(appL)
         self.app_names = self.application_buttons.keys()
         self.searched_buttons_box = Box(orientation="v", visible=False)
         self.scrolled_window.add_children(
             Box(
                 orientation="v",
                 children=[
-                    self.search_app_entry,
                     self.buttons_box,
                     self.searched_buttons_box,
                 ],
@@ -110,33 +118,49 @@ class AppMenu(PopupWindow):
             transition_duration=300,
             anchor="center",
             transition_type="slide-down",
-            child=self.scrolled_window,
+            child=Box(
+                orientation="v", children=[self.search_app_entry, self.scrolled_window]
+            ),
             enable_inhibitor=True,
             keyboard_mode="on-demand",
         )
         self.revealer.connect(
             "notify::child-revealed",
-            lambda *args: self.search_app_entry.grab_focus_without_selecting()
+            lambda *args: self.search_app_entry.grab_focus()
             if args[0].get_child_revealed()
             else None,
         )
 
+    def toggle_popup(self):
+        self.search_app_entry.set_text("")
+        self.reset_app_menu()
+        super().toggle_popup()
+
     def keypress(self, entry: Entry, event_key):
         if event_key.get_keycode()[1] == 9:
-            self.on_inhibit_click()
+            self.toggle_popup()
         if entry.get_text() == " " or entry.get_text() == "":
-            self.buttons_box.set_visible(True)
+            self.reset_app_menu()
             return
-        self.buttons_box.set_visible(False)
-        self.searched_buttons_box.set_visible(True)
-        self.searched_buttons_box.reset_children()
+        for app_button in self.application_buttons.values():
+            app_button.hide()
         lister = process.extract(
-            entry.get_text(), self.app_names, scorer=fuzz.partial_ratio, limit=10,
+            entry.get_text(),
+            self.app_names,
+            scorer=fuzz.partial_ratio,
+            limit=10,
         )
-        for elem in lister:
-            name = elem[0]
-            appL = AppInfo(self.application_buttons[name])
-            self.searched_buttons_box.add_children(appL)
-            appL.connect("clicked", lambda *args: appMenu.toggle_popup())
+        for elem_i in range(len(lister)):
+            name = lister[elem_i][0]
+            self.application_buttons[name].show()
+            self.buttons_box.reorder_child(self.application_buttons[name], elem_i)
+
+    def reset_app_menu(self):
+        i = 0
+        for app_button in self.application_buttons.values():
+            app_button.show()
+            self.buttons_box.reorder_child(app_button, i)
+            i += 1
+
 
 appMenu = AppMenu()
