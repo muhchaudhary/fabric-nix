@@ -6,7 +6,7 @@ from loguru import logger
 import config
 from components.app_menu.app_menu import appMenu
 from components.bar.bar import StatusBar
-from components.desktop.desktop_widget import ClockWidget
+from components.desktop.desktop_widget import ClockWidget, HadithWidget
 from components.osd.system_osd import SystemOSD
 
 gi.require_version("Gtk", "3.0")
@@ -25,6 +25,7 @@ if __name__ == "__main__":
     logger.disable("components.bar.widgets.date_time")
     bar = StatusBar()
     clockWidget = ClockWidget()
+    hadithWidget = HadithWidget()
     systemOverlay = SystemOSD()
     appMenu = appMenu
 
