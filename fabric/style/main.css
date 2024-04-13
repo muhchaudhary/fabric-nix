@@ -66,25 +66,37 @@ scale {
 
 #system-tray>button,
 #panel-button-active,
+#date-time,
 #panel-button {
-    margin: 0px 1px 0px 1px;
+    margin: 0px 2px 0px 2px;
     padding: 0px 5px 0px 5px;
     border-style: solid;
     border-width: 2px;
     border-radius: 10px;
     border-color: transparent;
+    /* border-color: alpha(@accent, 0.3); */
 }
 
+#date-time:hover,
 #system-tray>button:hover,
 #panel-button:hover {
     background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
     border-color: alpha(var(--fg), 0.1);
 }
 
+
 #panel-button label {
     font-weight: 800;
 }
 
+#date-time label {
+    font-weight: 900;
+    /* color: var(--orange); */
+}
+
+
+#date-time:active,
+#date-time:active label,
 #system-tray>button:active,
 #panel-button-active,
 #panel-button-active image,
@@ -164,7 +176,7 @@ scale {
 
 #battery-label,
 #battery-icon {
-    color: var(--accent);
+    color: mix(var(--accent), rgb(0, 255, 0), 0.2);
     font-size: 25px;
 }
 
@@ -331,10 +343,16 @@ scale {
     font-size: 17px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem,
 #submenu-item {
-    margin: 5px 5px 5px 5px;
+    margin: 5px;
+}
+
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
+    border-width: 1px;
+    border-style: double;
+    border-color: var(--fg4);
+    margin: 5px 0px 5px 0px;
 }
 
 #system-tray-menu>menuitem menu>menuitem:disabled,
@@ -342,11 +360,16 @@ scale {
     background-color: var(--bg_h);
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem,
 #submenu-button {
-    background-color: var(--bg_s);
+    background-color: var(--bg2);
     padding: 8px;
+    border-radius: 10px;
+}
+
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
+    background-color: var(--bg2);
+    padding: 5px;
     border-radius: 10px;
 }
 
@@ -354,10 +377,10 @@ scale {
 #system-tray-menu,
 #submenu {
     min-width: 450px;
-    background-color: alpha(var(--bg), 0.7);
+    background-color: alpha(var(--bg), 1);
     border-radius: 20px;
     border-width: 5px;
-    border-color: alpha(var(--accent), 0.4);
+    border-color: alpha(var(--accent), 1);
     padding: 10px;
 }
 
@@ -380,4 +403,35 @@ scale {
     min-height: 200px;
     border-radius: 25px;
     margin-bottom: 15px;
+}
+
+
+#hadith-box {
+    padding: 40px;
+    border-radius: 40px;
+    min-width: 1500px;
+    background-color: alpha(@bg_h, 0.6);
+}
+
+#hadith-ref {
+    font-weight: bold;
+    font-family: Noto Naskh Arabic UI;
+    font-size: 30px;
+    color: @fg3;
+}
+
+#hadith-text {
+    font-family: Noto Naskh Arabic UI;
+    font-size: 35px;
+    color: @fg;
+}
+
+#hadith-number,
+#hadith-book {
+    font-weight: bold;
+    font-size: 20px;
+    margin-bottom: 20px;
+    margin-right: 15px;
+    margin-top: 20px;
+    color: @fg3;
 }

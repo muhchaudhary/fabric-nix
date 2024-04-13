@@ -4,20 +4,7 @@
 #main-window {
     /* border: solid 2px; */
     /* border-color: #171717; */
-    background-color: alpha(#171717, 0.7);
+    /* background-color: alpha(#171717, 0.7); */
+    background-color: alpha(@bg_h, 1);
 }
 
-#date-time > label {
-    font-weight: 900;
-}
-
-#center-box {
-    margin: 1px;
-}
-
-#widgets-container {
-    border-radius: 100px;
-    background-color: @module-bg;
-    padding: 3px;
-    margin: 3px;
-}
