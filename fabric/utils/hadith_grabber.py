@@ -21,6 +21,7 @@ class Hadith:
         self.section_name: str = ""
         self.hadith_text: str = ""
         self.hadith_number: int = -1
+        self.arabic_number: int = -1
 
     def get_random_hadith(self):
         book_number = random.randint(1, len(main_books) - 1)
@@ -28,10 +29,10 @@ class Hadith:
         self.hadith_json = requests.get(
             f"{API_URL}/editions/{main_books[book_number][0]}/{hadith_number}.json"
         ).json()
-
         self.book_name = self.hadith_json["metadata"]["name"]
         self.section_name = list(self.hadith_json["metadata"]["section"].values())[0]
         self.hadith_text = self.hadith_json["hadiths"][0]["text"]
         self.book_number, self.hadith_number = self.hadith_json["hadiths"][0][
             "reference"
         ].values()
+        self.arabic_number = self.hadith_json["hadiths"][0]["arabicnumber"]
