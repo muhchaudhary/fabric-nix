@@ -7,7 +7,7 @@ import config
 from config import brightness
 from widgets.popup_window import PopupWindow
 
-accent = "#458588"
+accent = "#83A598"
 
 
 class SystemOSD(PopupWindow):
@@ -41,8 +41,11 @@ class SystemOSD(PopupWindow):
         icon_name = "-".join(str(config.audio.speaker.icon).split("-")[0:2])
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
+        quick_accent = accent
+        if config.audio.speaker.is_muted:
+            quick_accent = "#a89984"
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {round(self.vol)}%, alpha(#303030, 0.7) {round(self.vol)}%);",
+            f"background-image: linear-gradient(to top, alpha({quick_accent}, 0.8) {round(self.vol)}%, alpha(#303030, 0.8) {round(self.vol)}%);",
         )
 
     def update_label_brightness(self):
@@ -50,13 +53,15 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);",
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.8) {brightness}%, alpha(#303030, 0.8) {brightness}%);",
         )
 
     def update_label_keyboard(self, *args):
         brightness = (
             int(
-                os.read(os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6),
+                os.read(
+                    os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6
+                ),
             )
             / self.max_kbd_backlight
             * 100
@@ -64,7 +69,7 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.7) {brightness}%, alpha(#303030, 0.7) {brightness}%);",
+            f"background-image: linear-gradient(to top, alpha({accent}, 0.8) {brightness}%, alpha(#303030, 0.8) {brightness}%);",
         )
 
     def enable_popup(self, type: str):
