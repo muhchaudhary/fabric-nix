@@ -1,10 +1,4 @@
 
 
 
-#main-window {
-    /* border: solid 2px; */
-    /* border-color: #171717; */
-    /* background-color: alpha(#171717, 0.7); */
-    background-color: alpha(@bg_h, 1);
-}
 

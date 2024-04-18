@@ -13,7 +13,7 @@ from components.bar.widgets.date_time import (
 from components.bar.widgets.prayer_times import PrayerTimesButton
 from components.bar.widgets.systray import SystemTrayRevealer
 from components.quick_settings.quick_settings import QuickSettingsButton
-
+from components.bar.widgets.stats import Temps
 
 class StatusBar(Window):
     def __init__(
@@ -47,9 +47,10 @@ class StatusBar(Window):
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
+        self.sysinfo = Temps()
         self.sys_tray = SystemTrayRevealer(icon_size=20, name = "system-tray")
         self.center_box.end_container.add_children(
-            [self.sys_tray, self.quick_settings, self.battery, self.date_time],
+            [self.sysinfo, self.sys_tray, self.quick_settings, self.battery, self.date_time],
         )
         self.center_box.start_container.add_children(
             [self.workspaces, self.prayer_times, self.active_window],
