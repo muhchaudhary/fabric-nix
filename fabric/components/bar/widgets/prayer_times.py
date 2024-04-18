@@ -13,7 +13,7 @@ from gi.repository import GLib
 
 from widgets.popup_window import PopupWindow
 
-city = "Mississauga"
+city = "Waterloo"
 country = "Canada"
 api_request = (
     f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
@@ -119,20 +119,23 @@ class PrayerTimes(Box):
         self.add(CenterBox(start_children=self.isha, end_children=self.isha_time))
 
     def on_prayer_update(self, _, prayer_info):
+        def time_format(time):
+            d = datetime.datetime.strptime(time, "%H:%M")
+            return d.strftime("  %I:%M %p")
         self.fajr.set_label(prayer_info["Fajr"][0])
-        self.fajr_time.set_label(prayer_info["Fajr"][1])
+        self.fajr_time.set_label(time_format(prayer_info["Fajr"][1]))
 
         self.zhr.set_label(prayer_info["Dhuhr"][0])
-        self.zhr_time.set_label(prayer_info["Dhuhr"][1])
+        self.zhr_time.set_label(time_format(prayer_info["Dhuhr"][1]))
 
         self.asr.set_label(prayer_info["Asr"][0])
-        self.asr_time.set_label(prayer_info["Asr"][1])
+        self.asr_time.set_label(time_format(prayer_info["Asr"][1]))
 
         self.mgrb.set_label(prayer_info["Maghrib"][0])
-        self.mgrb_time.set_label(prayer_info["Maghrib"][1])
+        self.mgrb_time.set_label(time_format(prayer_info["Maghrib"][1]))
 
         self.isha.set_label(prayer_info["Isha"][0])
-        self.isha_time.set_label(prayer_info["Isha"][1])
+        self.isha_time.set_label(time_format(prayer_info["Isha"][1]))
 
 
 class PrayerTimesButton(Button):
