@@ -181,7 +181,7 @@ class PlayerBoxStack(Box):
         player_box.connect(
             "destroy",
             lambda *args: [
-                new_button.destroy(),
+                new_button.destroy(),  # type: ignore
                 self.player_buttons.pop(self.player_buttons.index(new_button)),
             ],
         )
@@ -257,10 +257,10 @@ class PlayerBox(Box):
             lambda _, x: x if x != "" else "No Artist",  # type: ignore
         )
 
-        self.track_title.set_line_wrap(True)
+        self.track_title.set_line_wrap(True)  # type: ignore
         self.track_title.set_xalign(0)
 
-        self.track_artist.set_line_wrap(True)
+        self.track_artist.set_line_wrap(True)  # type: ignore
         self.track_artist.set_xalign(0)
 
         self.track_info = Box(
@@ -351,7 +351,7 @@ class PlayerBox(Box):
         # self.seek_bar.connect("button-release-event", self.on_button_scale_release)
         self.player.connect(
             "notify::length",
-            lambda _, x: self.seek_bar.set_range(0, self.player.length)
+            lambda _, x: self.seek_bar.set_range(0, self.player.length)  # type: ignore
             if self.player.length
             else None,
         )
@@ -435,14 +435,14 @@ class PlayerBox(Box):
         self.rotate_animation()
 
     def update_colors(self, n):
-        colors = (0, 0, 0)
+        colors = (247, 239, 209)
         try:
             colors = grab_color(self.cover_path, n)
         except Exception:
             logger.error("[PLAYER] could not grab color")
 
-        bg = f"background-color: rgb{colors};"
-        border = f"border-color: rgb{colors};"
+        bg = f"background-color: mix(rgb{colors}, #F7EFD1, 0.5);"
+        border = f"border-color: mix(rgb{colors}, #F7EFD1, 0.5);"
         self.seek_bar.set_style(f" trough highlight{{ {bg} {border} }}")
 
     def set_image(self, *args):
