@@ -25,11 +25,11 @@ bluetooth_icons_names = {
 
 audio_icons = {"mute": "󰝟", "off": "󰖁", "high": "󰕾", "low": "󰕿", "medium": "󰖀"}
 audio_icons_names = {
-    "mute": "audio-volume-muted",
-    "off": "audio-volume-muted",
-    "low": "audio-volume-low",
-    "medium": "audio-volume-medium",
-    "high": "audio-volume-high",
+    "mute": "audio-volume-muted-symbolic",
+    "off": "audio-volume-muted-symbolic",
+    "low": "audio-volume-low-symbolic",
+    "medium": "audio-volume-medium-symbolic",
+    "high": "audio-volume-high-symbolic",
 }
 
 battery_icons = {
