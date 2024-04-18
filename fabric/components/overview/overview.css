@@ -1,6 +1,3 @@
-/* uncomment if you do have pywal configured */
-/* @import url("/home/USER/.cache/wal/colors-widgets.css"); */
-
 :vars {
     --background: #150d16;
     --foreground: #f5dbc4;
@@ -38,14 +35,18 @@
 }
 
 #window-box {
-    margin: 10px;
+    /* margin: 10px; */
     font-size: 70px;
     border: solid 2px;
     border-color: var(--border-color);
+    background-color: grey;
     border-radius: 30px;
 }
 
-button {
-    border-radius: 100px;
-    background-size: 400% 400%;
+#workspace-box {
+    padding: 10px;
+    padding-left: 25px;
+    padding-right: 25px;
+    background-color: black;
+    /* border-radius: 50px; */
 }
