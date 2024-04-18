@@ -79,7 +79,7 @@ class SystemTrayRevealer(Box):
         )
         self.reveal_button = Button(
             icon_image=self.button_image,
-            # name="panel-button",
+            name="panel-button",
         )
 
         self.revealed_box = SystemTrayBox(icon_size=self.icon_size)
