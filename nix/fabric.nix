@@ -19,8 +19,8 @@ buildPythonPackage rec {
   src = fetchFromGitHub {
     owner = "Fabric-Development";
     repo = "fabric";
-    rev = "0babdf6e498995305652dc73d96c614138395b31";
-    sha256 = "sha256-u02VLZiQBqwcaIRjzf/4x8wER/fnB+P7vcW8HjjCALg=";
+    rev = "aa3d8ef61854d7dc1388982b3114a1d7c07c1e1e";
+    sha256 = "sha256-6h0RzgkTr3R0dS2uejTmWrzwuJaHcCp0rftPrjGmp9c=";
   };
   format = "setuptools";
 
