@@ -1,10 +1,9 @@
-import asyncio
 import datetime
 import subprocess
 
 from fabric.service import Service
 from fabric.utils import exec_shell_command
-from gi.repository import GLib
+from gi.repository import GLib, Gio
 from loguru import logger
 
 
@@ -43,10 +42,10 @@ class ScreenRecorder(Service):
         wayshot = subprocess.run(command, check=True, capture_output=True)
         if save_copy:
             exec_shell_command_async(f"bash -c 'wl-copy < {file_path}' ")
-            asyncio.run(self.send_screenshot_notification_file("file",file_path))
+            self.send_screenshot_notification_file("file", file_path)
             return
         subprocess.run(["wl-copy"], input=wayshot.stdout, check=False)
-        asyncio.run(self.send_screenshot_notification_file("stdout"))
+        self.send_screenshot_notification_file("stdout")
 
     def screencast_start(self, fullscreen=False):
         time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
@@ -62,27 +61,37 @@ class ScreenRecorder(Service):
         exec_shell_command_async("killall -INT wf-recorder")
         self.recording = False
 
-    async def send_screenshot_notification_file(self, notify_type, file_path = None):
-        cmd = (
-            "notify-send "
-            + "-A 'files=Show in Files' "
-            + "-A 'view=View' "
-            + f"-A 'edit=Edit' -i {file_path} "
-            + f" Screenshot {file_path}"
-        ) if notify_type == "file" else "notify-send 'Screenshot Sent to Clipboard'"
-        proc = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-        )
-        stdout, stderr = await proc.communicate()
-        out = stdout.decode().strip("\n")
-        print(out)
-        if stderr:
-            logger.error("Failed to send notification")
-        if out == "files":
-            exec_shell_command_async(f"xdg-open {self.screenshot_path}")
-        elif out == "view":
-            exec_shell_command_async(f"xdg-open {file_path}")
-        elif out == "edit":
-            exec_shell_command_async(f"swappy -f {file_path}")
+    def send_screenshot_notification_file(self, notify_type, file_path=None):
+        cmd = ["notify-send"]
+        cmd.extend(
+            [
+                "-A",
+                "files=Show in Files",
+                "-A",
+                "view=View",
+                "-A",
+                "edit=Edit",
+                "-i",
+                f"{file_path}",
+                f"Screenshot {file_path}",
+            ]
+        ) if notify_type == "file" else ["Screenshot Sent to Clipboard"]
+
+        proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.STDOUT_PIPE)
+
+        def do_callback(process: Gio.Subprocess, task: Gio.Task):
+            try:
+                _, stdout, stderr = process.communicate_utf8_finish(task)
+            except Exception:
+                logger.error("Failed read notification action")
+                return
+
+            out = stdout.strip("\n")
+            if out == "files":
+                exec_shell_command_async(f"xdg-open {self.screenshot_path}")
+            elif out == "view":
+                exec_shell_command_async(f"xdg-open {file_path}")
+            elif out == "edit":
+                exec_shell_command_async(f"swappy -f {file_path}")
+
+        proc.communicate_utf8_async(None, None, do_callback)
