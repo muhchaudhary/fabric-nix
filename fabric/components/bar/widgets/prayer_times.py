@@ -45,7 +45,10 @@ class PrayerTimesService(Service):
             "Isha": ["Isha", ""],
         }
         super().__init__(**kwargs)
-        invoke_repeater(12 * 60 * 60 * 60, self.get_data, False)
+        invoke_repeater(
+            12 * 60 * 60 * 60,
+            lambda: self.get_data(False),
+        )
 
     def refresh(self):
         self.get_data(True)
@@ -122,6 +125,7 @@ class PrayerTimes(Box):
         def time_format(time):
             d = datetime.datetime.strptime(time, "%H:%M")
             return d.strftime("  %I:%M %p")
+
         self.fajr.set_label(prayer_info["Fajr"][0])
         self.fajr_time.set_label(time_format(prayer_info["Fajr"][1]))
 
@@ -154,7 +158,8 @@ class PrayerTimesButton(Button):
 
     def on_click(self, button, *args):
         PrayerTimesPopup.toggle_popup_offset(
-            button.get_allocation().x, button.get_allocated_width(),
+            button.get_allocation().x,
+            button.get_allocated_width(),
         )
 
 

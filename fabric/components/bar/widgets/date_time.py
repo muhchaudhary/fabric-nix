@@ -2,7 +2,7 @@ import json
 import time
 
 import gi
-from fabric.hyprland.service import Connection, SignalEvent
+from fabric.hyprland.service import Hyprland, HyprlandEvent
 from fabric.utils import bulk_connect
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.box import Box
@@ -92,11 +92,11 @@ class ActiveWindow(Button):
         self.initialize_active_window()
         return logger.info("[ActiveWindow] Connected to the hyprland socket")
 
-    def on_closewindow(self, obj, event: SignalEvent):
+    def on_closewindow(self, obj, event: HyprlandEvent):
         self.initialize_active_window()
         return logger.info(f"[ActiveWindow] Closed window 0x{event.data[0]}")
 
-    def on_activewindow(self, obj: Connection, event: SignalEvent):
+    def on_activewindow(self, obj: Hyprland, event: HyprlandEvent):
         win_data: dict = json.loads(
             str(
                 (
@@ -236,7 +236,7 @@ class WorkspacesEventBox(EventBox):
         return self.add_children(children)
 
 
-connection = Connection()
+connection = Hyprland()
 
 
 class Workspaces(WorkspacesEventBox):
@@ -289,11 +289,11 @@ class Workspaces(WorkspacesEventBox):
         logger.info("[Workspaces] Connected to the hyprland socket")
         return self.initialize_workspaces()
 
-    def on_workspace(self, obj, event: SignalEvent):
+    def on_workspace(self, obj, event: HyprlandEvent):
         GLib.idle_add(self.set_active_workspace, (int(event.data[0]) - 1))
         return logger.info(f"[Workspaces] Active workspace changed to {event.data[0]}")
 
-    def on_createworkspace(self, obj, event: SignalEvent):
+    def on_createworkspace(self, obj, event: HyprlandEvent):
         button_obj = self.buttons_map.get(int(event.data[0]) - 1)
         if not button_obj:
             return logger.info(
@@ -311,7 +311,7 @@ class Workspaces(WorkspacesEventBox):
         button_obj.set_empty()
         return logger.info(f"[Workspaces] Workspace {event.data[0]} destroyed")
 
-    def on_urgent(self, obj, event: SignalEvent):
+    def on_urgent(self, obj, event: HyprlandEvent):
         clients = json.loads(
             str(
                 connection.send_command(

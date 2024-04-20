@@ -1,7 +1,7 @@
 import datetime
 
 import psutil
-from fabric.utils.fabricator import Fabricate
+from fabric.utils.fabricator import Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
@@ -17,7 +17,7 @@ class BatteryIndicator(Box):
             self.set_visible(False)
             return
 
-        self.battery = Fabricate(
+        self.battery = Fabricator(
             value=[-1, -1, False],
             poll_from=lambda *args: self.poll_batt(),
             interval=1000,
