@@ -33,7 +33,6 @@
         buildInputs = with pkgs; [
           # Custom Packages
           fabric
-          gir-cvc
 
           # add aditional python packages here
           python3Packages.psutil
@@ -42,12 +41,12 @@
           python3Packages.lxml
           python3Packages.pam
           python3Packages.thefuzz
-          python3Packages.evdev
 
           ruff # Formatter
         ];
         nativeBuildInputs = with pkgs; [
           gobject-introspection
+          gir-cvc
 
           # non python aditional packages
           gtk-session-lock # For gtk lock screen
@@ -57,9 +56,6 @@
           libgweather # For weather
           libgudev # For uevent monitoring
         ];
-        # shellHook = ''
-        #   export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
-        # '';
       };
     });
   };
