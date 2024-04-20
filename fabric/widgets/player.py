@@ -1,3 +1,4 @@
+import math
 import os
 from typing import List
 
@@ -58,6 +59,7 @@ class PlayerBoxHandler(Box):
 
 # TODO: fix lack of information on what player is current visible (add player icon)
 # TODO: rewrite player_buttons_box handling
+# TODO: implement CANCEL_ANIMATION on song skip
 
 
 class PlayerBoxStack(Box):
@@ -194,16 +196,32 @@ class PlayerBoxStack(Box):
         GLib.idle_add(widget.get_style_context().add_class, class_name)
 
 
-def cubic_bezier(p0, p1, p2, p3, x):
-    return (
-        p0 * (1 - x) ** 3
-        + p1 * 3 * x * (1 - x) ** 2
-        + p2 * 3 * x**2 * (1 - x)
-        + p3 * x**3
-    )
+def easeOutBounce(t: float) -> float:
+    if t < 4 / 11:
+        return 121 * t * t / 16
+    elif t < 8 / 11:
+        return (363 / 40.0 * t * t) - (99 / 10.0 * t) + 17 / 5.0
+    elif t < 9 / 10:
+        return (4356 / 361.0 * t * t) - (35442 / 1805.0 * t) + 16061 / 1805.0
+    return (54 / 5.0 * t * t) - (513 / 25.0 * t) + 268 / 25.0
 
 
-myBezier = CubicBezier(0.25, 0.75, 0.5, 1.25)
+def easeInBounce(t: float) -> float:
+    return 1 - easeOutBounce(1 - t)
+
+
+def easeInOutBounce(t: float) -> float:
+    if t < 0.5:
+        return (1 - easeInBounce(1 - t * 2)) / 2
+    return (1 + easeOutBounce(t * 2 - 1)) / 2
+
+
+def easeOutElastic(t: float) -> float:
+    c4 = (2 * math.pi) / 3
+    return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
+
+
+myBezier = CubicBezier(0.65, 0, 0.35, 1)
 
 
 class PlayerBox(Box):
@@ -234,13 +252,17 @@ class PlayerBox(Box):
             label="No Title",
             name="player-title",
             justfication="left",
-            character_max_width=1,
+            character_max_width=24,
+            ellipsization="end",
+            h_align="start",
         )
         self.track_artist = Label(
             label="No Artist",
             name="player-artist",
             justfication="left",
-            character_max_width=1,
+            character_max_width=24,
+            ellipsization="end",
+            h_align="start",
         )
         self.player.bind_property(
             "title",
@@ -256,12 +278,6 @@ class PlayerBox(Box):
             GObject.BindingFlags.DEFAULT,
             lambda _, x: x if x != "" else "No Artist",  # type: ignore
         )
-
-        self.track_title.set_line_wrap(True)  # type: ignore
-        self.track_title.set_xalign(0)
-
-        self.track_artist.set_line_wrap(True)  # type: ignore
-        self.track_artist.set_xalign(0)
 
         self.track_info = Box(
             name="player-info",
@@ -381,7 +397,18 @@ class PlayerBox(Box):
         )
         self.overlay_box = Overlay(
             children=self.outer_box,
-            overlays=[self.inner_box, self.player_info_box, self.image_stack],
+            overlays=[
+                self.inner_box,
+                self.player_info_box,
+                self.image_stack,
+                Box(
+                    children=Image(icon_name=f"{self.player.player_name}-symbolic"),
+                    h_align="end",
+                    v_align="start",
+                    style="margin-top: 20px; margin-right: 10px;",
+                    tooltip_text=self.player.player_name,
+                ),
+            ],
         )
         self.add_children(self.overlay_box)
         self.set_style(f"min-height:{self.image_size + 4}px")
@@ -455,7 +482,6 @@ class PlayerBox(Box):
             + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)  # type: ignore
         )
         if os.path.exists(self.cover_path):
-            # messy,make it handele this better
             self.update_image()
             return
         Gio.File.new_for_uri(uri=url).copy_async(  # type: ignore
@@ -473,8 +499,8 @@ class PlayerBox(Box):
         def invoke():
             nonlocal anim_time
             if anim_time <= 1:
-                anim_time += 0.007
-                rot = 360 * myBezier.solve(anim_time)
+                anim_time += 0.005
+                rot = 360 * easeOutElastic(anim_time)
                 self.image_box.rotate_more(rot)
                 return True
             self.image_box.rotate_more(0)
