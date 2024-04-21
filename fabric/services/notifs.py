@@ -65,7 +65,7 @@ class Notification(Service):
         return self.actions
 
     def invoke(self, action_key: str):
-        if action_key in action_key:
+        if action_key in self.actions:
             self.emit("invoked", action_key)
 
         # this shoudln't be done like this
