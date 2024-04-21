@@ -1,3 +1,4 @@
+from typing import List
 from gi.repository import Gio, GLib
 from loguru import logger
 
@@ -15,8 +16,18 @@ from fabric.utils import get_ixml, get_relative_path
     "/org/freedesktop/Notifications",
 )
 
+# TODO: rewrite the whole thing
+#   Implement notificication timeouts
+#   Deal with multiple notification (store active notifs in an array or something)
+#   Implement Signals and properties
+
 
 class Notification(Service):
+    __gsignals__ = SignalContainer(
+        Signal("closed", "run-first", None, ()),
+        Signal("invoked", "run-first", None, (str,)),
+    )
+
     def __init__(
         self,
         app_name,
@@ -38,45 +49,64 @@ class Notification(Service):
         self.summary: str = summary
         self.body: str = body
         self.actions: list = actions
+
+        # There is a lot of info in the hints like pixbufs for app icons etc
         self.hints: dict = hints
         self.expire_timeout: int = expire_timeout
         self._connection: Gio.DBusConnection = connection
 
-        logger.info(f"New Notificaiton from application {self.app_name}")
-        logger.info(f"App supports the following actions: {self.actions}")
+        logger.info(f"New Notificaiton from application: {self.app_name}")
+        logger.info(f"Notification summary: {self.summary}")
+        logger.info(f"App supports the following actions: {self.actions} \n")
 
-        # GLib.idle_add(lambda: self.popup.toggle_popup())
-        # self._connection.call_sync(
-        #         FDN_BUS_NAME,
-        #         FDN_BUS_PATH,
-        #         FDN_BUS_NAME,
-        #         "CloseNotification",
-        #         GLib.Variant("(u)", [id]),
-        #         None,
-        #         Gio.DBusCallFlags.NONE,
-        #         1000,
-        #     )
-        # This doesn't work unfortunatley :(
-        GLib.timeout_add(
-            1000,
-            lambda: self._connection.emit_signal(
-                FDN_BUS_NAME,
-                FDN_BUS_PATH,
-                FDN_BUS_NAME,
-                "ActionInvoked",
-                GLib.Variant("(us)", [id, "default"]),
-            ),
-        )
+    def close(self):
+        self.emit("closed")
+
+    def get_actions(self) -> List[str]:
+        return self.actions
+
+    def invoke(self, action_key: str):
+        if action_key in action_key:
+            self.emit("invoked", action_key)
+
+        # this shoudln't be done like this
+        # I there can be notifications that take multiple actions
+        self.emit("closed")
 
 
-class NotificationWatcher(Service):
-    # __gsignals__ = SignalContainer(Signal("notification-recv", "run-first", None, ()))
+class NotificationServer(Service):
+    __gsignals__ = SignalContainer(
+        Signal("notification-received", "run-first", None, (int,)),
+        Signal("notification-closed", "run-first", None, (int,)),
+    )
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.curr_id = 1
-        self._notifications: dict[str, list] = {}
+        self._notifications: dict[int, Notification] = {}
         self._connection: Gio.DBusConnection | None = None
+
+        self.notification_server_props = {
+            "ServerInformation": GLib.Variant(
+                "(ssss)", ("Fabric Notification Server", "example.org", "0.1", "1.2")
+            ),
+            "Capabilities": GLib.Variant(
+                "(as)",
+                [
+                    [
+                        "action-icons",
+                        "actions",
+                        "body",
+                        "body-hyperlinks",
+                        "body-markup",
+                        "icon-static",
+                        "persistence",
+                        "sound",
+                    ]
+                ],
+            ),
+        }
+
         self.do_register()
 
     def do_register(self):
@@ -111,45 +141,68 @@ class NotificationWatcher(Service):
         invocation: Gio.DBusMethodInvocation,
         user_data: object = None,
     ):
-        props = {
-            "ServerInformation": GLib.Variant(
-                "(ssss)", ("Fabric Notification Server", "example.org", "0.1", "1.2")
-            ),
-            "Capabilities": GLib.Variant(
-                "(as)",
-                [
-                    [
-                        "action-icons",
-                        "actions",
-                        "body",
-                        "body-hyperlinks",
-                        "body-markup",
-                        "icon-static",
-                        "persistence",
-                        "sound",
-                    ]
-                ],
-            ),
-        }
-
         match target:
             case "GetServerInformation":
-                invocation.return_value(props["ServerInformation"])
+                invocation.return_value(
+                    self.notification_server_props["ServerInformation"]
+                )
+
             case "GetCapabilities":
-                invocation.return_value(props["Capabilities"])
+                invocation.return_value(self.notification_server_props["Capabilities"])
+
             case "Notify":
-                self.curr_id += 1
-                invocation.return_value(GLib.Variant("(u)", [self.curr_id]))
-                new_notif = Notification(*params, self._connection, self.curr_id)
+                # Checking if replaces_id
+                id, self.curr_id = (
+                    (params[1], self.curr_id)
+                    if params[1] != 0
+                    else (self.curr_id, self.curr_id + 1)
+                )
+                invocation.return_value(GLib.Variant("(u)", [id]))
+                self._notifications[id] = Notification(*params, self._connection, id)
+                self.add_notification(self._notifications[id])
+                self.emit("notification-received", id)
 
             case "CloseNotification":
-                print("closed Notif", params[0])
+                self.emit("notification-closed", params[0])
+                self._notifications[id].close() if id in self._notifications else None
                 invocation.return_value(None)
 
             case _:
                 print(target)
         return conn.flush()
 
+    def get_notifications(self) -> List[Notification]:
+        return self._notifications
 
-nw = NotificationWatcher()
+    def get_notification_for_id(self, id: int) -> Notification | None:
+        if id in self._notifications:
+            return self._notifications[id]
+        return None
+
+    def add_notification(self, notification: Notification) -> None:
+        def on_closed(notification):
+            self._connection.emit_signal(
+                None,
+                FDN_BUS_PATH,
+                FDN_BUS_NAME,
+                "NotificationClosed",
+                GLib.Variant("(uu)", [notification.id, 3]),
+            )
+            self._notifications.pop(notification.id)
+
+        notification.connect("closed", on_closed)
+
+        def on_invoke(notification, action_key):
+            self._connection.emit_signal(
+                None,
+                FDN_BUS_PATH,
+                FDN_BUS_NAME,
+                "ActionInvoked",
+                GLib.Variant("(us)", [notification.id, action_key]),
+            )
+
+        notification.connect("invoked", on_invoke)
+
+
+nw = NotificationServer()
 fabric.start()
