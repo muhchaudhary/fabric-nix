@@ -38,7 +38,6 @@ class Notification(Service):
         actions,
         hints,
         expire_timeout,
-        connection,
         id,
         *args,
         **kwargs,
@@ -49,11 +48,11 @@ class Notification(Service):
         self.summary: str = summary
         self.body: str = body
         self.actions: list = actions
+        self.id: int = id
 
         # There is a lot of info in the hints like pixbufs for app icons etc
         self.hints: dict = hints
         self.expire_timeout: int = expire_timeout
-        self._connection: Gio.DBusConnection = connection
 
         logger.info(f"New Notificaiton from application: {self.app_name}")
         logger.info(f"Notification summary: {self.summary}")
@@ -158,7 +157,7 @@ class NotificationServer(Service):
                     else (self.curr_id, self.curr_id + 1)
                 )
                 invocation.return_value(GLib.Variant("(u)", [id]))
-                self._notifications[id] = Notification(*params, self._connection, id)
+                self._notifications[id] = Notification(*params, id)
                 self.add_notification(self._notifications[id])
                 self.emit("notification-received", id)
 
