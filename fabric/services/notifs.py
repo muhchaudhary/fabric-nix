@@ -16,6 +16,59 @@ from fabric.utils import get_ixml, get_relative_path
 )
 
 
+class Notification(Service):
+    def __init__(
+        self,
+        app_name,
+        replaces_id,
+        app_icon,
+        summary,
+        body,
+        actions,
+        hints,
+        expire_timeout,
+        connection,
+        id,
+        *args,
+        **kwargs,
+    ):
+        self.app_name: str = app_name
+        self.replaces_id: int = replaces_id
+        self.app_icon: str = app_icon
+        self.summary: str = summary
+        self.body: str = body
+        self.actions: list = actions
+        self.hints: dict = hints
+        self.expire_timeout: int = expire_timeout
+        self._connection: Gio.DBusConnection = connection
+
+        logger.info(f"New Notificaiton from application {self.app_name}")
+        logger.info(f"App supports the following actions: {self.actions}")
+
+        # GLib.idle_add(lambda: self.popup.toggle_popup())
+        # self._connection.call_sync(
+        #         FDN_BUS_NAME,
+        #         FDN_BUS_PATH,
+        #         FDN_BUS_NAME,
+        #         "CloseNotification",
+        #         GLib.Variant("(u)", [id]),
+        #         None,
+        #         Gio.DBusCallFlags.NONE,
+        #         1000,
+        #     )
+        # This doesn't work unfortunatley :(
+        GLib.timeout_add(
+            1000,
+            lambda: self._connection.emit_signal(
+                FDN_BUS_NAME,
+                FDN_BUS_PATH,
+                FDN_BUS_NAME,
+                "ActionInvoked",
+                GLib.Variant("(us)", [id, "default"]),
+            ),
+        )
+
+
 class NotificationWatcher(Service):
     # __gsignals__ = SignalContainer(Signal("notification-recv", "run-first", None, ()))
 
@@ -62,7 +115,21 @@ class NotificationWatcher(Service):
             "ServerInformation": GLib.Variant(
                 "(ssss)", ("Fabric Notification Server", "example.org", "0.1", "1.2")
             ),
-            "Capabilities": GLib.Variant("(as)", [["body", "actions", "action-icons"]]),
+            "Capabilities": GLib.Variant(
+                "(as)",
+                [
+                    [
+                        "action-icons",
+                        "actions",
+                        "body",
+                        "body-hyperlinks",
+                        "body-markup",
+                        "icon-static",
+                        "persistence",
+                        "sound",
+                    ]
+                ],
+            ),
         }
 
         match target:
@@ -72,8 +139,12 @@ class NotificationWatcher(Service):
                 invocation.return_value(props["Capabilities"])
             case "Notify":
                 self.curr_id += 1
-                print(params)
                 invocation.return_value(GLib.Variant("(u)", [self.curr_id]))
+                new_notif = Notification(*params, self._connection, self.curr_id)
+
+            case "CloseNotification":
+                print("closed Notif", params[0])
+                invocation.return_value(None)
 
             case _:
                 print(target)
