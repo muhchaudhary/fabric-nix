@@ -1,8 +1,8 @@
 from typing import List
-from gi.repository import Gio, GLib
+
+from gi.repository import GdkPixbuf, Gio, GLib
 from loguru import logger
 
-import fabric
 from fabric.service import Service, Signal, SignalContainer
 from fabric.utils import get_ixml, get_relative_path
 
@@ -16,10 +16,11 @@ from fabric.utils import get_ixml, get_relative_path
     "/org/freedesktop/Notifications",
 )
 
-# TODO: rewrite the whole thing
-#   Implement notificication timeouts
+# TODO:
+#   rewrite the whole thing
+#   Implement propper notificication timeouts
 #   Deal with multiple notification (store active notifs in an array or something)
-#   Implement Signals and properties
+#   Implement Signals and properties (sort of done)
 
 
 class Notification(Service):
@@ -42,6 +43,7 @@ class Notification(Service):
         *args,
         **kwargs,
     ):
+        super().__init__(**kwargs)
         self.app_name: str = app_name
         self.replaces_id: int = replaces_id
         self.app_icon: str = app_icon
@@ -49,14 +51,12 @@ class Notification(Service):
         self.body: str = body
         self.actions: list = actions
         self.id: int = id
-
         # There is a lot of info in the hints like pixbufs for app icons etc
         self.hints: dict = hints
         self.expire_timeout: int = expire_timeout
 
         logger.info(f"New Notificaiton from application: {self.app_name}")
-        logger.info(f"Notification summary: {self.summary}")
-        logger.info(f"App supports the following actions: {self.actions} \n")
+        logger.info(f"Supports the following actions: {self.actions} \n")
 
     def close(self):
         self.emit("closed")
@@ -71,6 +71,60 @@ class Notification(Service):
         # this shoudln't be done like this
         # I there can be notifications that take multiple actions
         self.emit("closed")
+
+    # TODO: make images resizable, should be ez
+
+    def get_image(self) -> GdkPixbuf.Pixbuf | None:
+        # priority: image-data -> image-path -> icon_data
+        if "image-data" in self.hints:
+            image_data = self.hints.get("image-data")
+            # image-data is of the format: (iiibiiay)
+            #   0. width
+            #   1. height
+            #   2. rowstride
+            #   3. has_alpha
+            #   4. bits_per_sample (is always 8)
+            #   5. channels
+            #   6. image data in RBG byte order
+            return GdkPixbuf.Pixbuf.new_from_bytes(
+                data=GLib.Bytes.new(image_data[6]),
+                colorspace=GdkPixbuf.Colorspace.RGB,
+                has_alpha=image_data[3],
+                bits_per_sample=image_data[4],
+                width=image_data[0],
+                height=image_data[1],
+                rowstride=image_data[2],
+            )
+
+        if "image-path" in self.hints:
+            image_path = self.hints.get("image-path")
+            if "file://" in self.app_icon:
+                # I haven't noticed this personally, but according to the spec,
+                # the value should be a URI (file://...)
+                return GdkPixbuf.Pixbuf.new_from_file(image_path[7:])
+            return GdkPixbuf.Pixbuf.new_from_file(image_path)
+
+        if "icon_data" in self.hints:
+            image_data = self.hints.get("icon_data")
+            return GdkPixbuf.Pixbuf.new_from_bytes(
+                data=GLib.Bytes.new(image_data[6]),
+                colorspace=GdkPixbuf.Colorspace.RGB,
+                has_alpha=image_data[3],
+                bits_per_sample=image_data[4],
+                width=image_data.hints[0],
+                height=image_data.hints[1],
+                rowstride=image_data.hints[2],
+            )
+
+        return None
+
+    def get_icon(self) -> GdkPixbuf.Pixbuf | None:
+        if self.app_icon:
+            if "file://" in self.app_icon:
+                return GdkPixbuf.Pixbuf.new_from_file(self.app_icon[7:])
+
+        # NOT IMPLEMENTED: app_icon can be a "name in a freedesktop.org-compliant icon theme"
+        return None
 
 
 class NotificationServer(Service):
@@ -162,7 +216,8 @@ class NotificationServer(Service):
                 self.emit("notification-received", id)
 
             case "CloseNotification":
-                self.emit("notification-closed", params[0])
+                id = params[0]
+                self.emit("notification-closed", id)
                 self._notifications[id].close() if id in self._notifications else None
                 invocation.return_value(None)
 
@@ -203,5 +258,5 @@ class NotificationServer(Service):
         notification.connect("invoked", on_invoke)
 
 
-nw = NotificationServer()
-fabric.start()
+# nw = NotificationServer()
+# fabric.start()
