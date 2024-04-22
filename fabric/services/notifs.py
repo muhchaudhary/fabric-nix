@@ -98,7 +98,7 @@ class Notification(Service):
 
         if "image-path" in self.hints:
             image_path = self.hints.get("image-path")
-            if "file://" in self.app_icon:
+            if "file://" in image_path:
                 # I haven't noticed this personally, but according to the spec,
                 # the value should be a URI (file://...)
                 return GdkPixbuf.Pixbuf.new_from_file(image_path[7:])
