@@ -3,7 +3,23 @@ from fabric.widgets.image import Image
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 import psutil
-from fabric.utils import invoke_repeater
+
+import gi.repository.GLib as GLib
+
+
+def invoke_repeater_threaded(timeout: int, callback: callable, *args):
+    def invoke_threaded_repeater(timeout: int, callback: callable, *args):
+        ctx = GLib.MainContext.new()
+        loop = GLib.MainLoop.new(ctx, False)
+
+        source = GLib.timeout_source_new(timeout)
+        source.set_priority(GLib.PRIORITY_LOW)
+        source.set_callback(callback, *args)
+        source.attach(ctx)
+
+        loop.run()
+
+    GLib.Thread.new(None, lambda: invoke_threaded_repeater(timeout, callback, *args))
 
 
 class Temps(Button):
@@ -21,11 +37,12 @@ class Temps(Button):
                     self.fan_speed_label,
                     self.cpu_icon,
                     self.cpu_temp_label,
-                ]
+                ],
             )
         )
         self.update_labels()
-        invoke_repeater(5000, self.update_labels)
+
+        invoke_repeater_threaded(1500, lambda *args: self.update_labels())
 
     def update_labels(self):
         cpu_temp = psutil.sensors_temperatures()["coretemp"][0].current
