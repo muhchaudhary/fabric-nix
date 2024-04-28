@@ -11,11 +11,11 @@
   python3Packages,
   libdbusmenu-gtk3,
   pkg-config,
-  wrapGAppsHook,
   gdk-pixbuf,
   cairo,
   librsvg,
-  pkgconf,
+  # For Cvc
+  libpulseaudio,
 }:
 buildPythonPackage rec {
   pname = "fabric";
@@ -24,9 +24,11 @@ buildPythonPackage rec {
     owner = "its-darsh";
     repo = "fabric";
     rev = "db3903756238a18fb3e5292e4e4c0e0041240658";
-    sha256 = "sha256-huc8LJwkeQMQ3jELul5IpPhvwHXk4fWY98xvhYohwGQ=";
+    sha256 = "sha256-j0mvQm9cwogUb0m2ilUxEigSUytkQIlOm+9Kdpyyheo=";
+    fetchSubmodules = true;
   };
-  format = "setuptools";
+  # We have a custom setup
+  format = "other";
 
   # unit tests will fail with hyprland module
   doCheck = false;
@@ -34,34 +36,45 @@ buildPythonPackage rec {
   nativeBuildInputs = [
     gobject-introspection
     python3Packages.setuptools
-    python3Packages.meson
+    python3Packages.meson-python
+    pkg-config
     ninja
     meson
   ];
 
+  dependencies = [
+    python3Packages.pygobject3
+    python3Packages.pycairo
+    python3Packages.loguru
+    python3Packages.click
+  ];
+
+  buildPhase = ''
+    meson --prefix=$out build
+    ninja -C build
+  '';
+
+  installPhase = ''
+    meson install -C build
+  '';
+
   propagatedBuildInputs = [
-    glib
+    # Cvc
+    libpulseaudio
+
     libdbusmenu-gtk3
-    gtk3
     gtk-layer-shell
     gdk-pixbuf
-    cairo
     librsvg
-    pkgconf
-
-    # defined in requirements.txt
-    python3Packages.click
-    python3Packages.loguru
-    python3Packages.pycairo
-    python3Packages.pygobject3
-    python3Packages.pygobject-stubs
+    cairo
+    glib
+    gtk3
   ];
 
   meta = with lib; {
     description = "next-gen GTK+ based desktop widgets python framework";
     homepage = "http://github.com/Fabric-Development/fabric";
     # To be changed later
-    license = with licenses; [lgpl21Only mpl11];
     platforms = lib.platforms.linux;
   };
 }
