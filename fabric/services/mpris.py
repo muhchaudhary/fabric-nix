@@ -39,14 +39,17 @@ class MprisPlayer(Service):
         super().__init__(**kwargs)
         for sn in ["playback-status", "loop-status", "shuffle", "volume", "seeked"]:
             self._signal_connectors[sn] = self._player.connect(
-                sn, lambda *args, sn=sn: self.notifier(sn, args),
+                sn,
+                lambda *args, sn=sn: self.notifier(sn, args),
             )
 
         self._signal_connectors["exit"] = self._player.connect(
-            "exit", self.on_player_exit,
+            "exit",
+            self.on_player_exit,
         )
         self._signal_connectors["metadata"] = self._player.connect(
-            "metadata", lambda *args: self.update_status(),
+            "metadata",
+            lambda *args: self.update_status(),
         )
         GLib.idle_add(lambda *args: self.update_status_once())
 
@@ -240,7 +243,6 @@ class MprisPlayerManager(Service):
     def add_players(self):
         for player in self._manager.get_property("player-names"):  # type: ignore
             self._manager.manage_player(Playerctl.Player.new_from_name(player))  # type: ignore
-        logger.info(f"[MprisPlayer] starting manager: {self._manager}")
 
     @Property(value_type=object, flags="readable")
     def players(self):

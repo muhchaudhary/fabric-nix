@@ -8,7 +8,7 @@ import gi.repository.GLib as GLib
 
 
 def invoke_repeater_threaded(timeout: int, callback: callable, *args):
-    def invoke_threaded_repeater(timeout: int, callback: callable, *args):
+    def invoke_threaded_repeater():
         ctx = GLib.MainContext.new()
         loop = GLib.MainLoop.new(ctx, False)
 
@@ -19,7 +19,7 @@ def invoke_repeater_threaded(timeout: int, callback: callable, *args):
 
         loop.run()
 
-    GLib.Thread.new(None, lambda: invoke_threaded_repeater(timeout, callback, *args))
+    GLib.Thread.new(None, invoke_threaded_repeater)
 
 
 class Temps(Button):

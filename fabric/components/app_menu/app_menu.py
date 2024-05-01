@@ -24,7 +24,7 @@ class AppButton(Button):
         self.app_icon = (
             Image(pixbuf=self.app.get_icon_pixbuf())
             if self.app.get_icon_pixbuf()
-            else Image(icon_name="application-x-executable", pixel_size=48)
+            else Image(icon_name="application-x-executable", pixel_size=48, icon_size=3)
         )
         self.actions_list = self.app._app.list_actions()
         self.app_name = Box(

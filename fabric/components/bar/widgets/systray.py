@@ -20,30 +20,31 @@ class SystemTrayButton(Button):
         self.connect("button-press-event", self.on_button_click)
 
     def on_button_click(self, button, event):
-        if event.button == 1:
-            try:
-                self._sys_item.activate_for_event(event)
-            except Exception as e:
-                logger.error(e)
-        elif event.button == 3:
-            menu = self._sys_item.get_menu()
-            menu.set_name("system-tray-menu")
-            if menu:
-                menu.popup_at_widget(
-                    button,
-                    Gdk.Gravity.SOUTH,
-                    Gdk.Gravity.NORTH,
-                    event,
-                )
-            else:
-                logger.error(f"Failed to find Dbusmenu for {self._sys_item.bus_name}")
+        match event.button:
+            case 1:
+                try:
+                    self._sys_item.activate_for_event(event)
+                except Exception as e:
+                    logger.error(e)
+            case 3:
+                menu = self._sys_item.get_menu()
+                menu.set_name("system-tray-menu")
+                if menu:
+                    menu.popup_at_widget(
+                        button,
+                        Gdk.Gravity.SOUTH,
+                        Gdk.Gravity.NORTH,
+                        event,
+                    )
+                else:
+                    self._sys_item.context_menu_for_event(event)
 
     def on_icon_change(self, _=None):
         tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size + 5)
         self.set_image(
             Image(pixbuf=tray_icon_pixbuf),
         ) if tray_icon_pixbuf is not None else self.set_image(
-            Image(icon_name="missing", pixel_size=self.icon_size),
+            Image(icon_name="missing", pixel_size=self.icon_size, icon_size=3),
         )
 
 

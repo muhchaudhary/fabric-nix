@@ -87,11 +87,13 @@ class ScreenRecorder(Service):
                 return
 
             out = stdout.strip("\n")
-            if out == "files":
-                exec_shell_command_async(f"xdg-open {self.screenshot_path}")
-            elif out == "view":
-                exec_shell_command_async(f"xdg-open {file_path}")
-            elif out == "edit":
-                exec_shell_command_async(f"swappy -f {file_path}")
+
+            match out:
+                case "files":
+                    exec_shell_command_async(f"xdg-open {self.screenshot_path}")
+                case "view":
+                    exec_shell_command_async(f"xdg-open {file_path}")
+                case "edit":
+                    exec_shell_command_async(f"swappy -f {file_path}")
 
         proc.communicate_utf8_async(None, None, do_callback)

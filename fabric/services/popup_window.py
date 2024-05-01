@@ -59,6 +59,7 @@ class PopupWindow(Window):
             transition_duration=transition_duration,
             children=child,
         )
+        self.box = Box(style="padding:1px;", children=self.revealer)
         self.visible = visible
         super().__init__(
             layer="overlay",
@@ -66,7 +67,7 @@ class PopupWindow(Window):
             all_visible=False,
             visible=False,
             exclusive=False,
-            children=Box(style="padding:1px;", children=self.revealer),
+            children=self.box,
             keyboard_mode=keyboard_mode,
             *kwargs,
         )

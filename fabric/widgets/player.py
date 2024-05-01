@@ -234,6 +234,9 @@ class PlayerBox(Box):
         self.player_height = 140
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
 
+
+        self.skipped = False
+
         # Exit Logic
         self.player.connect("exit", self.on_player_exit)
 
@@ -402,11 +405,11 @@ class PlayerBox(Box):
                 self.player_info_box,
                 self.image_stack,
                 Box(
-                    children=Image(icon_name=f"{self.player.player_name}-symbolic"),
+                    children=Image(icon_name=f"{self.player.player_name}-symbolic", icon_size=3),
                     h_align="end",
                     v_align="start",
                     style="margin-top: 20px; margin-right: 10px;",
-                    tooltip_text=self.player.player_name,
+                    tooltip_text=self.player.player_name, # type: ignore
                 ),
             ],
         )
@@ -425,10 +428,12 @@ class PlayerBox(Box):
 
     def on_player_next(self, _):
         self.image_box.set_transition_type("bezier")
+        self.skipped = True
         self.player.next()
 
     def on_player_prev(self, _):
         self.image_box.set_transition_type("negbezier")
+        self.skipped = True
         self.player.previous()
 
     def shuffle_update(self, _, __):
@@ -449,8 +454,8 @@ class PlayerBox(Box):
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
             logger.info(f"[PLAYER] saving cover photo to {self.cover_path}")
-            os.path.isfile(self.cover_path)
-            # source.copy_finish(result)
+            # os.path.isfile(self.cover_path)
+            source.copy_finish(result)
             if os.path.isfile(self.cover_path):
                 self.update_image()
         except ValueError:
@@ -462,11 +467,12 @@ class PlayerBox(Box):
         self.rotate_animation()
 
     def update_colors(self, n):
-        colors = (247, 239, 209)
-        try:
-            colors = grab_color(self.cover_path, n)
-        except Exception:
-            logger.error("[PLAYER] could not grab color")
+        # TODO: lets fix this later (put in new thread)
+        colors = (255, 255, 255)
+        # try:
+        #     colors = grab_color(self.cover_path, n)
+        # except Exception:
+        #     logger.error("[PLAYER] could not grab color")
 
         bg = f"background-color: mix(rgb{colors}, #F7EFD1, 0.5);"
         border = f"border-color: mix(rgb{colors}, #F7EFD1, 0.5);"
@@ -498,12 +504,20 @@ class PlayerBox(Box):
 
         def invoke():
             nonlocal anim_time
+
+            if self.skipped and  anim_time != 0:
+                self.skipped = False
+                return False
+            else:
+                self.skipped = False
+
             if anim_time <= 1:
                 anim_time += 0.005
                 rot = 360 * easeOutElastic(anim_time)
                 self.image_box.rotate_more(rot)
                 return True
             self.image_box.rotate_more(0)
+            self.skipped = False
             return False
 
         invoke_repeater(16, invoke)

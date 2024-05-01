@@ -3,6 +3,7 @@ from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.wayland import Window
 
+
 from components.bar.widgets.battery_indicator import BatteryIndicator
 from components.bar.widgets.date_time import (
     ActiveWindow,
@@ -15,6 +16,7 @@ from components.bar.widgets.systray import SystemTrayRevealer
 from components.quick_settings.quick_settings import QuickSettingsButton
 from components.bar.widgets.stats import Temps
 
+
 class StatusBar(Window):
     def __init__(
         self,
@@ -24,13 +26,13 @@ class StatusBar(Window):
             name="workspaces",
             spacing=2,
             buttons_list=[
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
-                WorkspaceButton(FormattedString("")),
+                WorkspaceButton(),
+                WorkspaceButton(),
+                WorkspaceButton(),
+                WorkspaceButton(),
+                WorkspaceButton(),
+                WorkspaceButton(),
+                WorkspaceButton(),
             ],
         )
         self.active_window = ActiveWindow(
@@ -42,15 +44,20 @@ class StatusBar(Window):
                 else (x if len(x) <= max_length else x[: max_length - 3] + "..."),
             ),
         )
-        # self.active_window.set_tooltip_text("THIS IS A TOOLTIP")
         self.date_time = DateTime()
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.sysinfo = Temps()
-        self.sys_tray = SystemTrayRevealer(icon_size=20, name = "system-tray")
+        self.sys_tray = SystemTrayRevealer(icon_size=20, name="system-tray")
         self.center_box.end_container.add_children(
-            [self.sysinfo, self.sys_tray, self.quick_settings, self.battery, self.date_time],
+            [
+                self.sysinfo,
+                self.sys_tray,
+                self.quick_settings,
+                self.battery,
+                self.date_time,
+            ],
         )
         self.center_box.start_container.add_children(
             [self.workspaces, self.prayer_times, self.active_window],

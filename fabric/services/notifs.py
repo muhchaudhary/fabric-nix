@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Literal
 
 from gi.repository import GdkPixbuf, Gio, GLib
 from loguru import logger
 
 from fabric.service import Service, Signal, SignalContainer
-from fabric.utils import get_ixml, get_relative_path
-
+from fabric.utils import get_ixml, get_relative_path, invoke_repeater
+import fabric
 # FDN: FreeDesktop Notifications
 
 (FDN_BUS_NAME, FDN_BUS_IFACE_NODE, FDN_BUS_PATH) = (
@@ -22,6 +22,7 @@ from fabric.utils import get_ixml, get_relative_path
 #   Deal with multiple notification (store active notifs in an array or something)
 #   Implement Signals and properties (sort of done)
 
+DEFAULT_TIMEOUT = 5000
 
 class Notification(Service):
     __gsignals__ = SignalContainer(
@@ -57,6 +58,12 @@ class Notification(Service):
 
         logger.info(f"New Notificaiton from application: {self.app_name}")
         logger.info(f"Supports the following actions: {self.actions} \n")
+        self.start_timeout(
+            expire_timeout
+        ) if expire_timeout != -1 else self.start_timeout(DEFAULT_TIMEOUT)
+
+    def start_timeout(self, timeout):
+        invoke_repeater(timeout, lambda *args: [self.emit("closed"), False][1])
 
     def close(self):
         self.emit("closed")
@@ -72,10 +79,19 @@ class Notification(Service):
         # I there can be notifications that take multiple actions
         self.emit("closed")
 
-    # TODO: make images resizable, should be ez
-
-    def get_image(self) -> GdkPixbuf.Pixbuf | None:
+    def get_image_pixbuf(
+        self,
+        width=128,
+        height=128,
+        resize_method: Literal[
+            "hyper",
+            "bilinear",
+            "nearest",
+            "tiles",
+        ] = "nearest",
+    ) -> GdkPixbuf.Pixbuf | None:
         # priority: image-data -> image-path -> icon_data
+        pixbuf = None
         if "image-data" in self.hints:
             image_data = self.hints.get("image-data")
             # image-data is of the format: (iiibiiay)
@@ -86,7 +102,7 @@ class Notification(Service):
             #   4. bits_per_sample (is always 8)
             #   5. channels
             #   6. image data in RBG byte order
-            return GdkPixbuf.Pixbuf.new_from_bytes(
+            pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
                 data=GLib.Bytes.new(image_data[6]),
                 colorspace=GdkPixbuf.Colorspace.RGB,
                 has_alpha=image_data[3],
@@ -96,17 +112,18 @@ class Notification(Service):
                 rowstride=image_data[2],
             )
 
-        if "image-path" in self.hints:
+        elif "image-path" in self.hints:
             image_path = self.hints.get("image-path")
             if "file://" in image_path:
                 # I haven't noticed this personally, but according to the spec,
                 # the value should be a URI (file://...)
-                return GdkPixbuf.Pixbuf.new_from_file(image_path[7:])
-            return GdkPixbuf.Pixbuf.new_from_file(image_path)
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_path[7:])
+            else:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_path)
 
-        if "icon_data" in self.hints:
+        elif "icon_data" in self.hints:
             image_data = self.hints.get("icon_data")
-            return GdkPixbuf.Pixbuf.new_from_bytes(
+            pixbuf = GdkPixbuf.Pixbuf.new_from_bytes(
                 data=GLib.Bytes.new(image_data[6]),
                 colorspace=GdkPixbuf.Colorspace.RGB,
                 has_alpha=image_data[3],
@@ -115,16 +132,52 @@ class Notification(Service):
                 height=image_data.hints[1],
                 rowstride=image_data.hints[2],
             )
+        return (
+            pixbuf.scale_simple(
+                width,
+                height,
+                {
+                    "hyper": GdkPixbuf.InterpType.HYPER,
+                    "bilinear": GdkPixbuf.InterpType.BILINEAR,
+                    "nearest": GdkPixbuf.InterpType.NEAREST,
+                    "tiles": GdkPixbuf.InterpType.TILES,
+                }.get(resize_method.lower(), GdkPixbuf.InterpType.NEAREST),
+            )
+            if pixbuf is not None
+            else pixbuf
+        )
 
-        return None
-
-    def get_icon(self) -> GdkPixbuf.Pixbuf | None:
+    def get_icon_pixbuf(
+        self,
+        width=128,
+        height=128,
+        resize_method: Literal[
+            "hyper",
+            "bilinear",
+            "nearest",
+            "tiles",
+        ] = "nearest",
+    ) -> GdkPixbuf.Pixbuf | None:
+        pixbuf = None
         if self.app_icon:
             if "file://" in self.app_icon:
-                return GdkPixbuf.Pixbuf.new_from_file(self.app_icon[7:])
+                pixbuf = GdkPixbuf.Pixbuf.new_from_file(self.app_icon[7:])
 
         # NOT IMPLEMENTED: app_icon can be a "name in a freedesktop.org-compliant icon theme"
-        return None
+        return (
+            pixbuf.scale_simple(
+                width,
+                height,
+                {
+                    "hyper": GdkPixbuf.InterpType.HYPER,
+                    "bilinear": GdkPixbuf.InterpType.BILINEAR,
+                    "nearest": GdkPixbuf.InterpType.NEAREST,
+                    "tiles": GdkPixbuf.InterpType.TILES,
+                }.get(resize_method.lower(), GdkPixbuf.InterpType.NEAREST),
+            )
+            if pixbuf is not None
+            else pixbuf
+        )
 
 
 class NotificationServer(Service):
@@ -210,13 +263,20 @@ class NotificationServer(Service):
                     if params[1] != 0
                     else (self.curr_id, self.curr_id + 1)
                 )
+                logger.warning(f"NEW ID: {params[1]}")
                 invocation.return_value(GLib.Variant("(u)", [id]))
+                logger.warning(f"invocation sent: {id}")
                 self._notifications[id] = Notification(*params, id)
+                logger.warning(
+                    "Notification Has Been Created"
+                )  # <- This line runs after blocking takes
+
                 self.add_notification(self._notifications[id])
                 self.emit("notification-received", id)
 
             case "CloseNotification":
                 id = params[0]
+                logger.info("CLOSED NOTIFICATION")
                 self.emit("notification-closed", id)
                 self._notifications[id].close() if id in self._notifications else None
                 invocation.return_value(None)
@@ -258,5 +318,32 @@ class NotificationServer(Service):
         notification.connect("invoked", on_invoke)
 
 
-# nw = NotificationServer()
-# fabric.start()
+nw = NotificationServer()
+fabric.start()
+# # UPOWER_BUS_NAME = "org.freedesktop.UPower"
+# # UPOWER_BUS_PATH = "/org/freedesktop/UPower/devices/DisplayDevice"
+# # UPOWER_IFACE_NAME = "org.freedesktop.UPower.Device"
+
+
+# # class UpowerProxy(DBusProxyWrapper):
+# #     def __init__(self, **kwargs):
+# #         super().__init__(
+# #             UPOWER_BUS_NAME,
+# #             UPOWER_BUS_PATH,
+# #             UPOWER_IFACE_NAME,
+# #             **kwargs,
+# #         )
+# #         self.connect("ready", self.do_when_ready)
+
+# #     @DBusProxyWrapper.property_hook()
+# #     def percentage(self, *args): ...
+
+# #     def do_when_ready(self, *args):
+# #         print(self.percentage())
+
+
+# # TIME TO CHECK FOR BLOCKING
+# nfProxy = UpowerProxy()
+# GLib.timeout_add(300, lambda: [print("nb"), True, ][1])
+
+
