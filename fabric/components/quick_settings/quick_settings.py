@@ -20,7 +20,10 @@ class QuickSettingsAudioScale(Box):
         # self.label = Label("Sound", h_align="start")
         self.icon_name = ""
         self.audio_slider = Scale(
-            min_value=0, max_value=100, name="quicksettings-slider", h_expand=True,
+            min_value=0,
+            max_value=100,
+            name="quicksettings-slider",
+            h_expand=True,
         )
         self.audio_slider.connect("change-value", self.on_scale_move)
         config.audio.connect("speaker-changed", self.update_audio)
@@ -135,8 +138,22 @@ class QuickSettingsButton(Button):
         self.audio_icon = Image(name="panel-icon")
         config.audio.connect("speaker-changed", self.update_audio)
 
-        self.add(Box(children=[self.bluetooth_icon, self.audio_icon]))
+        def get_network_icon(_):
+            wifi = config.network.wifi_device
+            if not wifi:
+                return
+            print(wifi.get_property("icon-name"))
+            self.network_icon.set_from_icon_name(wifi.get_property("icon-name"),2)
+            wifi.bind_property("icon-name", self.network_icon, "icon-name")
+
+        self.network_icon = Image(name="panel-icon",pixel_size=20)
+        config.network.connect("device-ready", get_network_icon)
+
+        self.add(
+            Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])
+        )
         self.connect("clicked", self.on_click)
+
         QuickSettingsPopup.revealer.connect(
             "notify::reveal-child",
             lambda *args: self.set_name("panel-button-active")
