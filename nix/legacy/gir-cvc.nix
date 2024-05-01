@@ -32,25 +32,10 @@ stdenv.mkDerivation (finalAttrs: {
   ];
 
   buildInputs = [
-    cmake
     gdk-pixbuf
     gtk3
-    systemd
-    xkeyboard_config
-    libxkbfile
     libpulseaudio
   ];
 
-  installPhase = ''
-    meson install
-    cd libcvc
-  '';
-
   doCheck = false;
-
-  installFlags = [
-    "sysconfdir=${placeholder "out"}/etc"
-    "localstatedir=\${TMPDIR}"
-    "typelibdir=${placeholder "out"}/lib/girepository-1.0"
-  ];
 })
