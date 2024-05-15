@@ -1,14 +1,25 @@
+import config
+from components.quick_settings.widgets.quicksettings_submenu import QuickSubToggle
+
+from components.quick_settings.widgets.submenus import (
+    BluetoothSubMenu,
+    BluetoothToggle,
+    WifiSubMenu,
+    WifiToggle,
+)
+from components.quick_settings.widgets.sliders.brightness import BrightnessSlider
+from components.quick_settings.widgets.sliders.audio import AudioSlider
+
+from widgets.player import PlayerBoxStack
+from widgets.popup_window import PopupWindow
+
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.scale import Scale
 
-import config
-from widgets.bluetooth_box import BluetoothToggle
-from widgets.player import PlayerBoxStack
-from widgets.popup_window import PopupWindow
 
-
+# from fabric.utils
 class QuickSettingsAudioScale(Box):
     def __init__(self, **kwargs):
         super().__init__(
@@ -96,26 +107,57 @@ class QuickSettingsButtonBox(Box):
     def __init__(self, **kwargs):
         super().__init__(
             orientation="v",
+            spacing=4,
             h_align="start",
             v_align="start",
             h_expand=True,
             **kwargs,
         )
-        self.bluetooth_toggle = BluetoothToggle(config.bluetooth_client)
-        self.add(self.bluetooth_toggle)
+        self.buttons = Box(
+            orientation="h", spacing=4, h_align="center", v_align="center"
+        )
+        self.active_submenu = None
+
+        # Wifi
+        self.wifi_toggle = WifiToggle(
+            submenu=WifiSubMenu(config.network),
+            client=config.network,
+        )
+
+        # Bluetooth
+        self.bluetooth_toggle = BluetoothToggle(
+            submenu=BluetoothSubMenu(config.bluetooth_client),
+            client=config.bluetooth_client,
+        )
+
+        self.buttons.add(self.wifi_toggle)
+        self.buttons.add(self.bluetooth_toggle)
+
+        self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
+        self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
+
+        self.add(self.buttons)
+        self.add(self.wifi_toggle.submenu)
+        self.add(self.bluetooth_toggle.submenu)
+
+    def set_active_submenu(self, btn: QuickSubToggle):
+        if btn.submenu != self.active_submenu and self.active_submenu is not None:
+            self.active_submenu.do_reveal(False)
+
+        self.active_submenu = btn.submenu
+        self.active_submenu.toggle_reveal() if self.active_submenu else None
 
 
 class QuickSettings(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
-        # self.mprisBox = PlayerBoxHandler(config.mprisplayer)
         self.mprisBox = PlayerBoxStack(config.mprisplayer)
-        self.audio_slider_box = QuickSettingsAudioScale()
-        self.screen_slider_box = QuickSettingsBrightnessScale()
+        self.screen_bright_slider = BrightnessSlider(config.brightness)
+        self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
         self.add(self.buttons_box)
         self.add(self.audio_slider_box)
-        self.add(self.screen_slider_box)
+        self.add(self.screen_bright_slider)
         self.add(self.mprisBox)
 
 
@@ -142,11 +184,10 @@ class QuickSettingsButton(Button):
             wifi = config.network.wifi_device
             if not wifi:
                 return
-            print(wifi.get_property("icon-name"))
-            self.network_icon.set_from_icon_name(wifi.get_property("icon-name"),2)
+            self.network_icon.set_from_icon_name(wifi.get_property("icon-name"), 2)
             wifi.bind_property("icon-name", self.network_icon, "icon-name")
 
-        self.network_icon = Image(name="panel-icon",pixel_size=20)
+        self.network_icon = Image(name="panel-icon", pixel_size=20)
         config.network.connect("device-ready", get_network_icon)
 
         self.add(

@@ -7,7 +7,7 @@ import config
 from config import brightness
 from widgets.popup_window import PopupWindow
 
-accent = "#83A598"
+accent = "#4dac71"
 
 
 class SystemOSD(PopupWindow):

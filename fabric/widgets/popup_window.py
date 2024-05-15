@@ -58,7 +58,9 @@ class PopupWindow(Window):
             transition_type=transition_type,
             transition_duration=transition_duration,
             children=child,
+            visible=False,
         )
+        self.revealer_box = Box(style="padding:1px;", children=self.revealer)
         self.visible = visible
         super().__init__(
             layer="overlay",
@@ -66,10 +68,18 @@ class PopupWindow(Window):
             all_visible=False,
             visible=False,
             exclusive=False,
-            children=Box(style="padding:1px;", children=self.revealer),
+            children=self.revealer_box,
             keyboard_mode=keyboard_mode,
             *kwargs,
         )
+
+        self.revealer.connect(
+            "notify::child-revealed",
+            lambda revealer, is_reveal: self.revealer.hide()
+            if not revealer.get_child_revealed()
+            else None,
+        )
+
         if enable_inhibitor:
             self.inhibitor = inhibitOverlay()
             self.inhibitor.connect("button-press-event", self.on_inhibit_click)
@@ -90,6 +100,8 @@ class PopupWindow(Window):
             self.inhibitor.set_visible(self.visible)
 
     def toggle_popup(self):
+        if not self.visible:
+            self.revealer.show()
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)
         if self.enable_inhibitor:
@@ -98,11 +110,15 @@ class PopupWindow(Window):
     def toggle_popup_offset(self, offset, toggle_width):
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)
-        self.revealer.set_margin_start(offset - (self.revealer.get_allocated_width() - toggle_width) / 2)
+        self.revealer.set_margin_start(
+            offset - (self.revealer.get_allocated_width() - toggle_width) / 2
+        )
         if self.enable_inhibitor:
             self.inhibitor.set_visible(self.visible)
 
     def popup_timeout(self):
+        if not self.visible:
+            self.revealer.show()
         if self.popup_running:
             self.currtimeout = 0
             return

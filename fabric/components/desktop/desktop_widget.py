@@ -59,12 +59,16 @@ class HadithWidget(Window):
             ],
         )
         self.hadith.get_random_hadith()
-        split_hadith = self.hadith.hadith_text.split(":", 1)
-        self.hadith_ref.set_label(split_hadith[0])
-        self.hadith_text.set_label(split_hadith[1])
+        try:
+            split_hadith = self.hadith.hadith_text.split(":", 1)
+            self.hadith_ref.set_label(split_hadith[0])
+            self.hadith_text.set_label(split_hadith[1])
+        except:
+            self.hadith_text.set_label(self.hadith.hadith_text)
+
         self.hadith_book.set_label(self.hadith.book_name)
         self.hadith_number.set_label(
-            f"Book {self.hadith.book_number}, Hadith {self.hadith.hadith_number}"
+            f"Book {self.hadith.book_number}, Hadith {self.hadith.hadith_number}, Arabic Number {self.hadith.arabic_number}"
         )
         super().__init__(
             layer="bottom",

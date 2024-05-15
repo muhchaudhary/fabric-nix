@@ -1,21 +1,16 @@
 import subprocess
 
+from thefuzz import fuzz, process
+from widgets.popup_window import PopupWindow
+
+from fabric.utils import get_relative_path
 from fabric.utils.applications import Application, get_desktop_applications
 from fabric.widgets.box import Box
-from fabric.widgets.flowbox import FlowBox
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolled_window import ScrolledWindow
-from thefuzz import fuzz, process
-
-from widgets.popup_window import PopupWindow
-
-import gi
-
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
 
 
 class AppButton(Button):
@@ -36,30 +31,32 @@ class AppButton(Button):
                 ),
             ],
         )
-        self.app_description = Box(
-            children=Label(
-                label=self.app.description,
-                justfication="left",
-                ellipsization="end",
-            ),
-        )
+        # self.app_description = Box(
+        #     children=Label(
+        #         label=self.app.description,
+        #         justfication="left",
+        #         ellipsization="end",
+        #     ),
+        # )
         self.button_box = Box(
             spacing=5,
             children=[
                 self.app_icon,
                 Box(
                     orientation="v",
+                    v_align="center",
                     children=[
                         self.app_name,
-                        self.app_description,
+                        # self.app_description,
                     ],
                 ),
             ],
         )
-        super().__init__(name="panel-button", **kwargs)
-        self.connect("clicked", lambda *args: self.launch_app())
+        super().__init__(name="appmenu-button", **kwargs)
+        self.connect("clicked", lambda _: self.launch_app())
         self.add(self.button_box)
 
+    # TODO look into how ags does this
     def launch_app(self):
         cmd = [x for x in self.app.command_line.split(" ") if x[0] != "%"]
         subprocess.Popen(
@@ -69,6 +66,7 @@ class AppButton(Button):
             start_new_session=True,
         )
 
+    # Unused function
     def launch_app_action(self, action: str):
         subprocess.Popen(
             self.app.command_line.split(" ") + action.split(" "),
@@ -79,20 +77,18 @@ class AppButton(Button):
 class AppMenu(PopupWindow):
     def __init__(self, **kwargs):
         self.scrolled_window = ScrolledWindow(
-            name="quicksettings",
+            name="appmenu-scroll",
             min_content_width=600,
-            min_content_height=400,
+            min_content_height=450,
         )
         self.applications = sorted(
             get_desktop_applications(),
             key=lambda x: x.name.lower(),
         )
         self.application_buttons = {}
-        self.buttons_box = Box(
-            orientation="v",
-        )
+        self.buttons_box = Box(orientation="v")
         self.search_app_entry = Entry(
-            name="quicksettings",
+            name="appmenu-entry",
             placeholder_text="Search for an App",
             editable=True,
             style="font-size: 30px;",
@@ -119,7 +115,19 @@ class AppMenu(PopupWindow):
             anchor="center",
             transition_type="slide-down",
             child=Box(
-                orientation="v", children=[self.search_app_entry, self.scrolled_window]
+                name="appmenu",
+                children=[
+                    # This is just because im lazy btw
+                    Box(
+                        style="border-radius: 20px;"
+                        + f" background-image: url('{get_relative_path('../../assets/app/test.png')}');"
+                        + "min-width:446px; min-height:522px;",
+                    ),
+                    Box(
+                        orientation="v",
+                        children=[self.search_app_entry, self.scrolled_window],
+                    ),
+                ],
             ),
             enable_inhibitor=True,
             keyboard_mode="on-demand",
@@ -142,8 +150,6 @@ class AppMenu(PopupWindow):
         if entry.get_text() == " " or entry.get_text() == "":
             self.reset_app_menu()
             return
-        for app_button in self.application_buttons.values():
-            app_button.hide()
         lister = process.extract(
             entry.get_text(),
             self.app_names,
@@ -152,13 +158,11 @@ class AppMenu(PopupWindow):
         )
         for elem_i in range(len(lister)):
             name = lister[elem_i][0]
-            self.application_buttons[name].show()
             self.buttons_box.reorder_child(self.application_buttons[name], elem_i)
 
     def reset_app_menu(self):
         i = 0
         for app_button in self.application_buttons.values():
-            app_button.show()
             self.buttons_box.reorder_child(app_button, i)
             i += 1
 

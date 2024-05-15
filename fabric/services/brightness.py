@@ -6,10 +6,10 @@ from gi.repository import GLib
 
 
 # In the future, use GUdev to get ehe brightness devices
-def exec_brightnessctl(args: str):
-    return exec_shell_command(f"brightnessctl {args}")
 
 
+# BUG This will open a new file every single time for some
+#     reason, seems like brightnessctil does not stop function after completion
 def exec_brightnessctl_async(args: str):
     return GLib.spawn_command_line_async(f"brightnessctl {args}")
 
@@ -53,7 +53,8 @@ class Brightness(Service):
         self.screen_monitor.connect(
             "changed",
             lambda _, file, *args: self.emit(
-                "screen", round(int(file.load_bytes()[0].get_data())),
+                "screen",
+                round(int(file.load_bytes()[0].get_data())),
             ),
         )
         super().__init__(**kwargs)
@@ -62,7 +63,9 @@ class Brightness(Service):
     def screen_brightness(self) -> int:
         # could just also read the file
         return int(
-            os.read(os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6),
+            os.read(
+                os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6
+            ),
         )
 
     @screen_brightness.setter

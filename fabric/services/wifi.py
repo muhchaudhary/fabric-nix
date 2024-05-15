@@ -38,7 +38,7 @@ class Wifi(Service):
                     "notify::active-access-point": lambda *args: self._activate_ap(),
                     "access-point-added": lambda *args: self.emit("changed"),
                     "access-point-removed": lambda *args: self.emit("changed"),
-                    "state-changed": lambda *args: self.notifier("icon-name")
+                    "state-changed": lambda *args: self.ap_update()
                 },
             )
             self._activate_ap()
@@ -172,7 +172,7 @@ class Wifi(Service):
     @Property(value_type=str, flags="readable")
     def ssid(self):
         if not self._ap:
-            return ""
+            return "Disconnected"
         ssid = self._ap.get_ssid().get_data()
         return NM.utils_ssid_to_utf8(ssid) if ssid else "Unknown"
 

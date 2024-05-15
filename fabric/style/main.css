@@ -1,12 +1,10 @@
 @import "./style/desktop_widget.css";
-/* @import "./style/player.css"; */
 @import "./style/player-dark.css";
 
 
 
 :vars {
-
-    --accent: #83a598;
+    --accent: #4dac71;
 
     --bg_h: #1d2021;
     --bg: #282828;
@@ -42,13 +40,11 @@
 }
 
 * {
-    /* unsets everything so we can style everything from scratch. */
     all: unset;
     font-family: "roboto";
     font-weight: 500;
     font-size: 15px;
     color: var(--fg);
-    /* we can use webcss variables, fabric compiles that to gtk css. */
 }
 
 #main-window {
@@ -59,9 +55,9 @@
 }
 
 tooltip {
-    padding: 5px;
+    padding: 10px;
     border-radius: 10px;
-    background-color: var(--bg);
+    background-color: var(--bg_h);
 }
 
 scale {
@@ -79,7 +75,6 @@ scale {
     border-width: 2px;
     border-radius: 10px;
     border-color: transparent;
-    /* border-color: alpha(@accent, 0.3); */
 }
 
 #date-time:hover,
@@ -113,50 +108,6 @@ scale {
 #panel-button:active {
     background-color: var(--accent);
     color: var(--bg);
-}
-
-#quicksettings-slider {
-    /* min-width: 400px; */
-    margin-left: 10px;
-    margin-right: 20px;
-}
-
-#quicksettings-slider trough {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-right: 12.5px;
-    min-height: 25px;
-    background-color: alpha(var(--bg3), 0.7);
-    border-radius: 20px;
-}
-
-#quicksettings-slider trough highlight:disabled {
-    background-color: alpha(var(--gray-dim), 0.7);
-}
-
-#quicksettings-slider slider:disabled {
-    background-color: alpha(var(--gray-dim), 1);
-
-}
-
-#quicksettings-slider trough:hover {
-    background-color: alpha(var(--bg4), 0.7);
-}
-
-#quicksettings-slider trough highlight {
-    border-radius: 20px 0px 0px 20px;
-    background-color: var(--accent);
-    margin-right: -12.5px;
-}
-
-#quicksettings-slider slider {
-    border-radius: 100%;
-    min-width: 25px;
-    min-height: 25px;
-    box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
-    margin-left: 25px;
-    background-color: mix(var(--accent), white, 0.3);
-    /* background-color: alpha(red, 0.2); */
 }
 
 #quicksettings-box {
@@ -279,58 +230,19 @@ scale {
     padding: 15px;
 }
 
-#quicksettings-revealer,
-#quicksettings-toggle {
-    background-color: var(--bg1);
-}
-
-#quicksettings-toggle-active,
-#quicksettings-toggle {
-    border-radius: 10px 0px 0px 10px;
-    min-width: 150px;
-}
-
-#quicksettings-revealer-active,
-#quicksettings-revealer {
-    border-radius: 0px 10px 10px 0px;
-}
-
-#quicksettings-revealer-active>label,
-#quicksettings-revealer>label {
-    font-size: 27px;
-    padding: 0px 8px 0px 8px;
-    border-radius: 0px 10px 10px 0px;
-
-}
-
 #system-tray-menu>menuitem menu>menuitem:hover,
 #system-tray-menu>menuitem:hover,
-#submenu-button:hover,
-#quicksettings-toggle:hover,
-#quicksettings-revealer:hover {
+#submenu-button:hover {
     background-color: alpha(var(--bg4), 0.8);
     border-color: alpha(var(--fg), 0.1);
 
 }
 
-#quicksettings-revealer-active:hover,
-#quicksettings-toggle-active:hover {
-    background-image: linear-gradient(alpha(var(--fg), 0.3) 0%, alpha(var(--fg), 0.3) 100%);
-}
-
-#submenu-button:active,
-#quicksettings-toggle-active,
-#quicksettings-toggle:active,
-#quicksettings-revealer-active,
-#quicksettings-revealer:active {
+#submenu-button:active {
     background-color: var(--accent);
 }
 
-#submenu-button:active>*,
-#quicksettings-revealer:active>*,
-#quicksettings-toggle:active>box>*,
-#quicksettings-toggle-active>box>*,
-#quicksettings-revealer-active>* {
+#submenu-button:active>* {
     color: var(--bg);
 }
 
@@ -382,7 +294,7 @@ scale {
 #system-tray-menu>menuitem menu,
 #system-tray-menu,
 #submenu {
-    min-width: 450px;
+    /* min-width: 450px; */
     background-color: alpha(var(--bg), 1);
     border-radius: 20px;
     border-width: 5px;
@@ -397,7 +309,6 @@ scale {
     margin-right: 2px;
 }
 
-
 #panel-text {
     margin-top: 2px;
     font-size: 15px;
@@ -407,7 +318,7 @@ scale {
 #osd-box {
     min-width: 25px;
     min-height: 200px;
-    border-radius: 25px;
+    border-radius: 20px;
     margin-bottom: 15px;
 }
 
@@ -416,20 +327,20 @@ scale {
     padding: 40px;
     border-radius: 40px;
     min-width: 1500px;
-    background-color: alpha(@bg_h, 0.6);
+    background-color: alpha(var(--bg_h), 0.6);
 }
 
 #hadith-ref {
     font-weight: bold;
     font-family: Noto Naskh Arabic UI;
     font-size: 30px;
-    color: @fg3;
+    color: var(--fg3);
 }
 
 #hadith-text {
     font-family: Noto Naskh Arabic UI;
     font-size: 35px;
-    color: @fg;
+    color: var(--fg);
 }
 
 #hadith-number,
@@ -439,5 +350,149 @@ scale {
     margin-bottom: 20px;
     margin-right: 15px;
     margin-top: 20px;
-    color: @fg3;
+    color: var(--fg3);
 }
+
+/* --------------------------------- QUICK SETTINGS BUTTONS --------------------------------- */
+#quicksettings-togglebutton.active button image,
+#quicksettings-togglebutton.active button label,
+#quicksettings-togglebutton.active button {
+    background-color: var(--accent);
+    color: var(--bg);
+}
+
+#quicksettings-togglebutton.active button:hover image,
+#quicksettings-togglebutton.active button:hover label,
+#quicksettings-togglebutton.active button:hover {
+    background-color: mix(var(--accent), white, 0.2);
+}
+
+#quicksettings-togglebutton.active button:active image,
+#quicksettings-togglebutton.active button:active label,
+#quicksettings-togglebutton.active button:active {
+    background-color: mix(var(--accent), white, 0.5);
+}
+
+
+#quicksettings-togglebutton button image,
+#quicksettings-togglebutton button label,
+#quicksettings-togglebutton button {
+    background-color: var(--bg1);
+    color: var(--fg);
+}
+
+#quicksettings-togglebutton button:hover image,
+#quicksettings-togglebutton button:hover label,
+#quicksettings-togglebutton button:hover {
+    background-color: var(--bg2);
+}
+
+#quicksettings-togglebutton button:active image,
+#quicksettings-togglebutton button:active label,
+#quicksettings-togglebutton button:active {
+    background-color: var(--bg3);
+}
+
+#quicksettings-toggle-action {
+    border-radius: 10px 0px 0px 10px;
+    min-width: 200px;
+    min-height: 35px;
+}
+
+#quicksettings-toggle-revealer {
+    border-radius: 0px 10px 10px 0px;
+    padding: 5px;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+
+/* --------------------------------- QUICK SETTINGS SLIDERS --------------------------------- */
+#quicksettings-slider {
+    margin-left: 10px;
+    margin-right: 20px;
+}
+
+#quicksettings-slider trough {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding-right: 12.5px;
+    min-height: 25px;
+    background-color: alpha(var(--bg3), 0.7);
+    border-radius: 20px;
+}
+
+#quicksettings-slider trough highlight:disabled {
+    background-color: alpha(var(--gray-dim), 0.7);
+}
+
+#quicksettings-slider slider:disabled {
+    background-color: alpha(var(--gray-dim), 1);
+
+}
+
+#quicksettings-slider trough:hover {
+    background-color: alpha(var(--bg4), 0.7);
+}
+
+#quicksettings-slider trough highlight {
+    border-radius: 20px 0px 0px 20px;
+    background-color: var(--accent);
+    margin-right: -12.5px;
+}
+
+#quicksettings-slider slider {
+    border-radius: 100%;
+    min-width: 25px;
+    min-height: 25px;
+    box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+    margin-left: 25px;
+    background-color: mix(var(--accent), white, 0.3);
+}
+
+/* ------------------------------------------------------------------------------------------ */
+/* ---------------------------------------- APP MENU ---------------------------------------- */
+#appmenu {
+    background-color: #0D0D0D;
+    border-radius: 20px;
+    padding: 20px;
+}
+
+#appmenu-entry,
+#appmenu-button {
+    background-color: #161616;
+    margin: 5px;
+    border-radius: 20px;
+    padding: 10px;
+}
+
+#appmenu-button:focus,
+#appmenu-button:hover {
+    background-color: #3c3836;
+}
+
+#appmenu-button:active {
+    background-color: rgb(64, 64, 64);
+}
+
+
+#appmenu-button label {
+    color: white;
+    font-size: 17px;
+}
+
+#appmenu-entry {
+    font-size: 20px;
+}
+
+#appmenu-entry {
+    border-width: 3px;
+    border-style: solid;
+    border-color: #212121;
+}
+
+#appmenu-entry,
+#appmenu-scroll {
+    margin-left: 20px;
+}
+
+/* ------------------------------------------------------------------------------------------ */

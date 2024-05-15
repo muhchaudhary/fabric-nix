@@ -103,9 +103,7 @@ class SystemTrayRevealer(Box):
 
     def animate_spin(self, open):
         deg = 0 if open else 180
-        direction = -1
-        if open:
-            direction = 1
+        direction = -1 if not open else 1
 
         def do_animate():
             nonlocal deg

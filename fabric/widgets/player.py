@@ -234,7 +234,6 @@ class PlayerBox(Box):
         self.player_height = 140
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
 
-
         self.skipped = False
 
         # Exit Logic
@@ -405,11 +404,13 @@ class PlayerBox(Box):
                 self.player_info_box,
                 self.image_stack,
                 Box(
-                    children=Image(icon_name=f"{self.player.player_name}-symbolic", icon_size=3),
+                    children=Image(
+                        icon_name=f"{self.player.player_name}-symbolic", icon_size=3
+                    ),
                     h_align="end",
                     v_align="start",
                     style="margin-top: 20px; margin-right: 10px;",
-                    tooltip_text=self.player.player_name, # type: ignore
+                    tooltip_text=self.player.player_name,  # type: ignore
                 ),
             ],
         )
@@ -505,7 +506,7 @@ class PlayerBox(Box):
         def invoke():
             nonlocal anim_time
 
-            if self.skipped and  anim_time != 0:
+            if self.skipped and anim_time != 0:
                 self.skipped = False
                 return False
             else:
