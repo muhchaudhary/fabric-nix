@@ -108,6 +108,8 @@ class PopupWindow(Window):
             self.inhibitor.set_visible(self.visible)
 
     def toggle_popup_offset(self, offset, toggle_width):
+        if not self.visible:
+            self.revealer.show()
         self.visible = not self.visible
         self.revealer.set_reveal_child(self.visible)
         self.revealer.set_margin_start(

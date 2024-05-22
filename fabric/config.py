@@ -50,6 +50,14 @@ battery_icons = {
     100: "󰁹",
 }
 
+battery_gtk_icon = {
+    0: "battery-empty",
+    25: "battery-caution",
+    50: "battery-low",
+    75: "battery-good",
+    100: "battery-full",
+}
+
 battery_charging_icons = {
     0: "󰢟",
     10: "󰢜",

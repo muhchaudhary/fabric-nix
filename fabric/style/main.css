@@ -4,7 +4,7 @@
 
 
 :vars {
-    --accent: #4dac71;
+    --accent: #f9bc83;
 
     --bg_h: #1d2021;
     --bg: #282828;
@@ -21,8 +21,8 @@
     --fg4: #a89984;
 
     --red: #fb4934;
-    --green: #b8bb26;
-    --yellow: #fabd2f;
+    --green: #4bbb26;
+    --yellow: #ffe600;
     --blue: #83a598;
     --purple: #d3869b;
     --aqua: #8ec07c;
@@ -48,10 +48,11 @@
 }
 
 #main-window {
-    /* border: solid 2px; */
+    /* border: solid 1px; */
+    /* border-radius: 10px; */
     /* border-color: #171717; */
     /* background-color: alpha(#171717, 0.7); */
-    background-color: alpha(#111213, 1);
+    background-color: alpha(#171717, 0.9);
 }
 
 tooltip {
@@ -123,21 +124,12 @@ scale {
     margin: 10px -10px 10px 5px;
 }
 
-/* #quicksettings-box>box>button>*>*>* {
-    -gtk-icon-transform: scale(1);
-
-} */
-
-
 
 #battery-label,
 #battery-icon {
     color: mix(var(--accent), rgb(0, 255, 0), 0.2);
     font-size: 25px;
-}
-
-#battery-icon.charging {
-    padding-right: 6px;
+    -gtk-icon-transform: rotate(90deg);
 }
 
 #battery-label.charging,

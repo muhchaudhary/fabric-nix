@@ -26,9 +26,12 @@ class Hadith:
     def get_random_hadith(self):
         book_number = random.randint(1, len(main_books) - 1)
         hadith_number = random.randint(1, main_books[book_number][1])
-        self.hadith_json = requests.get(
-            f"{API_URL}/editions/{main_books[book_number][0]}/{hadith_number}.json"
-        ).json()
+        try:
+            self.hadith_json = requests.get(
+                f"{API_URL}/editions/{main_books[book_number][0]}/{hadith_number}.json"
+            ).json()
+        except Exception as e:
+            return
         self.book_name = self.hadith_json["metadata"]["name"]
         self.section_name = list(self.hadith_json["metadata"]["section"].values())[0]
         self.hadith_text = self.hadith_json["hadiths"][0]["text"]

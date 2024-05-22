@@ -6,6 +6,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
+from fabric.widgets.image import Image
 
 import config
 
@@ -24,7 +25,7 @@ class BatteryIndicator(Box):
         )
         self.battery.connect("changed", self.update_battery)
 
-        self.battery_icon = Label(name="battery-icon")
+        self.battery_icon = Image(name="battery-icon")
         self.current_class = ""
         self.battery_percent = Label(name="battery-label")
 
@@ -70,12 +71,14 @@ class BatteryIndicator(Box):
         )
 
         if charging:
-            self.battery_icon.set_label(
-                config.battery_charging_icons[int(round(percent, -1))],
+            self.battery_icon.set_from_icon_name(
+                config.battery_gtk_icon[25 * round(percent / 25)] + "-charging-symbolic", 4
             )
         else:
-            self.battery_icon.set_label(config.battery_icons[int(round(percent, -1))])
-
+            self.battery_icon.set_from_icon_name(
+                config.battery_gtk_icon[25 * round(percent / 25)] + "-symbolic", 4
+            )
+        self.battery_icon.set_pixel_size(28)
         if charging:
             if self.current_class != "charging":
                 self.current_class = "charging"

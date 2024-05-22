@@ -162,13 +162,10 @@ class PrayerTimesButton(Button):
             button.get_allocated_width(),
         )
 
-
-prayer_times = PrayerTimes()
-
 PrayerTimesPopup = PopupWindow(
     transition_duration=350,
     anchor="top left",
     transition_type="slide-down",
-    child=prayer_times,
+    child=PrayerTimes(),
     enable_inhibitor=True,
 )

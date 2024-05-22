@@ -60,7 +60,11 @@ class StatusBar(Window):
             ],
         )
         self.center_box.start_container.add_children(
-            [self.workspaces, self.prayer_times, self.active_window],
+            [
+                self.workspaces,
+                 self.prayer_times,
+                self.active_window,
+            ],
         )
 
         super().__init__(
