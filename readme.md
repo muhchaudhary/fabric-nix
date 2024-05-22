@@ -5,8 +5,8 @@ I also have my personal config for fabric located in the `fabric` folder. If you
 
 # How to set up
 
-* The provided flake.nix will create a development shell with a ll the dependincies you need to use fabric. **ADD INFO ON WHY WE NEED THIS HERE**
-* To make setting up the dev envornoment quicker, I reccomded setting up nix-direnv **ADD LINK HERE**.
+* The provided flake.nix will create a development shell with all the dependincies you need to use fabric. **ADD INFO ON WHY WE NEED THIS HERE**
+* By default, a direnv will need to be rebuild on each reload, I reccomded setting up [nix-direnv](https://github.com/nix-community/nix-direnv) to cache the nix-shell
 
 1. run `direnv allow` in your terminal
 2. your terminal should automatically build and load into the development environment.
