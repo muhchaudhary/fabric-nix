@@ -43,7 +43,7 @@ You might have noticed that your gi.repository imports are
 missing type checking and autocompletions. Unfortunately there
 isn't a perfect solution for this. The issue stems from how
 girepostiory handles python. In order to fix this,
-I use [fakegir](https://github.com/strycore/fakegir/blob/master/fakegir.py).
+I use [fakegir](https://github.com/strycore/fakegir/tree/master).
 I made a small tweak to the script to make it work on nixOS however:
 ```python
 # Replace starting from line 18 to line 23
