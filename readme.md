@@ -1,7 +1,7 @@
 # What is this?
 This is my repo for getting fabric to work in nixOS, hassle free. You can find the derrivation for fabric in the nix folder.
 
-I also have my personal config for fabric located in the `fabric` folder. If you want to start fresh, you can clone the `fresh_env` branch
+I also have my personal config for fabric located in the `fabric` folder. If you want to start fresh, you can clone the `fresh-env` branch
 
 # How to set up
 
@@ -40,17 +40,23 @@ dbus-send --session --print-reply --dest=org.Fabric.fabric  /org/Fabric/fabric o
 # Fixing python autocompletions and type checking.
 
 You might have noticed that your gi.repository imports are
-missing type checking and autocompletions. Unfortunetly there
+missing type checking and autocompletions. Unfortunately there
 isn't a perfect solution for this. The issue stems from how
-girepostiory handles python. In order to fix this, I use fakeGIR
-(ADD LINK HERE). I made a small tweak to the script to make it
-work on nixOS however:
+girepostiory handles python. In order to fix this,
+I use [fakegir](https://github.com/strycore/fakegir/blob/master/fakegir.py).
+I made a small tweak to the script to make it work on nixOS however:
 ```python
-fix here
+# Replace starting from line 18 to line 23
+GIR_PATHS = []
+
+GIR_PATH = os.environ.get("XDG_DATA_DIRS")
+GIR_PATH = GIR_PATH.split(":")
+
+
+for path in GIR_PATH:
+    if os.path.exists(path + "/gir-1.0"):
+        GIR_PATHS.append(path + "/gir-1.0")
 ```
 
 You can also read more about this issue on the fabric wiki:
-LINK HERE
-
-# Adding Dependencies
-Adding depndencies is easy
+[Getting a Stub Package](https://fabric-development.github.io/fabric-wiki/installing-stubs.html)
