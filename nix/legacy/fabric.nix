@@ -12,26 +12,24 @@
   wrapGAppsHook,
   gdk-pixbuf,
   librsvg,
+  webkitgtk_4_1,
 }:
 buildPythonPackage rec {
   pname = "fabric";
   version = "0.0.1";
 
   src = fetchFromGitHub {
-    owner = "its-darsh";
+    owner = "Fabric-Development";
     repo = "fabric";
-    rev = "e96d7ea313a1c3ceb9d4134e831358c2a66680d1";
-    sha256 = "sha256-huc8LJwkeQMQ3jELul5IpPhvwHXk4fWY98xzhYohwGQ=";
+    rev = "667ca7591856b03f3abef847c4e716dadb5e12e2";
+    sha256 = "sha256-Cj/+OXx0fkx+fO2KKU2Y3ET7wiO7s57bpLlzFW7EnXs=";
   };
-
-  format = "setuptools";
 
   # unit tests will fail with hyprland module
   doCheck = false;
 
   nativeBuildInputs = [
     gobject-introspection
-    python3Packages.setuptools
   ];
 
   propagatedBuildInputs = [
@@ -41,6 +39,7 @@ buildPythonPackage rec {
     gtk-layer-shell
     gdk-pixbuf
     librsvg
+    webkitgtk_4_1
 
     # defined in requirements.txt
     python3Packages.click

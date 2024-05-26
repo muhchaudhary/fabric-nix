@@ -13,6 +13,7 @@
   xkeyboard_config,
   libxkbfile,
   libpulseaudio,
+  systemdLibs,
 }:
 stdenv.mkDerivation (finalAttrs: {
   pname = "libcvc-gir";
@@ -21,7 +22,7 @@ stdenv.mkDerivation (finalAttrs: {
 
   src = fetchurl {
     url = "https://github.com/linuxmint/cinnamon-desktop/archive/refs/tags/master.mint22.tar.gz";
-    hash = "sha256-lZjJqNqVTFMZLyoozoX8aACEqqBTfPMDvJWBwxrvLms=";
+    hash = "sha256-etl6sufEGN7GQyVgWhsgVIZL+lWExACGLXHkyOrDyBE=";
   };
 
   nativeBuildInputs = [meson ninja pkg-config gobject-introspection];
@@ -35,6 +36,9 @@ stdenv.mkDerivation (finalAttrs: {
     gdk-pixbuf
     gtk3
     libpulseaudio
+    systemdLibs
+    xkeyboard_config
+    libxkbfile
   ];
 
   doCheck = false;

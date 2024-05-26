@@ -26,7 +26,8 @@
       );
   in {
     devShells = eachSystem (pkgs: let
-      fabric = pkgs.python3Packages.callPackage ./nix/fabric-meson.nix {};
+      fabric = pkgs.python3Packages.callPackage ./nix/legacy/fabric.nix {};
+      gir-cvc = pkgs.callPackage ./nix/legacy/gir-cvc.nix {};
     in {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
@@ -47,6 +48,7 @@
         nativeBuildInputs = with pkgs; [
           vala # Vala compiler
           gobject-introspection
+          gir-cvc
 
           # non python aditional packages
           gtk-session-lock # For gtk lock screen
