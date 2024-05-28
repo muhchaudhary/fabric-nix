@@ -3,10 +3,8 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
-from services.notifs import NotificationServer, Notification
+from services.notifications_astal import NotificationServer, Notification
 from fabric.utils import invoke_repeater
-
-from gi.repository import GLib
 
 
 class NotificationBox(Box):
@@ -42,11 +40,12 @@ class NotificationBox(Box):
 class NotificationCenter(Window):
     def __init__(self, notification_server: NotificationServer, **kwargs):
         self._server = notification_server
+        print("starting server")
 
         self._server.connect("notification-received", self.on_new_notification)
         self.notifications = Box(
             orientation="v",
-            style="padding:1px; background-color: red;",
+            style="padding:20px; background-color: black;",
             spacing=5,
         )
         self.notif_dash = Revealer(
@@ -68,11 +67,8 @@ class NotificationCenter(Window):
         self.show()
 
     def on_new_notification(
-        self, notification_server: NotificationServer, notification_id: int
+        self, notification_server: NotificationServer, notification: Notification
     ):
-        new_notif_box = NotificationBox(
-            notification_server.get_notification_for_id(notification_id),
-        )
-
+        new_notif_box = NotificationBox(notification)
         self.notifications.add(new_notif_box)
         self.notif_dash.set_reveal_child(True)

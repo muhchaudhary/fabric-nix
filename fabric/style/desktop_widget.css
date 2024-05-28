@@ -1,5 +1,3 @@
-@import url("/home/muhammad/.cache/wal/colors-waybar.css");
-
 @define-color window-bg alpha(@background, 0.9);
 @define-color module-bg alpha(@background, 0.4);
 @define-color border-color @color11;

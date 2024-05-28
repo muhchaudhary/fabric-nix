@@ -455,8 +455,8 @@ class PlayerBox(Box):
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
         try:
             logger.info(f"[PLAYER] saving cover photo to {self.cover_path}")
-            # os.path.isfile(self.cover_path)
-            source.copy_finish(result)
+            os.path.isfile(self.cover_path)
+            # source.copy_finish(result)
             if os.path.isfile(self.cover_path):
                 self.update_image()
         except ValueError:

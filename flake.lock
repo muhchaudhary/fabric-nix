@@ -1,8 +1,26 @@
 {
   "nodes": {
-    "gtk-session-lock": {
+    "astal-notifd": {
       "inputs": {
         "nixpkgs": "nixpkgs"
+      },
+      "locked": {
+        "lastModified": 1716329247,
+        "narHash": "sha256-+vnP972+67e6ROngluwT3uTF8/luTsBglH4WgurSJc8=",
+        "owner": "astal-sh",
+        "repo": "notifd",
+        "rev": "297126f9c85dca14570dc5af29697aae10a65a8f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "astal-sh",
+        "repo": "notifd",
+        "type": "github"
+      }
+    },
+    "gtk-session-lock": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
         "lastModified": 1712778835,
@@ -20,6 +38,22 @@
     },
     "nixpkgs": {
       "locked": {
+        "lastModified": 1716137900,
+        "narHash": "sha256-sowPU+tLQv8GlqtVtsXioTKeaQvlMz/pefcdwg8MvfM=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "6c0b7a92c30122196a761b440ac0d46d3d9954f1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
         "lastModified": 1713537308,
         "narHash": "sha256-XtTSSIB2DA6tOv+l0FhvfDMiyCmhoRbNB+0SeInZkbk=",
         "owner": "nixos",
@@ -34,7 +68,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_2": {
+    "nixpkgs_3": {
       "locked": {
         "lastModified": 1713562564,
         "narHash": "sha256-NQpYhgoy0M89g9whRixSwsHb8RFIbwlxeYiVSDwSXJg=",
@@ -52,8 +86,9 @@
     },
     "root": {
       "inputs": {
+        "astal-notifd": "astal-notifd",
         "gtk-session-lock": "gtk-session-lock",
-        "nixpkgs": "nixpkgs_2",
+        "nixpkgs": "nixpkgs_3",
         "systems": "systems"
       }
     },

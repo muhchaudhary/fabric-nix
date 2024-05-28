@@ -3,6 +3,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
+    astal-notifd.url = "github:astal-sh/notifd";
   };
 
   outputs = {
@@ -21,6 +22,11 @@
               in {
                 inherit gtk-session-lock;
               })
+              (final: _: let
+                astal-notifd = inputs.astal-notifd.packages.${system}.default;
+              in {
+                inherit astal-notifd;
+              })
             ];
           })
       );
@@ -33,6 +39,7 @@
         buildInputs = with pkgs; [
           # Custom Packages
           fabric
+          astal-notifd
 
           # add aditional python packages here
           python3Packages.psutil
