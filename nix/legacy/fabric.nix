@@ -46,7 +46,6 @@ buildPythonPackage rec {
     python3Packages.loguru
     python3Packages.pycairo
     python3Packages.pygobject3
-    python3Packages.pygobject-stubs
   ];
 
   meta = with lib; {

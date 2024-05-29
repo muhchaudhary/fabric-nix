@@ -10,7 +10,7 @@ from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
 from components.notifications.notification_popup import NotificationPopup
 
-from services.notifications_astal import NotificationServer
+from services.notifications_astal_v2 import NotificationServer
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk  # noqa: E402

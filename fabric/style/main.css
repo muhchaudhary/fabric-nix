@@ -514,8 +514,8 @@ scale {
 
 #notification-image {
   background-size: cover;
-  min-width: 64px;
-  min-height: 64px;
+  min-width: 80px;
+  min-height: 80px;
   border-radius: 10px;
 }
 /* ------------------------------------------------------------------------------------------ */

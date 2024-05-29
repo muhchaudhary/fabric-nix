@@ -100,8 +100,8 @@ class NotificationServer(Service):
     def on_new_notification(self, _, notification):
         # TODO for now, im getting notifications on each new notif, we should just store and update this dict instead??
         notification_dict = json.loads(notification)
-        # if next(notif for notif in dicts if notif["name"] == notification_dict["id"]):
-        #     print("notification with this id exts, replace")
+        # if next(notif for notif in self.get_notifications() if notif["name"] == notification_dict["id"]):
+        #     print("notification with this id exts, replace it")
 
         self.add_notification(
             Notification(
@@ -117,8 +117,8 @@ class NotificationServer(Service):
             )
         )
 
-    def get_notifications(self) -> List[Notification]:
-        return exec_shell_command("astal-notifd -l")
+    def get_notifications(self) -> List[dict]:
+        return exec_shell_command("astal-notifd -l") # type: ignore
 
     def add_notification(self, notification: Notification) -> None:
         def on_closed(notification):
