@@ -1,50 +1,48 @@
 @import "./style/desktop_widget.css";
 @import "./style/player-dark.css";
 
-
-
 :vars {
     --accent: #d39a7e;
 
-    --bg_h: #1d2021;
-    --bg: #282828;
-    --bg_s: #32302f;
-    --bg1: #3c3836;
-    --bg2: #504945;
-    --bg3: #665c54;
-    --bg4: #7c6f64;
+  --bg_h: #1d2021;
+  --bg: #282828;
+  --bg_s: #32302f;
+  --bg1: #3c3836;
+  --bg2: #504945;
+  --bg3: #665c54;
+  --bg4: #7c6f64;
 
-    --fg: #f7efd1;
-    --fg1: #ebdbb2;
-    --fg2: #d5c4a1;
-    --fg3: #bdae93;
-    --fg4: #a89984;
+  --fg: #f7efd1;
+  --fg1: #ebdbb2;
+  --fg2: #d5c4a1;
+  --fg3: #bdae93;
+  --fg4: #a89984;
 
-    --red: #fb4934;
-    --green: #4bbb26;
-    --yellow: #ffe600;
-    --blue: #83a598;
-    --purple: #d3869b;
-    --aqua: #8ec07c;
-    --gray: #928374;
-    --orange: #fe8019;
+  --red: #fb4934;
+  --green: #4bbb26;
+  --yellow: #ffe600;
+  --blue: #83a598;
+  --purple: #d3869b;
+  --aqua: #8ec07c;
+  --gray: #928374;
+  --orange: #fe8019;
 
-    --red-dim: #cc2412;
-    --green-dim: #98971a;
-    --yellow-dim: #d79921;
-    --blue-dim: #458588;
-    --purple-dim: #b16286;
-    --aqua-dim: #689d6a;
-    --gray-dim: #a89984;
-    --orange-dim: #d65d0e;
+  --red-dim: #cc2412;
+  --green-dim: #98971a;
+  --yellow-dim: #d79921;
+  --blue-dim: #458588;
+  --purple-dim: #b16286;
+  --aqua-dim: #689d6a;
+  --gray-dim: #a89984;
+  --orange-dim: #d65d0e;
 }
 
 * {
-    all: unset;
-    font-family: "roboto";
-    font-weight: 500;
-    font-size: 15px;
-    color: var(--fg);
+  all: unset;
+  font-family: "roboto";
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--fg);
 }
 
 #main-window {
@@ -56,436 +54,468 @@
 }
 
 tooltip {
-    padding: 10px;
-    border-radius: 10px;
-    background-color: var(--bg_h);
+  padding: 10px;
+  border-radius: 10px;
+  background-color: var(--bg_h);
 }
 
 scale {
-    margin-top: 10px;
-    margin-bottom: 10px;
+  margin-top: 10px;
+  margin-bottom: 10px;
 }
 
-#system-tray>button,
+#system-tray > button,
 #panel-button-active,
 #date-time,
 #panel-button {
-    margin: 0px 2px 0px 2px;
-    padding: 0px 5px 0px 5px;
-    border-style: solid;
-    border-width: 2px;
-    border-radius: 10px;
-    border-color: transparent;
+  margin: 0px 2px 0px 2px;
+  padding: 0px 5px 0px 5px;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 10px;
+  border-color: transparent;
 }
 
 #date-time:hover,
-#system-tray>button:hover,
+#system-tray > button:hover,
 #panel-button:hover {
-    background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
-    border-color: alpha(var(--fg), 0.1);
+  background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
+  border-color: alpha(var(--fg), 0.1);
 }
 
-
 #panel-button label {
-    font-weight: 800;
+  font-weight: 800;
 }
 
 #date-time label {
-    font-weight: 900;
-    /* color: var(--orange); */
+  font-weight: 900;
+  /* color: var(--orange); */
 }
-
 
 #date-time:active,
 #date-time:active label,
-#system-tray>button:active,
+#system-tray > button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active>*>*>label,
-#panel-button:active>*>label,
-#panel-button-active>box>label,
+#panel-button:active > * > * > label,
+#panel-button:active > * > label,
+#panel-button-active > box > label,
 #panel-button:active {
-    background-color: var(--accent);
-    color: var(--bg);
+  background-color: var(--accent);
+  color: var(--bg);
 }
 
 #quicksettings-box {
-    background-color: alpha(var(--bg1), 0.7);
-    border-radius: 20px;
+  background-color: alpha(var(--bg1), 0.7);
+  border-radius: 20px;
 }
 
 #quicksettings-slider slider:hover {
-    background-color: mix(var(--accent), white, 0.6);
+  background-color: mix(var(--accent), white, 0.6);
 }
 
-#quicksettings-box>box>button {
-    margin: 10px -10px 10px 5px;
+#quicksettings-box > box > button {
+  margin: 10px -10px 10px 5px;
 }
-
 
 #battery-label,
 #battery-icon {
-    color: mix(var(--accent), rgb(0, 255, 0), 0.2);
-    font-size: 25px;
-    -gtk-icon-transform: rotate(90deg);
+  color: mix(var(--accent), rgb(0, 255, 0), 0.2);
+  font-size: 25px;
+  -gtk-icon-transform: rotate(90deg);
 }
 
 #battery-label.charging,
 #battery-icon.charging {
-    color: var(--green);
+  color: var(--green);
 }
 
 #battery-label.low,
 #battery-icon.low {
-    color: var(--yellow);
+  color: var(--yellow);
 }
 
 #battery-label.critical,
 #battery-icon.critical {
-    color: var(--red);
+  color: var(--red);
 }
 
 #battery-label {
-    margin: 0px 5px -2px 2px;
-    font-size: 15px;
-    font-weight: 900;
+  margin: 0px 5px -2px 2px;
+  font-size: 15px;
+  font-weight: 900;
 }
 
 #prayer-info {
-    min-width: 140px;
+  min-width: 140px;
 }
 
-#prayer-info>*>*>*>* {
-    font-size: 16px;
+#prayer-info > * > * > * > * {
+  font-size: 16px;
 }
 
-
-
-#workspaces>button {
-    border-radius: 100%;
-    min-width: 10px;
-    margin: 13px 2px 13px 2px;
-    transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
-    background-color: var(--fg);
+#workspaces > button {
+  border-radius: 100%;
+  min-width: 10px;
+  margin: 13px 2px 13px 2px;
+  transition: min-width 0.15s cubic-bezier(0.075, 0.82, 0.165, 1);
+  background-color: var(--fg);
 }
 
 #workspaces {
-    margin: 0px 5px 0px 5px;
+  margin: 0px 5px 0px 5px;
 }
 
-
 #player-stack-button {
-    border-radius: 5px;
-    min-width: 30px;
-    margin: 10px 1px 10px 1px;
-    background-color: var(--fg);
+  border-radius: 5px;
+  min-width: 30px;
+  margin: 10px 1px 10px 1px;
+  background-color: var(--fg);
 }
 
 #player-stack-button:hover {
-    background-color: #646464;
+  background-color: #646464;
 }
 
 #player-stack-button.active,
-#workspaces>button.active {
-    border-radius: 5px;
-    min-width: 30px;
-    margin: 10px 1px 10px 1px;
-    background-color: var(--accent);
+#workspaces > button.active {
+  border-radius: 5px;
+  min-width: 30px;
+  margin: 10px 1px 10px 1px;
+  background-color: var(--accent);
 }
 
 #player-stack-button.empty,
-#workspaces>button.empty {
-    min-width: 9px;
-    margin: 14px 2px 14px 2px;
-    background-color: var(--fg4);
-
+#workspaces > button.empty {
+  min-width: 9px;
+  margin: 14px 2px 14px 2px;
+  background-color: var(--fg4);
 }
 
-#workspaces>button.urgent {
-    background-color: var(--red-dim);
+#workspaces > button.urgent {
+  background-color: var(--red-dim);
 }
 
-#workspaces>button:hover {
-    background-color: var(--bg4);
+#workspaces > button:hover {
+  background-color: var(--bg4);
 }
 
 #prayer-info,
 #quicksettings {
-    background-color: alpha(var(--bg_h), 0.9);
-    border-radius: 20px;
-    border-style: solid;
-    /* border-width: 5px; */
-    /* border-color: alpha(var(--bg_h), 0.9); */
-    margin: 5px;
-    padding: 15px;
+  background-color: alpha(var(--bg_h), 0.9);
+  border-radius: 20px;
+  border-style: solid;
+  /* border-width: 5px; */
+  /* border-color: alpha(var(--bg_h), 0.9); */
+  margin: 5px;
+  padding: 15px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:hover,
-#system-tray-menu>menuitem:hover,
+#system-tray-menu > menuitem menu > menuitem:hover,
+#system-tray-menu > menuitem:hover,
 #submenu-button:hover {
-    background-color: alpha(var(--bg4), 0.8);
-    border-color: alpha(var(--fg), 0.1);
-
+  background-color: alpha(var(--bg4), 0.8);
+  border-color: alpha(var(--fg), 0.1);
 }
 
 #submenu-button:active {
-    background-color: var(--accent);
+  background-color: var(--accent);
 }
 
-#submenu-button:active>* {
-    color: var(--bg);
+#submenu-button:active > * {
+  color: var(--bg);
 }
 
 #submenu-title {
-    border-style: solid;
-    border-bottom-width: 2px;
-    border-color: var(--bg3);
-    margin-bottom: 5px;
+  border-style: solid;
+  border-bottom-width: 2px;
+  border-color: var(--bg3);
+  margin-bottom: 5px;
 }
 
 #submenu-label {
-    margin-left: 5px;
+  margin-left: 5px;
 }
 
 #submenu-title-label {
-    font-size: 17px;
+  font-size: 17px;
 }
 
 #submenu-item {
-    margin: 5px;
+  margin: 5px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
-    border-width: 1px;
-    border-style: double;
-    border-color: var(--fg4);
-    margin: 5px 0px 5px 0px;
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
+  border-width: 1px;
+  border-style: double;
+  border-color: var(--fg4);
+  margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:disabled,
-#system-tray-menu>menuitem:disabled {
-    background-color: var(--bg_h);
+#system-tray-menu > menuitem menu > menuitem:disabled,
+#system-tray-menu > menuitem:disabled {
+  background-color: var(--bg_h);
 }
 
 #submenu-button {
-    background-color: var(--bg2);
-    padding: 8px;
-    border-radius: 10px;
+  background-color: var(--bg2);
+  padding: 8px;
+  border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
-    background-color: var(--bg2);
-    padding: 5px;
-    border-radius: 10px;
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
+  background-color: var(--bg2);
+  padding: 5px;
+  border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu,
+#system-tray-menu > menuitem menu,
 #system-tray-menu,
 #submenu {
-    /* min-width: 450px; */
-    background-color: alpha(var(--bg), 1);
-    border-radius: 20px;
-    border-width: 5px;
-    border-color: alpha(var(--accent), 1);
-    padding: 10px;
+  /* min-width: 450px; */
+  background-color: alpha(var(--bg), 1);
+  border-radius: 20px;
+  border-width: 5px;
+  border-color: alpha(var(--accent), 1);
+  padding: 10px;
 }
 
 #system-tray,
 #panel-icon {
-    margin-left: 2px;
-    font-size: 25px;
-    margin-right: 2px;
+  margin-left: 2px;
+  font-size: 25px;
+  margin-right: 2px;
 }
 
 #panel-text {
-    margin-top: 2px;
-    font-size: 15px;
-    font-weight: 900;
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 900;
 }
 
 #osd-box {
-    min-width: 25px;
-    min-height: 200px;
-    border-radius: 20px;
-    margin-bottom: 15px;
+  min-width: 25px;
+  min-height: 200px;
+  border-radius: 20px;
+  margin-bottom: 15px;
 }
 
-
 #hadith-box {
-    padding: 40px;
-    border-radius: 40px;
-    min-width: 1500px;
-    background-color: alpha(var(--bg_h), 0.6);
+  padding: 40px;
+  border-radius: 40px;
+  min-width: 1500px;
+  background-color: alpha(var(--bg_h), 0.6);
 }
 
 #hadith-ref {
-    font-weight: bold;
-    font-family: Noto Naskh Arabic UI;
-    font-size: 30px;
-    color: var(--fg3);
+  font-weight: bold;
+  font-family: Noto Naskh Arabic UI;
+  font-size: 30px;
+  color: var(--fg3);
 }
 
 #hadith-text {
-    font-family: Noto Naskh Arabic UI;
-    font-size: 35px;
-    color: var(--fg);
+  font-family: Noto Naskh Arabic UI;
+  font-size: 35px;
+  color: var(--fg);
 }
 
 #hadith-number,
 #hadith-book {
-    font-weight: bold;
-    font-size: 20px;
-    margin-bottom: 20px;
-    margin-right: 15px;
-    margin-top: 20px;
-    color: var(--fg3);
+  font-weight: bold;
+  font-size: 20px;
+  margin-bottom: 20px;
+  margin-right: 15px;
+  margin-top: 20px;
+  color: var(--fg3);
 }
 
 /* --------------------------------- QUICK SETTINGS BUTTONS --------------------------------- */
 #quicksettings-togglebutton.active button image,
 #quicksettings-togglebutton.active button label,
 #quicksettings-togglebutton.active button {
-    background-color: var(--accent);
-    color: var(--bg);
+  background-color: var(--accent);
+  color: var(--bg);
 }
 
 #quicksettings-togglebutton.active button:hover image,
 #quicksettings-togglebutton.active button:hover label,
 #quicksettings-togglebutton.active button:hover {
-    background-color: mix(var(--accent), white, 0.2);
+  background-color: mix(var(--accent), white, 0.2);
 }
 
 #quicksettings-togglebutton.active button:active image,
 #quicksettings-togglebutton.active button:active label,
 #quicksettings-togglebutton.active button:active {
-    background-color: mix(var(--accent), white, 0.5);
+  background-color: mix(var(--accent), white, 0.5);
 }
-
 
 #quicksettings-togglebutton button image,
 #quicksettings-togglebutton button label,
 #quicksettings-togglebutton button {
-    background-color: var(--bg1);
-    color: var(--fg);
+  background-color: var(--bg1);
+  color: var(--fg);
 }
 
 #quicksettings-togglebutton button:hover image,
 #quicksettings-togglebutton button:hover label,
 #quicksettings-togglebutton button:hover {
-    background-color: var(--bg2);
+  background-color: var(--bg2);
 }
 
 #quicksettings-togglebutton button:active image,
 #quicksettings-togglebutton button:active label,
 #quicksettings-togglebutton button:active {
-    background-color: var(--bg3);
+  background-color: var(--bg3);
 }
 
 #quicksettings-toggle-action {
-    border-radius: 10px 0px 0px 10px;
-    min-width: 200px;
-    min-height: 35px;
+  border-radius: 10px 0px 0px 10px;
+  min-width: 200px;
+  min-height: 35px;
 }
 
 #quicksettings-toggle-revealer {
-    border-radius: 0px 10px 10px 0px;
-    padding: 5px;
+  border-radius: 0px 10px 10px 0px;
+  padding: 5px;
 }
 
 /* ------------------------------------------------------------------------------------------ */
 
 /* --------------------------------- QUICK SETTINGS SLIDERS --------------------------------- */
 #quicksettings-slider {
-    margin-left: 10px;
-    margin-right: 20px;
+  margin-left: 10px;
+  margin-right: 20px;
 }
 
 #quicksettings-slider trough {
-    margin-top: 5px;
-    margin-bottom: 5px;
-    padding-right: 12.5px;
-    min-height: 25px;
-    background-color: alpha(var(--bg3), 0.7);
-    border-radius: 20px;
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding-right: 12.5px;
+  min-height: 25px;
+  background-color: alpha(var(--bg3), 0.7);
+  border-radius: 20px;
 }
 
 #quicksettings-slider trough highlight:disabled {
-    background-color: alpha(var(--gray-dim), 0.7);
+  background-color: alpha(var(--gray-dim), 0.7);
 }
 
 #quicksettings-slider slider:disabled {
-    background-color: alpha(var(--gray-dim), 1);
-
+  background-color: alpha(var(--gray-dim), 1);
 }
 
 #quicksettings-slider trough:hover {
-    background-color: alpha(var(--bg4), 0.7);
+  background-color: alpha(var(--bg4), 0.7);
 }
 
 #quicksettings-slider trough highlight {
-    border-radius: 20px 0px 0px 20px;
-    background-color: var(--accent);
-    margin-right: -12.5px;
+  border-radius: 20px 0px 0px 20px;
+  background-color: var(--accent);
+  margin-right: -12.5px;
 }
 
 #quicksettings-slider slider {
-    border-radius: 100%;
-    min-width: 25px;
-    min-height: 25px;
-    box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
-    margin-left: 25px;
-    background-color: mix(var(--accent), white, 0.3);
+  border-radius: 100%;
+  min-width: 25px;
+  min-height: 25px;
+  box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+  margin-left: 25px;
+  background-color: mix(var(--accent), white, 0.3);
 }
 
 /* ------------------------------------------------------------------------------------------ */
 
 /* ---------------------------------------- APP MENU ---------------------------------------- */
 #appmenu {
-    background-color: #0D0D0D;
-    border-radius: 20px;
-    padding: 20px;
+  background-color: #0d0d0d;
+  border-radius: 20px;
+  padding: 20px;
 }
 
 #appmenu-entry,
 #appmenu-button {
-    background-color: #161616;
-    margin: 5px;
-    border-radius: 20px;
-    padding: 10px;
+  background-color: #161616;
+  margin: 5px;
+  border-radius: 20px;
+  padding: 10px;
 }
 
 #appmenu-button:focus,
 #appmenu-button:hover {
-    background-color: #3c3836;
+  background-color: #3c3836;
 }
 
 #appmenu-button:active {
-    background-color: rgb(64, 64, 64);
+  background-color: rgb(64, 64, 64);
 }
-
 
 #appmenu-button label {
-    color: white;
-    font-size: 17px;
+  color: white;
+  font-size: 17px;
 }
 
 #appmenu-entry {
-    font-size: 20px;
+  font-size: 20px;
 }
 
 #appmenu-entry {
-    border-width: 3px;
-    border-style: solid;
-    border-color: #212121;
+  border-width: 3px;
+  border-style: solid;
+  border-color: #212121;
 }
 
 #appmenu-entry,
 #appmenu-scroll {
-    margin-left: 20px;
+  margin-left: 20px;
 }
 
+/* ------------------------------------------------------------------------------------------ */
+
+/* -------------------------------------- Notifications ------------------------------------- */
+#notification-box {
+  background-color: alpha(white, 0.7);
+  padding: 10px;
+  border-radius: 20px;
+  min-width: 500px;
+  margin-right: 20px;
+}
+
+#notification-action-buttons,
+#notification-box box label {
+    margin-left: 20px;
+    color: black;
+}
+
+#notification-action-buttons button label{
+    margin: 0px;
+    padding: 0px;
+}
+
+#notification-action-buttons button{
+    background-color: #E3E5E6;
+    border-radius: 10px;
+    margin-left: 5px;
+    margin-right: 5px;
+    padding: 5px;
+}
+
+#notification-action-buttons button:hover{
+    background-color: #cfcfcf;
+}
+
+#notification-action-buttons button:active{
+    background-color: #a1a0a0;
+}
+
+#notification-image {
+  background-size: cover;
+  min-width: 64px;
+  min-height: 64px;
+  border-radius: 10px;
+}
 /* ------------------------------------------------------------------------------------------ */
