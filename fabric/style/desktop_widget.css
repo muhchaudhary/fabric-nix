@@ -11,13 +11,17 @@
 #clock>label {
     /* font-family: "Ubuntu Nerd Font"; */
     /* color: alpha(@fg, 0.8); */
-    color: alpha(#F3EFB0, 0.8);
-    /* text-shadow: -1px -1px 1px rgba(0, 0, 0, 0.05),
-              1px -1px 1px rgba(0, 0, 0, 0.05),
-             -1px  1px  1px rgba(0, 0, 0, 0.05),
-              1px  1px  1px rgba(0, 0, 0, 0.05); */
+    color: alpha(#d39a7e, 1);
     font-size: 96px;
     font-weight: 900;
+}
+
+#date>label {
+    text-shadow: alpha(#ff8181, 0.7) 3px 3px;
+}
+
+#clock>label {
+    text-shadow: alpha(#ff8181, 0.7) 7px 7px;
 }
 
 #date,
@@ -28,11 +32,11 @@
 
 #date {
     padding-top: 10px;
-    border-radius: 25px 25px 0px 0px;
+    border-radius: 22px 22px 0px 0px;
 }
 
 #clock {
-    border-radius: 0px 0px 25px 25px;
+    border-radius: 0px 0px 22px 22px;
 }
 
 

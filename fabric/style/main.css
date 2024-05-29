@@ -4,7 +4,7 @@
 
 
 :vars {
-    --accent: #f9bc83;
+    --accent: #d39a7e;
 
     --bg_h: #1d2021;
     --bg: #282828;
@@ -48,11 +48,11 @@
 }
 
 #main-window {
-    /* border: solid 1px; */
+    /* border: solid 2px black; */
     /* border-radius: 10px; */
     /* border-color: #171717; */
     /* background-color: alpha(#171717, 0.7); */
-    background-color: alpha(#171717, 0.9);
+    background-color: alpha(#171717, 0.8);
 }
 
 tooltip {
@@ -442,6 +442,7 @@ scale {
 }
 
 /* ------------------------------------------------------------------------------------------ */
+
 /* ---------------------------------------- APP MENU ---------------------------------------- */
 #appmenu {
     background-color: #0D0D0D;
