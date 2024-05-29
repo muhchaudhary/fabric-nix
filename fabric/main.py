@@ -8,7 +8,7 @@ from components.app_menu.app_menu import appMenu
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
-from components.notifications.notification_popup import NotificationCenter
+from components.notifications.notification_popup import NotificationPopup
 
 from services.notifications_astal import NotificationServer
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
     bar = StatusBar()
     clockWidget = ClockWidget()
     systemOverlay = SystemOSD()
-    nc = NotificationCenter(NotificationServer())
+    nc = NotificationPopup(NotificationServer())
     appMenu = appMenu
 
     file = monitor_file(get_relative_path("style/main.css"))

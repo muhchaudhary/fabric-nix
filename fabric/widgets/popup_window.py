@@ -46,9 +46,10 @@ class PopupWindow(Window):
         anchor: str = "top right",
         enable_inhibitor: bool = False,
         keyboard_mode: str = "on-demand",
+        timeout: int = 1000,
         *kwargs,
     ):
-        self.timeout = 1000
+        self.timeout = timeout
         self.eventID = -1
         self.currtimeout = 0
         self.popup_running = False

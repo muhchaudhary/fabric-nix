@@ -1,14 +1,12 @@
 import json
-from typing import List, Literal
+from typing import List
 
-from gi.repository import GdkPixbuf
 from loguru import logger
 
 from fabric.service import Service, Signal, SignalContainer
 from fabric.utils import invoke_repeater, exec_shell_command_async, exec_shell_command
 from fabric.utils.fabricator import Fabricator
 
-# FDN: FreeDesktop Notifications
 
 DEFAULT_TIMEOUT = 10000
 
@@ -47,6 +45,7 @@ class Notification(Service):
 
         logger.info(f"New Notificaiton from application: {self.app_name}")
         logger.info(f"Supports the following actions: {self.actions} \n")
+
         self.start_timeout(
             expire_timeout
         ) if expire_timeout != -1 else self.start_timeout(DEFAULT_TIMEOUT)
@@ -61,83 +60,30 @@ class Notification(Service):
         return self.actions
 
     def invoke(self, action_key: str):
-        if action_key in self.actions:
-            self.emit("invoked", action_key)
+        self.emit("invoked", action_key)
 
         # this shoudln't be done like this
         # I there can be notifications that take multiple actions
         self.emit("closed")
 
-    def get_image_pixbuf(
-        self,
-        width=128,
-        height=128,
-        resize_method: Literal[
-            "hyper",
-            "bilinear",
-            "nearest",
-            "tiles",
-        ] = "nearest",
-    ) -> GdkPixbuf.Pixbuf | None:
+    def get_image_file_path(self) -> str | None:
         # priority: image-data -> image-path -> icon_data
-        pixbuf = None
+        file_path = None
         if "image-data" in self.hints:
-            image_data = self.hints.get("image-data")
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_data)
+            file_path = self.hints.get("image-data")
 
         elif "image-path" in self.hints:
-            image_path = self.hints.get("image-path")
-            if image_path != "":
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_path)
+            file_path = self.hints.get("image-path")
 
         elif "icon_data" in self.hints:
-            image_data = self.hints.get("icon_data")
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(image_data)
-        return (
-            pixbuf.scale_simple(
-                width,
-                height,
-                {
-                    "hyper": GdkPixbuf.InterpType.HYPER,
-                    "bilinear": GdkPixbuf.InterpType.BILINEAR,
-                    "nearest": GdkPixbuf.InterpType.NEAREST,
-                    "tiles": GdkPixbuf.InterpType.TILES,
-                }.get(resize_method.lower(), GdkPixbuf.InterpType.NEAREST),
-            )
-            if pixbuf is not None
-            else pixbuf
-        )
+            file_path = self.hints.get("icon_data")
+        return file_path
 
-    def get_icon_pixbuf(
-        self,
-        width=128,
-        height=128,
-        resize_method: Literal[
-            "hyper",
-            "bilinear",
-            "nearest",
-            "tiles",
-        ] = "nearest",
-    ) -> GdkPixbuf.Pixbuf | None:
-        pixbuf = None
-        if self.app_icon:
-            if self.app_icon != "":
-                pixbuf = GdkPixbuf.Pixbuf.new_from_file(self.app_icon)
-
-        return (
-            pixbuf.scale_simple(
-                width,
-                height,
-                {
-                    "hyper": GdkPixbuf.InterpType.HYPER,
-                    "bilinear": GdkPixbuf.InterpType.BILINEAR,
-                    "nearest": GdkPixbuf.InterpType.NEAREST,
-                    "tiles": GdkPixbuf.InterpType.TILES,
-                }.get(resize_method.lower(), GdkPixbuf.InterpType.NEAREST),
-            )
-            if pixbuf is not None
-            else pixbuf
-        )
+    def get_icon_file_path(self) -> str | None:
+        file_path = None
+        if self.app_icon and self.app_icon != "":
+            file_path = self.app_icon
+        return file_path
 
 
 class NotificationServer(Service):
@@ -152,8 +98,11 @@ class NotificationServer(Service):
         self.notification_fab.connect("changed", self.on_new_notification)
 
     def on_new_notification(self, _, notification):
+        # TODO for now, im getting notifications on each new notif, we should just store and update this dict instead??
         notification_dict = json.loads(notification)
-        print(notification_dict)
+        # if next(notif for notif in dicts if notif["name"] == notification_dict["id"]):
+        #     print("notification with this id exts, replace")
+
         self.add_notification(
             Notification(
                 id=notification_dict["id"],
@@ -176,14 +125,14 @@ class NotificationServer(Service):
             exec_shell_command_async(f"astal-notifd -c {notification.id}", None)
             self.emit("notification-closed", notification.id)
 
-        notification.connect("closed", on_closed)
-
         def on_invoke(notification, action_key):
             exec_shell_command_async(
                 f"astal-notifd -i {notification.id}:{action_key}", None
             )
 
         notification.connect("invoked", on_invoke)
+        notification.connect("closed", on_closed)
+
         self.emit("notification-received", notification)
 
     # TODO GET ALL NOTIFS AT STARTUP

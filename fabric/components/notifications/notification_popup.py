@@ -1,74 +1,90 @@
-from fabric.widgets.wayland import Window
-from fabric.widgets.revealer import Revealer
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
-from fabric.widgets.image import Image
-from services.notifications_astal import NotificationServer, Notification
-from fabric.utils import invoke_repeater
+from services.notifications_astal import Notification, NotificationServer
+from widgets.popup_window import PopupWindow
+from fabric.widgets import Box, Button, Label, Image
 
 
 class NotificationBox(Box):
     def __init__(self, notification: Notification, **kwargs):
-        notification.connect("closed", lambda _: self.destroy())
-
-        self.notif_icon = Image()
-        self.notif_image = Image()
-        pixbuf = notification.get_image_pixbuf()
-        pixbuf = notification.get_icon_pixbuf() if pixbuf is None else pixbuf
-        self.notif_image.set_from_pixbuf(pixbuf) if pixbuf else None
         super().__init__(
             h_expand=True,
-            children=[
-                self.notif_image,
-                Box(
-                    h_expand=True,
-                    orientation="v",
-                    children=[
-                        Label(notification.summary),
-                        Label(notification.body),
-                    ],
-                    h_align="start",
-                    v_align="start",
-                ),
-            ],
+            name="notification-box",
             **kwargs,
         )
+        self.notification = notification
+        self.notification.connect("closed", lambda _: self.destroy())
 
-        invoke_repeater(2000, lambda: [notification.close(), False][1])
+        file_path = notification.get_image_file_path()
+        print(file_path)
+        file_path = (
+            notification.get_icon_file_path() if file_path is None else file_path
+        )
+        # We have an icon name
+        if file_path[0] != "/":
+            self.notif_image = Image(
+                icon_name=file_path + "-symbolic", style="color: black;", pixel_size=24
+            )
+        else:
+            self.notif_image = Box(
+                name="notification-image",
+                style=f"background-image: url('{file_path}')",
+            )
+
+        self.action_buttons = Box(name="notification-action-buttons")
+        for action in notification.actions:
+            self.action_buttons.add_children(
+                self.make_action_button(action["label"], action["id"])
+            )
+
+        self.add_children(self.notif_image) if self.notif_image else None
+        self.add_children(
+            Box(
+                h_expand=True,
+                orientation="v",
+                children=[
+                    Label(
+                        notification.summary,
+                        h_align="start",
+                        character_max_width=40,
+                        ellipsization="end",
+                    ),
+                    Label(
+                        notification.body,
+                        h_align="start",
+                        character_max_width=40,
+                        ellipsization="end",
+                    ),
+                    self.action_buttons,
+                ],
+                h_align="start",
+                v_align="start",
+            ),
+        )
+
+    def make_action_button(self, label: str, action_id: str) -> Button:
+        action_button = Button(label=label, h_align="center", v_align="center")
+        action_button.connect("clicked", lambda *_: self.notification.invoke(action_id))
+        return action_button
 
 
-class NotificationCenter(Window):
+class NotificationPopup(PopupWindow):
     def __init__(self, notification_server: NotificationServer, **kwargs):
         self._server = notification_server
-        print("starting server")
-
         self._server.connect("notification-received", self.on_new_notification)
         self.notifications = Box(
             orientation="v",
-            style="padding:20px; background-color: black;",
             spacing=5,
         )
-        self.notif_dash = Revealer(
-            h_expand=True,
-            children=self.notifications,
-            transition_duration=350,
-            transition_type="slide-left",
-        )
         super().__init__(
-            layer="overlay",
             anchor="top right",
-            margin="10px 0px 10px 0px",
-            children=Box(style="padding: 1px;", children=self.notif_dash),
-            all_visible=False,
-            visible=False,
-            exclusive=False,
-            **kwargs,
+            transition_type="slide-left",
+            transition_duration=350,
+            child=self.notifications,
+            timeout=5000,
         )
-        self.show()
 
     def on_new_notification(
         self, notification_server: NotificationServer, notification: Notification
     ):
         new_notif_box = NotificationBox(notification)
         self.notifications.add(new_notif_box)
-        self.notif_dash.set_reveal_child(True)
+        self.popup_timeout()
