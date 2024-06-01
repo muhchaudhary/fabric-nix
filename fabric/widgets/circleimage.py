@@ -112,19 +112,3 @@ class CircleImage(Gtk.DrawingArea, Widget):
             else None
         )
         self.queue_draw()
-
-    def do_calculate_new_size(
-        self, base_width, base_height, desired_width, desired_height,
-    ):
-        try:
-            aspect_ratio = base_width / base_height
-            new_width = aspect_ratio * desired_height
-            if new_width > desired_width:
-                new_width = desired_width
-                new_height = desired_width / aspect_ratio
-            else:
-                new_height = desired_height
-        except ZeroDivisionError:
-            new_width = desired_width
-            new_height = desired_height
-        return new_width, new_height
