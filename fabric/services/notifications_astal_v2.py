@@ -1,24 +1,17 @@
-from typing import List
-
 import gi
 from loguru import logger
 
-from fabric.service import Service, Signal, SignalContainer
+from fabric.service import Service
 
 gi.require_version("AstalNotifd", "0.1")
 from gi.repository import AstalNotifd
 
 
 class NotificationServer(Service):
-    __gsignals__ = SignalContainer(
-        Signal("notification-received", "run-first", None, (object,)),
-        Signal("notification-closed", "run-first", None, (int,)),
-    )
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._client: AstalNotifd.Notifd = AstalNotifd.Notifd.new()
-        self._client.connect("active", self.on_client_ready)
+        self.astal_notifd: AstalNotifd.Notifd = AstalNotifd.Notifd.new()
+        self.astal_notifd.connect("active", self.on_client_ready)
 
     def on_client_ready(
         self, client: AstalNotifd.Notifd, active_type: AstalNotifd.ActiveType
@@ -28,24 +21,14 @@ class NotificationServer(Service):
         )
 
         client.connect("notified", self.on_new_notification)
-        client.connect(
-            "resolved", lambda _, id, reason: self.emit("notification-closed", id)
-        )
+        client.connect("resolved", self.on_notification_resolved)
 
-    def on_new_notification(self, client: AstalNotifd.Notifd, notification_id: int):
+    def on_new_notification(self, _, notification_id: int):
         logger.info(f"New notification with id: {notification_id}")
-        new_notification: AstalNotifd.Notification = client.get_notification(
-            notification_id
+
+    def on_notification_resolved(
+        self, _, notification_id: int, reason: AstalNotifd.ClosedReason
+    ):
+        logger.info(
+            f"resolved notification with id: {notification_id} for reason {reason}"
         )
-        self.emit("notification-received", new_notification)
-
-    def get_notifications(self) -> List[AstalNotifd.Notification]:
-        return self._client.get_notifications()
-
-    # TODO GET ALL NOTIFS AT STARTUP
-    def get_all_notficiatons(self):
-        pass
-
-
-# ns = NotificationServer()
-# fabric.start()

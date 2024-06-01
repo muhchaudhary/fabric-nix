@@ -2,10 +2,16 @@ import gi
 from services.notifications_astal_v2 import NotificationServer
 from widgets.popup_window import PopupWindow
 
-from fabric.widgets import Box, Button, Image, Label
+from loguru import logger
+
+import gi
 
 gi.require_version("AstalNotifd", "0.1")
 from gi.repository import AstalNotifd
+
+
+# TODO: make a notification center
+# TODO: group notifications by type
 
 
 class NotificationBox(Box):
@@ -15,13 +21,16 @@ class NotificationBox(Box):
             name="notification-box",
             **kwargs,
         )
+        # Notification signals
         self.notification = notification
         self.notification.connect("resolved", self.on_resolved)
         self.notification.connect("invoked", lambda *args: self.notification.dismiss())
 
+        # Grabbing the file path
+        # TODO: find a better way to check if file path is a path or just an icon
+        # TODO: consider if using a custom cairo widget to display the image is better
         file_path = notification.get_image()
         file_path = notification.get_app_icon() if file_path is None else file_path
-        # We have an icon name
         if file_path and file_path[0] != "/":
             self.notif_image = Image(
                 icon_name=file_path + "-symbolic", style="color: black;", pixel_size=24
@@ -67,16 +76,17 @@ class NotificationBox(Box):
         reason = ""
         match closed_reason:
             case AstalNotifd.ClosedReason.EXPIRED:
-                reason = ("expired")
+                reason = "expired"
             case AstalNotifd.ClosedReason.DISMISSED_BY_USER:
-                reason = ("closed by user")
+                reason = "closed by user"
             case AstalNotifd.ClosedReason.CLOSED:
-                reason = ("closed")
+                reason = "closed"
             case _:
-                reason = ("undefined")
-        print(f"Notification {self.notification.get_id()} resolved with reason: {reason}")
+                reason = "undefined"
+        logger.info(
+            f"Notification {self.notification.get_id()} resolved with reason: {reason}"
+        )
         self.destroy()
-
 
     def make_action_button(self, label: str, action_id: str) -> Button:
         action_button = Button(label=label, h_align="center", v_align="center")
@@ -87,7 +97,7 @@ class NotificationBox(Box):
 class NotificationPopup(PopupWindow):
     def __init__(self, notification_server: NotificationServer):
         self._server = notification_server
-        self._server.connect("notification-received", self.on_new_notification)
+        self._server.astal_notifd.connect("notified", self.on_new_notification)
         self.notifications = Box(
             orientation="v",
             spacing=5,
@@ -99,13 +109,10 @@ class NotificationPopup(PopupWindow):
             child=self.notifications,
             timeout=5000,
         )
-        self.toggle_popup()
 
-    def on_new_notification(
-        self,
-        notification_server: NotificationServer,
-        notification: AstalNotifd.Notification,
-    ):
-        new_notif_box = NotificationBox(notification)
+    def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int):
+        # for notif in astal_notifd.get_notifications():
+        #     print(notif.to_json_string())
+        new_notif_box = NotificationBox(astal_notifd.get_notification(id))
         self.notifications.add(new_notif_box)
-        # self.popup_timeout()
+        self.popup_timeout()
