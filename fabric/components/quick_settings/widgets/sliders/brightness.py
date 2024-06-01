@@ -19,6 +19,8 @@ class BrightnessSlider(QuickSettingsScale):
 
         self.scale.connect("change-value", self.on_scale_move)
         self.client.connect("screen", self.on_brightness_change)
+        if self.client.screen_brightness == -1:
+            self.destroy()
 
     def on_scale_move(self, _, __, moved_pos):
         # TODO switch to getters and setters

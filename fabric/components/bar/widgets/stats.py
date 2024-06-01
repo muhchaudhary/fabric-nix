@@ -1,10 +1,9 @@
-from fabric.widgets.button import Button
-from fabric.widgets.image import Image
-from fabric.widgets.box import Box
-from fabric.widgets.label import Label
 import psutil
+from gi.repository import GLib
 
-import gi.repository.GLib as GLib
+from fabric.widgets import Box, Button, Image, Label
+
+from fabric.utils import exec_shell_command
 
 
 def invoke_repeater_threaded(timeout: int, callback: callable, *args):
@@ -44,9 +43,23 @@ class Temps(Button):
 
         invoke_repeater_threaded(1500, lambda *args: self.update_labels())
 
+    def get_gpu_temp(self):
+        if self.fan_icon.get_icon_name() != "freon-gpu-temperature-symbolic":
+            self.fan_icon.set_from_icon_name("freon-gpu-temperature-symbolic", 3)
+        gpu_temp = exec_shell_command("nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader").strip("\n")
+        self.fan_speed_label.set_label(f"{gpu_temp} °C")
+        return None
+
     def update_labels(self):
-        cpu_temp = psutil.sensors_temperatures()["coretemp"][0].current
-        fan_speed = psutil.sensors_fans()["thinkpad"][0].current
-        self.fan_speed_label.set_label(f"{fan_speed} RPM")
+        cpu_temp = round(
+            (
+                psutil.sensors_temperatures()["coretemp"]
+                if ("coretemp" in psutil.sensors_temperatures())
+                else psutil.sensors_temperatures()["k10temp"]
+            )[0].current,
+            1,
+        )
+        fan_speed = psutil.sensors_fans()["thinkpad"][0].current if ("thinkpad" in psutil.sensors_fans()) else self.get_gpu_temp()
+        self.fan_speed_label.set_label(f"{fan_speed} RPM") if fan_speed else None
         self.cpu_temp_label.set_label(f"{cpu_temp}°C")
         return True

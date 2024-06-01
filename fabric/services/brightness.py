@@ -1,9 +1,8 @@
 import os
 
 from fabric.service import Property, Service, Signal, SignalContainer
-from fabric.utils import exec_shell_command, monitor_file
+from fabric.utils import exec_shell_command,exec_shell_command_async , monitor_file
 from gi.repository import GLib
-
 
 # In the future, use GUdev to get ehe brightness devices
 
@@ -11,7 +10,7 @@ from gi.repository import GLib
 # BUG This will open a new file every single time for some
 #     reason, seems like brightnessctil does not stop function after completion
 def exec_brightnessctl_async(args: str):
-    return GLib.spawn_command_line_async(f"brightnessctl {args}")
+    exec_shell_command_async(f"brightnessctl {args}", None)
 
 
 screen = str(exec_shell_command("ls -w1 /sys/class/backlight")).split("\n")[0]
@@ -61,12 +60,11 @@ class Brightness(Service):
 
     @Property(value_type=int, flags="read-write")
     def screen_brightness(self) -> int:
-        # could just also read the file
         return int(
             os.read(
                 os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6
             ),
-        )
+        ) if os.path.exists(self.screen_backlight_path + "/brightness") else -1
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):
