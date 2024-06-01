@@ -2,13 +2,10 @@ import gi
 from services.notifications_astal_v2 import NotificationServer
 from widgets.popup_window import PopupWindow
 
-from loguru import logger
-
-import gi
+from fabric.widgets import Box, Button, Image, Label
 
 gi.require_version("AstalNotifd", "0.1")
 from gi.repository import AstalNotifd
-
 
 # TODO: make a notification center
 # TODO: group notifications by type
