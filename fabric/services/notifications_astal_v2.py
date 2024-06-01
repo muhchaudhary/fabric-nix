@@ -3,7 +3,6 @@ from typing import List
 import gi
 from loguru import logger
 
-import fabric
 from fabric.service import Service, Signal, SignalContainer
 
 gi.require_version("AstalNotifd", "0.1")

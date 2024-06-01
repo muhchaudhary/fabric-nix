@@ -1,11 +1,12 @@
-from fabric.audio.service import Audio
-from fabric.bluetooth.service import BluetoothClient
+from fabric.audio import Audio
+from fabric.bluetooth import BluetoothClient
 
 # from services.notifs import NotificationServer
 from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.screen_record import ScreenRecorder
 from services.wifi import NetworkClient
+from services.notifications_astal_v2 import NotificationServer
 
 # Services
 mprisplayer = MprisPlayerManager()
@@ -14,7 +15,7 @@ audio = Audio()
 sc = ScreenRecorder()
 brightness = Brightness()
 network = NetworkClient()
-# desktop_notifs = NotificationServer()
+notification_server = NotificationServer()
 
 # Icons
 bluetooth_icons = {

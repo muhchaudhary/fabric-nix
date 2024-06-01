@@ -1,13 +1,9 @@
 from utils.hadith_grabber import Hadith
 
-from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.date_time import DateTime
-from fabric.widgets.label import Label
-from fabric.widgets.wayland import Window
+from fabric.widgets import Box, CenterBox, DateTime, Label, WaylandWindow
 
 
-class ClockWidget(Window):
+class ClockWidget(WaylandWindow):
     def __init__(self, **kwargs):
         self.center_box = CenterBox(name="clock-window")
 
@@ -34,7 +30,7 @@ class ClockWidget(Window):
         self.show_all()
 
 
-class HadithWidget(Window):
+class HadithWidget(WaylandWindow):
     def __init__(self, **kwargs):
         self.hadith_ref = Label(name="hadith-ref")
         self.hadith_ref.set_line_wrap(True)

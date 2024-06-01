@@ -1,12 +1,11 @@
 import os
 
-from fabric.widgets.box import Box
-from fabric.widgets.image import Image
-
 import config
-from config import brightness
 from widgets.popup_window import PopupWindow
 
+from fabric.widgets import Box, Image
+
+# TODO: use progressbar or custom cairo widget so that I can update the accent color with css
 accent = "#4dac71"
 
 
@@ -14,9 +13,9 @@ class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
         self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
         self.kbd_backlight_path = "/sys/class/leds/tpacpi::kbd_backlight/"
-        self.max_disp_backlight = brightness.max_screen
-        self.max_kbd_backlight = brightness.max_kbd
-        self.brightness = brightness
+        self.max_disp_backlight = config.brightness.max_screen
+        self.max_kbd_backlight = config.brightness.max_kbd
+        self.brightness = config.brightness
         self.disp_backlight = 0
         self.kbd_backlight = 0
         self.vol = 0

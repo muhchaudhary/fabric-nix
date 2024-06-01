@@ -2,20 +2,14 @@ import json
 import time
 
 import gi
-from fabric.hyprland.service import Hyprland, HyprlandEvent
-from fabric.utils import bulk_connect
-from fabric.utils.string_formatter import FormattedString
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.eventbox import EventBox
 from loguru import logger
 
+from fabric.hyprland import Hyprland, HyprlandEvent
+from fabric.utils import FormattedString, bulk_connect
+from fabric.widgets import Box, Button, EventBox
+
 gi.require_version("Gtk", "3.0")
-from gi.repository import (  # noqa: E402
-    Gdk,
-    GLib,
-    Gtk,
-)
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
 
 class DateTime(Button):
@@ -240,8 +234,7 @@ connection = Hyprland()
 
 
 class Workspaces(WorkspacesEventBox):
-    """a widget provides you the workspaces controls, it uses the hyprland IPC.
-    """
+    """a widget provides you the workspaces controls, it uses the hyprland IPC."""
 
     def __init__(
         self,
@@ -379,7 +372,8 @@ class Workspaces(WorkspacesEventBox):
             button_obj.set_active()
 
     def setup_buttons(
-        self, button_list: list[WorkspaceButton],
+        self,
+        button_list: list[WorkspaceButton],
     ) -> list[WorkspaceButton]:
         workspaces_buttons = []
         for index, button in enumerate(button_list):

@@ -1,4 +1,4 @@
-from components.quick_settings.widgets.quicksettings_submenu import (
+from components.quick_settings.widgets.quick_settings_submenu import (
     QuickSubMenu,
     QuickSubToggle,
 )

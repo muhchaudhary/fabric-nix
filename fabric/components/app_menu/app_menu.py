@@ -165,6 +165,3 @@ class AppMenu(PopupWindow):
         for app_button in self.application_buttons.values():
             self.buttons_box.reorder_child(app_button, i)
             i += 1
-
-
-appMenu = AppMenu()

@@ -3,17 +3,14 @@ import json
 import os
 
 import requests
-from fabric.service import Property, Service, Signal, SignalContainer
-from fabric.utils import invoke_repeater
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.label import Label
 from gi.repository import GLib
 
+from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.utils import invoke_repeater
+from fabric.widgets import Box, Button, CenterBox, Label
 from widgets.popup_window import PopupWindow
 
-city = "Waterloo"
+city = "Toronto"
 country = "Canada"
 api_request = (
     f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
@@ -161,6 +158,7 @@ class PrayerTimesButton(Button):
             button.get_allocation().x,
             button.get_allocated_width(),
         )
+
 
 PrayerTimesPopup = PopupWindow(
     transition_duration=350,
