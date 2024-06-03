@@ -444,6 +444,7 @@ scale {
 #appmenu-heading {
   margin-left: 10px;
 }
+
 #appmenu-button {
   margin: 4px;
   padding: 10px;
@@ -495,7 +496,6 @@ scale {
   background-color: #2c2c2c;
   color: #e8e8e8;
 }
-
 /* ------------------------------------------------------------------------------------------ */
 
 /* -------------------------------------- Notifications ------------------------------------- */
