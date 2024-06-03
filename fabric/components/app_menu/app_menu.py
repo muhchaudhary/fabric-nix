@@ -1,53 +1,71 @@
+import json
+import os
 import subprocess
 
+from gi.repository import GLib
+from loguru import logger
 from thefuzz import fuzz, process
 from widgets.popup_window import PopupWindow
 
-from fabric.utils import get_relative_path
-from fabric.utils.applications import Application, get_desktop_applications
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.entry import Entry
-from fabric.widgets.image import Image
-from fabric.widgets.label import Label
-from fabric.widgets.scrolled_window import ScrolledWindow
+from fabric.utils import Application, get_desktop_applications
+from fabric.widgets import Box, Button, Entry, Image, Label, ScrolledWindow
+
+CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
+APP_CACHE = CACHE_DIR + "/app_launcher"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+if not os.path.exists(APP_CACHE):
+    os.makedirs(APP_CACHE)
 
 
-class AppButton(Button):
+def get_recent_apps() -> list:
+    recent_apps_list = []
+    if os.path.exists(APP_CACHE + "/last_launched.json"):
+        f = open(APP_CACHE + "/last_launched.json", "r")
+        try:
+            recent_apps_list = json.load(f)
+        except json.JSONDecodeError:
+            logger.info("[App Menu] Cache file does not exist or is corrupted")
+        f.close()
+    return recent_apps_list
+
+
+class ApplicationButton(Button):
     def __init__(self, app: Application, **kwargs):
         self.app: Application = app
-        self.app_icon = (
-            Image(pixbuf=self.app.get_icon_pixbuf())
-            if self.app.get_icon_pixbuf()
-            else Image(icon_name="application-x-executable", pixel_size=48, icon_size=3)
+        self.app_icon = Image(
+            pixbuf=self.app.get_icon_pixbuf(
+                size=36,
+                default_icon="application-x-executable",
+            )
         )
-        self.actions_list = self.app._app.list_actions()
-        self.app_name = Box(
-            children=[
-                Label(
-                    label=self.app.display_name,
-                    justfication="left",
-                    ellipsization="end",
-                ),
-            ],
+        self.app_name = Label(
+            name="appmenu-app-name",
+            label=self.app.display_name,
+            justfication="left",
+            ellipsization="end",
         )
-        # self.app_description = Box(
-        #     children=Label(
-        #         label=self.app.description,
-        #         justfication="left",
-        #         ellipsization="end",
-        #     ),
-        # )
+        self.app_description = (
+            Label(
+                name="appmenu-app-desc",
+                label=self.app.description,
+                justfication="left",
+                ellipsization="end",
+            )
+            if self.app.description
+            else Label("")
+        )
         self.button_box = Box(
             spacing=5,
             children=[
                 self.app_icon,
                 Box(
-                    orientation="v",
                     v_align="center",
+                    spacing=5,
                     children=[
                         self.app_name,
-                        # self.app_description,
+                        Label("󰧞") if self.app.description else Label(""),
+                        self.app_description,
                     ],
                 ),
             ],
@@ -66,20 +84,27 @@ class AppButton(Button):
             start_new_session=True,
         )
 
-    # Unused function
-    def launch_app_action(self, action: str):
-        subprocess.Popen(
-            self.app.command_line.split(" ") + action.split(" "),
-            start_new_session=True,
-        )
+    def add_app_to_json(self) -> list:
+        data = get_recent_apps()
+
+        with open(APP_CACHE + "/last_launched.json", "w") as f:
+            if self.app.name in data:
+                data.remove(self.app.name)
+            data.insert(0, self.app.name)
+            data.pop() if len(data) > 6 else None
+            json.dump(data, f)
+            print(data)
+            f.close()
+
+        return data
 
 
 class AppMenu(PopupWindow):
     def __init__(self, **kwargs):
         self.scrolled_window = ScrolledWindow(
             name="appmenu-scroll",
-            min_content_width=600,
-            min_content_height=450,
+            min_content_height=400,
+            visible=False,
         )
         self.applications = sorted(
             get_desktop_applications(),
@@ -87,18 +112,24 @@ class AppMenu(PopupWindow):
         )
         self.application_buttons = {}
         self.buttons_box = Box(orientation="v")
+
+        # Entry
         self.search_app_entry = Entry(
             name="appmenu-entry",
-            placeholder_text="Search for an App",
+            placeholder_text="Type to search...",
             editable=True,
-            style="font-size: 30px;",
         )
-        self.search_app_entry.connect("key-release-event", self.keypress)
+        self.search_app_entry.set_icon_from_icon_name(
+            0, "preferences-system-search-symbolic"
+        )
+        self.search_app_entry.connect("key-release-event", self.on_keypress)
+
+        # Application buttons
         for app in self.applications:
-            appL = AppButton(app)
-            self.application_buttons[app.name] = appL
-            appL.connect("clicked", lambda *args: self.toggle_popup())
-            self.buttons_box.add(appL)
+            app_button = ApplicationButton(app)
+            self.application_buttons[app.name] = app_button
+            app_button.connect("clicked", self.on_app_launch)
+            self.buttons_box.add(app_button)
         self.app_names = self.application_buttons.keys()
         self.searched_buttons_box = Box(orientation="v", visible=False)
         self.scrolled_window.add_children(
@@ -110,46 +141,70 @@ class AppMenu(PopupWindow):
                 ],
             ),
         )
+
+        self.recent_applications = Box(orientation="v")
+        self.update_recent_apps()
+
         super().__init__(
             transition_duration=300,
             anchor="center",
             transition_type="slide-down",
             child=Box(
                 name="appmenu",
+                orientation="v",
+                spacing=20,
                 children=[
-                    # This is just because im lazy btw
-                    Box(
-                        style="border-radius: 20px;"
-                        + f" background-image: url('{get_relative_path('../../assets/app/test.png')}');"
-                        + "min-width:446px; min-height:522px;",
-                    ),
-                    Box(
-                        orientation="v",
-                        children=[self.search_app_entry, self.scrolled_window],
-                    ),
+                    self.search_app_entry,
+                    self.recent_applications,
+                    self.scrolled_window,
                 ],
             ),
             enable_inhibitor=True,
             keyboard_mode="on-demand",
         )
         self.revealer.connect(
-            "notify::child-revealed",
-            lambda *args: self.search_app_entry.grab_focus()
-            if args[0].get_child_revealed()
-            else None,
+            "notify::child-revealed", lambda *args: self.search_app_entry.grab_focus()
         )
+
+    def update_recent_apps(self, recent_apps: list | None = None):
+        self.recent_applications.reset_children()
+        self.recent_applications.add_children(
+            Label(
+                name="appmenu-heading",
+                label="Recently Used",
+                justfication="left",
+                h_align="start",
+            )
+        )
+        recent_apps = get_recent_apps() if not recent_apps else recent_apps
+        for app_id in recent_apps:
+            for app in self.applications:
+                if app.name == app_id:
+                    recent_app_button = ApplicationButton(app)
+                    recent_app_button.connect("clicked", self.on_app_launch)
+                    self.recent_applications.add_children(recent_app_button)
+
+    def on_app_launch(self, app_button: ApplicationButton, *_):
+        self.toggle_popup()
+        self.update_recent_apps(app_button.add_app_to_json())
 
     def toggle_popup(self):
         self.search_app_entry.set_text("")
         self.reset_app_menu()
+        self.scrolled_window.hide()
+        self.recent_applications.show()
         super().toggle_popup()
 
-    def keypress(self, entry: Entry, event_key):
+    def on_keypress(self, entry: Entry, event_key):
         if event_key.get_keycode()[1] == 9:
             self.toggle_popup()
         if entry.get_text() == " " or entry.get_text() == "":
             self.reset_app_menu()
+            self.scrolled_window.hide()
+            self.recent_applications.show()
             return
+        self.scrolled_window.show()
+        self.recent_applications.hide()
         lister = process.extract(
             entry.get_text(),
             self.app_names,

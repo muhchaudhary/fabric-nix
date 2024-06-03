@@ -2,10 +2,10 @@
 @import "./style/player-dark.css";
 
 :vars {
-    --accent: #d39a7e;
+  --accent: #ff8181;
 
   --bg_h: #1d2021;
-  --bg: #282828;
+  --bg: #1e1e1e;
   --bg_s: #32302f;
   --bg1: #3c3836;
   --bg2: #504945;
@@ -46,11 +46,11 @@
 }
 
 #main-window {
-    /* border: solid 2px black; */
-    /* border-radius: 10px; */
-    /* border-color: #171717; */
-    /* background-color: alpha(#171717, 0.7); */
-    background-color: alpha(#171717, 0.8);
+  /* border: solid 2px black; */
+  /* border-radius: 10px; */
+  /* border-color: #171717; */
+  /* background-color: alpha(#171717, 0.7); */
+  background-color: alpha(#171717, 0.8);
 }
 
 tooltip {
@@ -64,7 +64,7 @@ scale {
   margin-bottom: 10px;
 }
 
-#system-tray > button,
+#system-tray>button,
 #panel-button-active,
 #date-time,
 #panel-button {
@@ -77,7 +77,7 @@ scale {
 }
 
 #date-time:hover,
-#system-tray > button:hover,
+#system-tray>button:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -94,14 +94,14 @@ scale {
 
 #date-time:active,
 #date-time:active label,
-#system-tray > button:active,
+#system-tray>button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active > * > * > label,
-#panel-button:active > * > label,
-#panel-button-active > box > label,
+#panel-button:active>*>*>label,
+#panel-button:active>*>label,
+#panel-button-active>box>label,
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
@@ -116,7 +116,7 @@ scale {
   background-color: mix(var(--accent), white, 0.6);
 }
 
-#quicksettings-box > box > button {
+#quicksettings-box>box>button {
   margin: 10px -10px 10px 5px;
 }
 
@@ -152,11 +152,11 @@ scale {
   min-width: 140px;
 }
 
-#prayer-info > * > * > * > * {
+#prayer-info>*>*>*>* {
   font-size: 16px;
 }
 
-#workspaces > button {
+#workspaces>button {
   border-radius: 100%;
   min-width: 10px;
   margin: 13px 2px 13px 2px;
@@ -180,7 +180,7 @@ scale {
 }
 
 #player-stack-button.active,
-#workspaces > button.active {
+#workspaces>button.active {
   border-radius: 5px;
   min-width: 30px;
   margin: 10px 1px 10px 1px;
@@ -188,17 +188,17 @@ scale {
 }
 
 #player-stack-button.empty,
-#workspaces > button.empty {
+#workspaces>button.empty {
   min-width: 9px;
   margin: 14px 2px 14px 2px;
   background-color: var(--fg4);
 }
 
-#workspaces > button.urgent {
+#workspaces>button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces > button:hover {
+#workspaces>button:hover {
   background-color: var(--bg4);
 }
 
@@ -213,8 +213,8 @@ scale {
   padding: 15px;
 }
 
-#system-tray-menu > menuitem menu > menuitem:hover,
-#system-tray-menu > menuitem:hover,
+#system-tray-menu>menuitem menu>menuitem:hover,
+#system-tray-menu>menuitem:hover,
 #submenu-button:hover {
   background-color: alpha(var(--bg4), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -224,7 +224,7 @@ scale {
   background-color: var(--accent);
 }
 
-#submenu-button:active > * {
+#submenu-button:active>* {
   color: var(--bg);
 }
 
@@ -247,16 +247,16 @@ scale {
   margin: 5px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   border-width: 1px;
   border-style: double;
   border-color: var(--fg4);
   margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu > menuitem menu > menuitem:disabled,
-#system-tray-menu > menuitem:disabled {
+#system-tray-menu>menuitem menu>menuitem:disabled,
+#system-tray-menu>menuitem:disabled {
   background-color: var(--bg_h);
 }
 
@@ -266,14 +266,14 @@ scale {
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   background-color: var(--bg2);
   padding: 5px;
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu,
+#system-tray-menu>menuitem menu,
 #system-tray-menu,
 #submenu {
   /* min-width: 450px; */
@@ -432,46 +432,68 @@ scale {
 
 /* ---------------------------------------- APP MENU ---------------------------------------- */
 #appmenu {
-  background-color: #0d0d0d;
-  border-radius: 20px;
+  background-color: #2c2c2c;
   padding: 20px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #b2b2b2;
+  min-width: 700px;
+  min-height: 450px;
 }
 
-#appmenu-entry,
+#appmenu-heading {
+  margin-left: 10px;
+}
 #appmenu-button {
-  background-color: #161616;
-  margin: 5px;
-  border-radius: 20px;
+  margin: 4px;
   padding: 10px;
 }
 
-#appmenu-button:focus,
-#appmenu-button:hover {
-  background-color: #3c3836;
+#appmenu-app-name {
+  color: #e9e9e9;
 }
 
+#appmenu-app-desc {
+  font-style: italic;
+  color: #bababa;
+}
+
+#appmenu-button:hover {
+  background-color: #404040;
+}
+
+#appmenu-button:focus label,
+#appmenu-button:focus {
+  background-color: #b4b4b4;
+  color: #2c2c2c;
+}
+
+#appmenu-button:active label,
 #appmenu-button:active {
-  background-color: rgb(64, 64, 64);
+  background-color: #dadada;
+  color: #2c2c2c;
 }
 
 #appmenu-button label {
-  color: white;
   font-size: 17px;
 }
 
 #appmenu-entry {
+  background-color: #e6e6e6;
   font-size: 20px;
+  padding: 10px;
+  color: #6D685C;
+  caret-color: #6D685C;
 }
 
-#appmenu-entry {
-  border-width: 3px;
-  border-style: solid;
-  border-color: #212121;
+#appmenu-entry image {
+  color: #6D685C;
+  margin-right: 5px;
 }
 
-#appmenu-entry,
-#appmenu-scroll {
-  margin-left: 20px;
+#appmenu-entry selection {
+  background-color: #2c2c2c;
+  color: #e8e8e8;
 }
 
 /* ------------------------------------------------------------------------------------------ */
@@ -487,29 +509,29 @@ scale {
 
 #notification-action-buttons,
 #notification-box box label {
-    margin-left: 20px;
-    color: black;
+  margin-left: 20px;
+  color: black;
 }
 
-#notification-action-buttons button label{
-    margin: 0px;
-    padding: 0px;
+#notification-action-buttons button label {
+  margin: 0px;
+  padding: 0px;
 }
 
-#notification-action-buttons button{
-    background-color: #E3E5E6;
-    border-radius: 10px;
-    margin-left: 5px;
-    margin-right: 5px;
-    padding: 5px;
+#notification-action-buttons button {
+  background-color: #E3E5E6;
+  border-radius: 10px;
+  margin-left: 5px;
+  margin-right: 5px;
+  padding: 5px;
 }
 
-#notification-action-buttons button:hover{
-    background-color: #cfcfcf;
+#notification-action-buttons button:hover {
+  background-color: #cfcfcf;
 }
 
-#notification-action-buttons button:active{
-    background-color: #a1a0a0;
+#notification-action-buttons button:active {
+  background-color: #a1a0a0;
 }
 
 #notification-image {
@@ -518,4 +540,5 @@ scale {
   min-height: 80px;
   border-radius: 10px;
 }
+
 /* ------------------------------------------------------------------------------------------ */
