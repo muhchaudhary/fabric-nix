@@ -15,7 +15,6 @@ class inhibitOverlay(Window):
             # style="background-color: alpha(white, 0.005);",
             size=(size),
         )
-        self.eventbox.set_can_focus(True)
         super().__init__(
             layer="top",
             anchor="center top",
@@ -25,7 +24,6 @@ class inhibitOverlay(Window):
             children=self.eventbox,
             keyboard_mode="on-demand",
         )
-        self.eventbox.set_can_focus(True)
 
 
 class PopupWindow(Window):
@@ -45,7 +43,7 @@ class PopupWindow(Window):
         visible: bool = False,
         anchor: str = "top right",
         enable_inhibitor: bool = False,
-        keyboard_mode: str = "on-demand",
+        keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
         *kwargs,
     ):

@@ -57,8 +57,6 @@ class PlayerBoxHandler(Box):
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
 
 
-# TODO: fix lack of information on what player is current visible (add player icon)
-# TODO: rewrite player_buttons_box handling
 # TODO: implement CANCEL_ANIMATION on song skip
 
 

@@ -4,6 +4,8 @@ from widgets.popup_window import PopupWindow
 
 from fabric.widgets import Box, Button, Image, Label
 
+from loguru import logger
+
 gi.require_version("AstalNotifd", "0.1")
 from gi.repository import AstalNotifd
 
@@ -55,12 +57,14 @@ class NotificationBox(Box):
                         h_align="start",
                         character_max_width=40,
                         ellipsization="end",
+                        markup=True,
                     ),
                     Label(
                         notification.get_body(),
                         h_align="start",
                         character_max_width=40,
                         ellipsization="end",
+                        markup=True,
                     ),
                     self.action_buttons,
                 ],
@@ -94,6 +98,7 @@ class NotificationBox(Box):
 class NotificationPopup(PopupWindow):
     def __init__(self, notification_server: NotificationServer):
         self._server = notification_server
+        self.pop_up_list = []
         self._server.astal_notifd.connect("notified", self.on_new_notification)
         self.notifications = Box(
             orientation="v",
@@ -106,10 +111,15 @@ class NotificationPopup(PopupWindow):
             child=self.notifications,
             timeout=5000,
         )
+        self.revealer.connect(
+            "notify::child-revealed",
+            lambda revealer, *args: self.notifications.reset_children()
+            if not revealer.get_child_revealed()
+            else None,
+        )
 
     def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int):
-        # for notif in astal_notifd.get_notifications():
-        #     print(notif.to_json_string())
-        new_notif_box = NotificationBox(astal_notifd.get_notification(id))
-        self.notifications.add(new_notif_box)
+        # if id not in self.pop_up_list:
+        self.notifications.add(NotificationBox(astal_notifd.get_notification(id)))
         self.popup_timeout()
+        # self.pop_up_list.append(id)

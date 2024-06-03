@@ -97,11 +97,6 @@ class BluetoothSubMenu(QuickSubMenu):
             ["active"]
         ) if self.client.scanning else btn.set_style_classes([""])
 
-    # TODO: we need to update the label of the action button once a device is connected
-    # def on_device_connect(self, device: BluetoothDevice, _):
-    #     if device.connected:
-    #         self.bluetooth_toggle_name()
-
     def populate_new_device(self, client: BluetoothClient, address: str):
         device: BluetoothDevice = client.get_device_from_addr(address)
         # device.connect("notify:connected", self.on_device_connect)

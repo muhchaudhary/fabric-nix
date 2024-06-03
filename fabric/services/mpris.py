@@ -20,7 +20,7 @@ try:
 except ValueError:
     raise PlayerctlImportError
 
-# TODO: consider building my own mpris service using dbus rather than playerctl
+# TODO: (not needed) consider building my own mpris service using dbus rather than playerctl
 
 
 class MprisPlayer(Service):
