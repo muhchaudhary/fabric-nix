@@ -1,27 +1,18 @@
-@define-color window-bg alpha(@background, 0.9);
-@define-color module-bg alpha(@background, 0.4);
-@define-color border-color @color11;
-@define-color ws-active @color9;
-@define-color ws-inactive @color3;
-@define-color ws-empty @color8;
-@define-color ws-hover @color1;
-@define-color ws-urgent @color11;
-
 #date>label,
 #clock>label {
     /* font-family: "Ubuntu Nerd Font"; */
     /* color: alpha(@fg, 0.8); */
-    color: alpha(#d39a7e, 1);
+    color: alpha(#ffffff, 1);
     font-size: 96px;
     font-weight: 900;
 }
 
 #date>label {
-    text-shadow: alpha(#ff8181, 0.7) 3px 3px;
+    text-shadow: alpha(#a9a9a9, 0.7) 3px 3px;
 }
 
 #clock>label {
-    text-shadow: alpha(#ff8181, 0.7) 7px 7px;
+    text-shadow: alpha(#a9a9a9, 0.7) 7px 7px;
 }
 
 #date,

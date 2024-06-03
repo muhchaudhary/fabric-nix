@@ -71,8 +71,8 @@ class ScreenRecorder(Service):
                 "view=View",
                 "-A",
                 "edit=Edit",
-                "-i",
-                f"{file_path}",
+                "-h",
+                f"STRING:image-path:{file_path}",
                 f"Screenshot {file_path}",
             ]
         ) if notify_type == "file" else ["Screenshot Sent to Clipboard"]
