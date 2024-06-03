@@ -60,6 +60,6 @@ class Temps(Button):
             1,
         )
         fan_speed = psutil.sensors_fans()["thinkpad"][0].current if ("thinkpad" in psutil.sensors_fans()) else self.get_gpu_temp()
-        self.fan_speed_label.set_label(f"{fan_speed} RPM") if fan_speed else None
+        self.fan_speed_label.set_label(f"{fan_speed} RPM") if fan_speed is not None else None
         self.cpu_temp_label.set_label(f"{cpu_temp}°C")
         return True

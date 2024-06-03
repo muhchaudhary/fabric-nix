@@ -105,7 +105,6 @@ class BluetoothSubMenu(QuickSubMenu):
     def populate_new_device(self, client: BluetoothClient, address: str):
         device: BluetoothDevice = client.get_device_from_addr(address)
         # device.connect("notify:connected", self.on_device_connect)
-        print(f"found device of addr {address}")
         if device.paired:
             self.paired_devices.add(BluetoothDeviceBox(device))
         else:
