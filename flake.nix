@@ -4,6 +4,7 @@
     systems.url = "github:nix-systems/default";
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
     astal-notifd.url = "github:astal-sh/notifd";
+    fabric-libgray.url = "github:muhchaudhary/gray";
   };
 
   outputs = {
@@ -27,6 +28,11 @@
               in {
                 inherit astal-notifd;
               })
+              (final: _: let
+                fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
+              in {
+                inherit fabric-libgray;
+              })
             ];
           })
       );
@@ -40,6 +46,7 @@
           # Custom Packages
           fabric
           astal-notifd
+          fabric-libgray
 
           # add aditional python packages here
           python3Packages.psutil
@@ -56,6 +63,7 @@
           vala # Vala compiler
           gobject-introspection
           gir-cvc
+          sox
 
           # non python aditional packages
           gtk-session-lock # For gtk lock screen

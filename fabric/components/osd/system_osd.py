@@ -6,7 +6,7 @@ from widgets.popup_window import PopupWindow
 from fabric.widgets import Box, Image
 
 # TODO: use progressbar or custom cairo widget so that I can update the accent color with css
-accent = "#4dac71"
+accent = "#ff8181"
 
 
 class SystemOSD(PopupWindow):
