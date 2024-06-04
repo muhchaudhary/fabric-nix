@@ -2,17 +2,17 @@
 #clock>label {
     /* font-family: "Ubuntu Nerd Font"; */
     /* color: alpha(@fg, 0.8); */
-    color: alpha(#ffffff, 1);
+    color: alpha(#efac78, 1);
     font-size: 96px;
     font-weight: 900;
 }
 
 #date>label {
-    text-shadow: alpha(#a9a9a9, 0.7) 3px 3px;
+    text-shadow: alpha(#ff8181, 0.7) 3px 3px;
 }
 
 #clock>label {
-    text-shadow: alpha(#a9a9a9, 0.7) 7px 7px;
+    text-shadow: alpha(#ff8181, 0.7) 7px 7px;
 }
 
 #date,

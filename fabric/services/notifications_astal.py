@@ -118,7 +118,7 @@ class NotificationServer(Service):
         )
 
     def get_notifications(self) -> List[dict]:
-        return exec_shell_command("astal-notifd -l") # type: ignore
+        return exec_shell_command("astal-notifd -l")  # type: ignore
 
     def add_notification(self, notification: Notification) -> None:
         def on_closed(notification):

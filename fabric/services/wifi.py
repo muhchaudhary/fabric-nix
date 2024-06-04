@@ -38,7 +38,7 @@ class Wifi(Service):
                     "notify::active-access-point": lambda *args: self._activate_ap(),
                     "access-point-added": lambda *args: self.emit("changed"),
                     "access-point-removed": lambda *args: self.emit("changed"),
-                    "state-changed": lambda *args: self.ap_update()
+                    "state-changed": lambda *args: self.ap_update(),
                 },
             )
             self._activate_ap()

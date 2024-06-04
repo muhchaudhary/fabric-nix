@@ -1,7 +1,7 @@
 import os
 
 from fabric.service import Property, Service, Signal, SignalContainer
-from fabric.utils import exec_shell_command,exec_shell_command_async , monitor_file
+from fabric.utils import exec_shell_command, exec_shell_command_async, monitor_file
 from gi.repository import GLib
 
 # In the future, use GUdev to get ehe brightness devices
@@ -60,11 +60,15 @@ class Brightness(Service):
 
     @Property(value_type=int, flags="read-write")
     def screen_brightness(self) -> int:
-        return int(
-            os.read(
-                os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6
-            ),
-        ) if os.path.exists(self.screen_backlight_path + "/brightness") else -1
+        return (
+            int(
+                os.read(
+                    os.open(self.screen_backlight_path + "/brightness", os.O_RDONLY), 6
+                ),
+            )
+            if os.path.exists(self.screen_backlight_path + "/brightness")
+            else -1
+        )
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):

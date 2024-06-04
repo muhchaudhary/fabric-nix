@@ -1,13 +1,12 @@
 import json
 import os
-import subprocess
 
 from gi.repository import GLib
 from loguru import logger
 from thefuzz import fuzz, process
 from widgets.popup_window import PopupWindow
 
-from fabric.utils import Application, get_desktop_applications
+from fabric.utils import Application, exec_shell_command_async, get_desktop_applications
 from fabric.widgets import Box, Button, Entry, Image, Label, ScrolledWindow
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
@@ -33,12 +32,14 @@ def get_recent_apps() -> list:
 class ApplicationButton(Button):
     def __init__(self, app: Application, **kwargs):
         self.app: Application = app
-        self.app_icon = Image(
-            pixbuf=self.app.get_icon_pixbuf(
-                size=36,
-                default_icon="application-x-executable",
-            )
+        print(f"APP: {app.name} ::: {app.command_line} ::: {app.executable}")
+        self.app_icon_symbolic = Image(
+            icon_name=self.app.icon_name + "-symbolic"
+            if self.app.icon_name
+            else "application-x-executable-symbolic",
+            pixel_size=36,
         )
+
         self.app_name = Label(
             name="appmenu-app-name",
             label=self.app.display_name,
@@ -58,7 +59,7 @@ class ApplicationButton(Button):
         self.button_box = Box(
             spacing=5,
             children=[
-                self.app_icon,
+                self.app_icon_symbolic,
                 Box(
                     v_align="center",
                     spacing=5,
@@ -72,17 +73,29 @@ class ApplicationButton(Button):
         )
         super().__init__(name="appmenu-button", **kwargs)
         self.connect("clicked", lambda _: self.launch_app())
+        self.connect("focus", lambda *_: self.set_app_icon(self.is_focus()))
         self.add(self.button_box)
 
-    # TODO look into how ags does this
-    def launch_app(self):
-        cmd = [x for x in self.app.command_line.split(" ") if x[0] != "%"]
-        subprocess.Popen(
-            cmd,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.STDOUT,
-            start_new_session=True,
+    def set_app_icon(self, focus_event):
+        app_icon = (
+            self.app.icon_name if self.app.icon_name else "application-x-executable"
         )
+
+        self.app_icon_symbolic.set_from_icon_name(
+            app_icon if not focus_event else app_icon + "-symbolic", 1
+        )
+
+    def launch_app(self):
+        logger.info(
+            f"Attempting to launch {self.app.name} with command {self.app.command_line}"
+        )
+        command = self.app.executable
+        if command == "gapplication":
+            command = self.app.command_line
+        exec_shell_command_async(
+            f"hyprctl dispatch exec -- {self.app.command_line}",
+            lambda *_: logger.info(f"Launched {self.app.name}"),
+        ) if command else None
 
     def add_app_to_json(self) -> list:
         data = get_recent_apps()

@@ -68,7 +68,9 @@ class BatteryIndicator(Box):
 
         if charging:
             self.battery_icon.set_from_icon_name(
-                config.battery_gtk_icon[25 * round(percent / 25)] + "-charging-symbolic", 4
+                config.battery_gtk_icon[25 * round(percent / 25)]
+                + "-charging-symbolic",
+                4,
             )
         else:
             self.battery_icon.set_from_icon_name(

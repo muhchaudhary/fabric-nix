@@ -2,6 +2,7 @@ from components.quick_settings.widgets.quick_settings_scale import QuickSettings
 from fabric.audio.service import Audio
 import config
 
+
 class AudioSlider(QuickSettingsScale):
     def __init__(self, client: Audio, **kwargs):
         self.client = client

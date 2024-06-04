@@ -437,7 +437,7 @@ scale {
   border-width: 2px;
   border-style: solid;
   border-color: #b2b2b2;
-  min-width: 500px;
+  min-width: 700px;
   min-height: 450px;
 }
 
@@ -544,5 +544,4 @@ scale {
   min-height: 80px;
   /* border-radius: 10px; */
 }
-
 /* ------------------------------------------------------------------------------------------ */
