@@ -32,7 +32,6 @@ def get_recent_apps() -> list:
 class ApplicationButton(Button):
     def __init__(self, app: Application, **kwargs):
         self.app: Application = app
-        print(f"APP: {app.name} ::: {app.command_line} ::: {app.executable}")
         self.app_icon_symbolic = Image(
             icon_name=self.app.icon_name + "-symbolic"
             if self.app.icon_name
@@ -86,14 +85,12 @@ class ApplicationButton(Button):
         )
 
     def launch_app(self):
-        logger.info(
-            f"Attempting to launch {self.app.name} with command {self.app.command_line}"
+        command = " ".join(
+            [arg for arg in self.app.command_line.split() if "%" not in arg]
         )
-        command = self.app.executable
-        if command == "gapplication":
-            command = self.app.command_line
+        logger.info(f"Attempting to launch {self.app.name} with command {command}")
         exec_shell_command_async(
-            f"hyprctl dispatch exec -- {self.app.command_line}",
+            f"hyprctl dispatch exec -- {command}",
             lambda *_: logger.info(f"Launched {self.app.name}"),
         ) if command else None
 
@@ -106,7 +103,6 @@ class ApplicationButton(Button):
             data.insert(0, self.app.name)
             data.pop() if len(data) > 6 else None
             json.dump(data, f)
-            print(data)
             f.close()
 
         return data
