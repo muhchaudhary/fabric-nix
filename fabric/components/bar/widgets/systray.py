@@ -1,31 +1,71 @@
-from gi.repository import Gdk
+import gi
+
 from loguru import logger
 
-from fabric.system_tray import SystemTray, SystemTrayItem
 from fabric.utils import invoke_repeater
 from fabric.widgets import Box, Button, Image, Revealer
 
+gi.require_version("Gray", "0.1")
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gdk, Gray, GdkPixbuf, Gtk
 
-class SystemTrayButton(Button):
-    def __init__(self, sys_item: SystemTrayItem, icon_size=16, **kwargs):
-        self._sys_item = sys_item
-        self.icon_size = icon_size
-        super().__init__(**kwargs)
 
-        self._sys_item.connect("changed", self.on_icon_change)
+class SystemTrayWidget(Box):
+    def __init__(self, pixel_size: int = 16, **kwargs) -> None:
+        super().__init__(name="system-tray")
+        self.pixel_size = pixel_size
+        self.watcher = Gray.Watcher()
+        self.watcher.connect("item-added", self.on_item_added)
 
-        self.on_icon_change()
-        self.connect("button-press-event", self.on_button_click)
+    def on_item_added(self, _, identifier: str):
+        item = self.watcher.get_item_for_identifier(identifier)
+        item_button = self.do_bake_item_button(item)
+        item_button.show_all()
+        self.add(item_button)
 
-    def on_button_click(self, button, event):
+    def do_bake_item_button(self, item) -> Button:
+        button = Button()
+
+        # context menu handler
+        button.connect(
+            "button-press-event",
+            lambda button, event: self.on_button_click(button, item, event),
+        )
+
+        # get pixel map of item's icon
+        pixmap = Gray.get_pixmap_for_pixmaps(item.get_icon_pixmaps(), 36)
+
+        # convert the pixmap to a pixbuf
+        print(self.pixel_size)
+        pixbuf: GdkPixbuf.Pixbuf = (
+            pixmap.as_pixbuf(self.pixel_size, GdkPixbuf.InterpType.HYPER)
+            if pixmap is not None
+            else Gtk.IconTheme().get_default().load_icon(
+                item.get_icon_name(),
+                self.pixel_size,
+                Gtk.IconLookupFlags.FORCE_SIZE,
+            )
+        )
+
+        # resize/scale the pixbuf
+        pixbuf.scale_simple(
+            self.pixel_size, self.pixel_size, GdkPixbuf.InterpType.HYPER
+        )
+
+        image = Image(pixbuf=pixbuf, pixel_size=self.pixel_size)
+        button.set_image(image)
+
+        return button
+
+    def on_button_click(self, button, item: Gray.Item, event):
         match event.button:
             case 1:
                 try:
-                    self._sys_item.activate_for_event(event)
+                    item.activate(event.x, event.y)
                 except Exception as e:
                     logger.error(e)
             case 3:
-                menu = self._sys_item.get_menu()
+                menu = item.get_menu()
                 menu.set_name("system-tray-menu")
                 if menu:
                     menu.popup_at_widget(
@@ -35,36 +75,7 @@ class SystemTrayButton(Button):
                         event,
                     )
                 else:
-                    self._sys_item.context_menu_for_event(event)
-
-    def on_icon_change(self, _=None):
-        tray_icon_pixbuf = self._sys_item.get_preferred_icon_pixbuf(self.icon_size + 5)
-        self.set_image(
-            Image(pixbuf=tray_icon_pixbuf),
-        ) if tray_icon_pixbuf is not None else self.set_image(
-            Image(icon_name="missing", pixel_size=self.icon_size, icon_size=3),
-        )
-
-
-class SystemTrayBox(Box):
-    def __init__(self, icon_size=16, name="system-tray", **kwargs):
-        self._system_tray: SystemTray = SystemTray()
-        self._system_tray.connect("item-added", self.on_item_added)
-        self._system_tray.connect("item-removed", self.on_item_removed)
-        self._tray_buttons = {}
-        self.icon_size = icon_size
-        super().__init__(name=name, **kwargs)
-
-    def on_item_added(self, systray: SystemTray, name: str):
-        tray_item: SystemTrayItem = systray.get_items()[name]
-        self._tray_buttons[name] = SystemTrayButton(tray_item, self.icon_size)
-        self.add_children(self._tray_buttons[name])
-
-    def on_item_removed(self, systray: SystemTray, name: str):
-        button: Button = self._tray_buttons[name]
-        self.remove(button)
-        button.destroy()
-        self._tray_buttons.pop(name)
+                    item.context_menu(event.x, event.y)
 
 
 class SystemTrayRevealer(Box):
@@ -81,7 +92,7 @@ class SystemTrayRevealer(Box):
             name="panel-button",
         )
 
-        self.revealed_box = SystemTrayBox(icon_size=self.icon_size)
+        self.revealed_box = SystemTrayWidget(pixel_size=icon_size)
 
         self.revealer = Revealer(
             transition_type="slide-left",
