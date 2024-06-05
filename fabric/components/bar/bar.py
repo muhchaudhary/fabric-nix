@@ -5,17 +5,22 @@ from components.bar.widgets import (
     SystemTrayRevealer,
     Temps,
 )
-from components.bar.widgets.date_time import (
-    ActiveWindow,
-    DateTime,
-    WorkspaceButton,
-    Workspaces,
-)
+from components.bar.widgets.date_time import DateTime
 from components.quick_settings.quick_settings import QuickSettingsButton
+
+from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow
 
 from fabric.utils.string_formatter import FormattedString
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.wayland import Window
+
+
+class WorkspaceButtonNoLabel(WorkspaceButton):
+    def __init__(self):
+        super().__init__()
+
+    def bake_label(self):
+        return None
 
 
 class StatusBar(Window):
@@ -27,13 +32,13 @@ class StatusBar(Window):
             name="workspaces",
             spacing=2,
             buttons_list=[
-                WorkspaceButton(),
-                WorkspaceButton(),
-                WorkspaceButton(),
-                WorkspaceButton(),
-                WorkspaceButton(),
-                WorkspaceButton(),
-                WorkspaceButton(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
+                WorkspaceButtonNoLabel(),
             ],
         )
         self.active_window = ActiveWindow(
@@ -54,7 +59,7 @@ class StatusBar(Window):
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.sysinfo = Temps()
-        self.sys_tray = SystemTrayRevealer(icon_size=20, name="system-tray")
+        self.sys_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
         self.center_box.end_container.add_children(
             [
                 self.sysinfo,
