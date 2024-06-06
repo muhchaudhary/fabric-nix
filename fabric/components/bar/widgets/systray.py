@@ -7,7 +7,7 @@ from fabric.widgets import Box, Button, Image, Revealer
 
 gi.require_version("Gray", "0.1")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gray, GdkPixbuf, Gtk
+from gi.repository import Gdk, Gray, GdkPixbuf, Gtk  # noqa: E402
 
 
 class SystemTrayWidget(Box):
@@ -17,13 +17,16 @@ class SystemTrayWidget(Box):
         self.watcher = Gray.Watcher()
         self.watcher.connect("item-added", self.on_item_added)
 
+    # 6901 markwood place misissauga
+
     def on_item_added(self, _, identifier: str):
         item = self.watcher.get_item_for_identifier(identifier)
         item_button = self.do_bake_item_button(item)
+        item.connect("removed", lambda *args: item_button.destroy())
         item_button.show_all()
         self.add(item_button)
 
-    def do_bake_item_button(self, item) -> Button:
+    def do_bake_item_button(self, item: Gray.Item) -> Button:
         button = Button()
 
         # context menu handler
@@ -33,10 +36,9 @@ class SystemTrayWidget(Box):
         )
 
         # get pixel map of item's icon
-        pixmap = Gray.get_pixmap_for_pixmaps(item.get_icon_pixmaps(), 36)
+        pixmap = Gray.get_pixmap_for_pixmaps(item.get_icon_pixmaps(), 24)
 
         # convert the pixmap to a pixbuf
-        print(self.pixel_size)
         pixbuf: GdkPixbuf.Pixbuf = (
             pixmap.as_pixbuf(self.pixel_size, GdkPixbuf.InterpType.HYPER)
             if pixmap is not None
