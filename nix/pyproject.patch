@@ -1,0 +1,10 @@
+--- pyproject.toml	2024-06-08 05:50:25.809923780 -0400
++++ pyproject.toml	2024-06-08 05:50:43.666001340 -0400
+@@ -49,7 +49,6 @@
+ options = {"LOTTIE_MODULE" = "OFF"}
+ install_components = ["python_module"]
+ python_abi = 'abi3'
+-abi3_minimum_cpython_version = 37
+ 
+ [tool.py-build-cmake.linux.cmake] # Linux-specific options
+ config = "Release"
