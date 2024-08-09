@@ -1,5 +1,3 @@
-import time
-
 from gi.repository import GLib
 
 from fabric.widgets.button import Button
@@ -14,5 +12,5 @@ class DateTime(Button):
         GLib.timeout_add(self.interval, self.update_label)
 
     def update_label(self, *args):
-        self.set_label(time.strftime(self.format))
+        self.set_label(GLib.DateTime.new_now_local().format("%a %b %d  %I:%M %p"))
         return True

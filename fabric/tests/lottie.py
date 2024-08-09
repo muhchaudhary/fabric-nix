@@ -1,33 +1,28 @@
+import ctypes
 from typing import Literal
-from rlottie_python.rlottie_wrapper import LottieAnimation
 
-# import numpy as np
-import fabric
-from fabric.widgets import WaylandWindow, Box, Button, Overlay, Widget
 import cairo
 import gi
-import ctypes
+from rlottie_python.rlottie_wrapper import LottieAnimation
 
+import fabric
 from fabric.utils import set_stylesheet_from_string
+from fabric.widgets import Box, Button, Overlay, WaylandWindow, Widget
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, GLib
+from gi.repository import GLib, Gtk
 
-anim = LottieAnimation.from_file("/home/muhammad/Downloads/battery.json")
-anim2 = LottieAnimation.from_file("/home/muhammad/Downloads/bolt.json")
+# anim = LottieAnimation.from_file("/home/muhammad/Downloads/battery.json")
+# anim2 = LottieAnimation.from_file("/home/muhammad/Downloads/bolt.json")
 
 
-# anim = LottieAnimation.from_file("/home/muhammad/Downloads/batter-icon-animation.json")
-# TESTING this does not work for now
 # anim.lottie_animation_property_override(
-#     "LOTTIE_ANIMATION_PROPERTY_STROKECOLOR",
-#     # "Charging.Bolt.Shape 1.Fill 1",
-#     "play 3.**",
-#     ctypes.c_float(0),
-#     ctypes.c_float(1),
-#     ctypes.c_float(0),
+#     LottieAnimationProperty.LOTTIE_ANIMATION_PROPERTY_FILLCOLOR,
+#     "charge-state.Shape 1.Fill 1.**",
+#     ctypes.c_double(1.0),
+#     ctypes.c_double(1.0),
+#     ctypes.c_double(0.0),
 # )
-# print(anim.tree)
 
 
 # TODO make this more robust, going to needa full rewrite of all of it tbh
@@ -85,10 +80,10 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
         # State Management Things
         self.is_playing = False
         self.do_reverse = False
-        self.curr_frame: int = 0
+        self.curr_frame: int = 0 if draw_frame is None or do_loop else draw_frame
+        self.end_frame: int = lottie_animation.lottie_animation_get_totalframe()
 
         self.do_loop: bool = do_loop
-
         self.lottie_animation: LottieAnimation = lottie_animation
 
         # LOTTIE STUFF
@@ -108,16 +103,13 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
         self.timeout_delay = int(
             (1 / self.lottie_animation.lottie_animation_get_framerate()) * 1000
         )
-
-        # TODO switch these to loggers
-        print(self.timeout_delay)
-        print(self.width, self.height)
-
         self.set_size_request(self.width, self.height)
         self.connect("draw", self.draw)
+        if draw_frame is not None:
+            self.on_update()
 
         if self.do_loop:
-            self.on_update()
+            GLib.timeout_add(self.timeout_delay, self.on_update)
 
     def draw(self, _: Gtk.DrawingArea, ctx: cairo.Context):
         if self.lottie_animation.async_buffer_c is not None:
@@ -133,7 +125,6 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
         return False
 
     def on_update(self):
-        print(f"drawing frame {self.curr_frame}")
         self.is_playing = True
         self.lottie_animation.lottie_animation_render_async(
             self.curr_frame, width=self.width, height=self.height
@@ -141,24 +132,37 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
 
         self.lottie_animation.lottie_animation_render_flush()
         self.queue_draw()
-        if self.do_reverse and self.curr_frame <= 0:
-            print("done in reverse")
-            # self.curr_frame = self.anim_total_frames
-            self.is_playing = False
+        if self.do_reverse and self.curr_frame <= self.end_frame:
+            self.is_playing = False if not self.do_loop else True
+            self.curr_frame = self.anim_total_frames
             return False if not self.do_loop else True
-        elif not self.do_reverse and self.curr_frame >= self.anim_total_frames:
-            print("done in normal")
-            # self.curr_frame = 0
-            self.is_playing = False
+        elif not self.do_reverse and self.curr_frame >= self.end_frame:
+            self.is_playing = False if not self.do_loop else True
+            self.curr_frame = 0
             return False if not self.do_loop else True
         self.curr_frame += -1 if self.do_reverse else 1
-
         return True
 
-    def play_animation(self, is_reverse: bool = False):
+    def play_animation(
+        self,
+        start_frame: int | None = None,
+        end_frame: int | None = None,
+        is_reverse: bool = False,
+    ):
+        # TODO: check if animation can be played (santizie start and end frame inputs)
         if self.is_playing or self.do_loop:
             return
         self.do_reverse = is_reverse
+        self.curr_frame = (
+            start_frame
+            if start_frame is not None
+            else self.anim_total_frames
+            if self.do_reverse
+            else 0
+        )
+        self.end_frame = (
+            end_frame if end_frame else 0 if self.do_reverse else self.anim_total_frames
+        )
         # self.curr_frame = self.anim_total_frames if self.is_reverse else 0
         GLib.timeout_add(self.timeout_delay, self.on_update)
 
@@ -169,20 +173,19 @@ class LottieWindow(WaylandWindow):
 
         self.battery_animation = LottieAnimationWidget(
             anim,
-            scale=1,
+            scale=0.5,
             do_loop=False,
             h_align="center",
             v_align="center",
         )
         self.bolt_animation = LottieAnimationWidget(
             anim2,
-            scale=1,
+            scale=0.5,
             do_loop=False,
             h_align="center",
             v_align="center",
         )
-        # self.animation2.set_size_request(self.animation.width, self.animation2.height)
-        self.battery_animation.play_animation()
+        self.battery_animation.play_animation(0, int(1.5 * 15))
         self.bolt_animation.play_animation()
         # self.lottie_button.connect(
         #     "enter-notify-event", lambda *args: self.animation.play_animation()
@@ -190,7 +193,7 @@ class LottieWindow(WaylandWindow):
         self.lottie_button.connect(
             "clicked",
             lambda *args: self.bolt_animation.play_animation(
-                not self.bolt_animation.do_reverse
+                is_reverse=not self.bolt_animation.do_reverse
             ),
         )
         self.image_box = Box(
@@ -204,7 +207,6 @@ class LottieWindow(WaylandWindow):
                     self.lottie_button,
                 ],
             ),
-            # style="background-color:transparent;",
         )
         super().__init__(
             layer="top",
@@ -215,14 +217,14 @@ class LottieWindow(WaylandWindow):
         )
 
 
-set_stylesheet_from_string("""
-* {
-  all: unset;
-  font-family: "roboto";
-  font-weight: 500;
-  font-size: 15px;
-  color: var(--fg);
-}
-""")
-LottieWindow()
-fabric.start()
+# set_stylesheet_from_string("""
+# * {
+#   all: unset;
+#   font-family: "roboto";
+#   font-weight: 500;
+#   font-size: 15px;
+#   color: var(--fg);
+# }
+# """)
+# LottieWindow()
+# fabric.start()

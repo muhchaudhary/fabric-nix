@@ -2,7 +2,7 @@
 @import "./style/player-dark.css";
 
 :vars {
-  --accent: #ff8181;
+  --accent: #82C480;
 
   --bg_h: #1d2021;
   --bg: #1e1e1e;
@@ -12,7 +12,7 @@
   --bg3: #665c54;
   --bg4: #7c6f64;
 
-  --fg: #edebe2;
+  --fg: #e2e2e0;
   --fg1: #ebdbb2;
   --fg2: #d5c4a1;
   --fg3: #bdae93;
@@ -307,7 +307,7 @@ scale {
 #osd-box {
   min-width: 25px;
   min-height: 200px;
-  border-radius: 20px;
+  border-radius: 5px;
   margin-bottom: 15px;
 }
 
@@ -468,13 +468,22 @@ scale {
   background-color: #404040;
 }
 
+#clockbox {
+  margin-top: 100px;
+  border-radius: 30px;
+  padding: 10px;
+  background-color: alpha(black, 0.4);
+}
+
 #appmenu-button:focus label,
+#appmenu-button:focus image,
 #appmenu-button:focus {
   background-color: #b4b4b4;
   color: #2c2c2c;
 }
 
 #appmenu-button:active label,
+#appmenu-button:active image,
 #appmenu-button:active {
   background-color: #dadada;
   color: #2c2c2c;

@@ -20,12 +20,7 @@ class WifiSubMenu(QuickSubMenu):
         self.available_networks_box = Box(orientation="v", spacing=4, h_expand=True)
 
         self.scan_button = Button(label="Scan", name="panel-button")
-        self.scan_button.connect(
-            "clicked",
-            lambda _: self.client.wifi_device.scan()
-            if self.client.wifi_device
-            else None,
-        )
+        self.scan_button.connect("clicked", self.start_new_scan)
 
         self.child = ScrolledWindow(
             min_content_size=(-1, 100),
@@ -41,6 +36,10 @@ class WifiSubMenu(QuickSubMenu):
             child=Box(orientation="v", children=[self.scan_button, self.child]),
             **kwargs,
         )
+
+    def start_new_scan(self, _):
+        self.client.wifi_device.scan() if self.client.wifi_device else None
+        self.build_wifi_options()
 
     def on_device_ready(self, client: NetworkClient):
         self.wifi_device = client.wifi_device

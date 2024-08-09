@@ -57,7 +57,7 @@ class Brightness(Service):
         self.screen_monitor = monitor_file(self.screen_backlight_path + "/brightness")
         self.screen_monitor.connect(
             "changed",
-            lambda _, file, *args: self.emit(
+            lambda _, file, *args: self.emit(  # type: ignore
                 "screen",
                 round(int(file.load_bytes()[0].get_data())),
             ),
@@ -82,8 +82,8 @@ class Brightness(Service):
             return 0 if value < 0 else self.max_screen
         try:
             exec_brightnessctl_async(f"--device '{screen}' set {value}")
-            self.emit("screen", int((value / self.max_screen) * 100))
-        except GLib.Error as e:
+            self.emit("screen", int((value / self.max_screen) * 100))  # type: ignore
+        except GLib.Error as e: # type: ignore
             print(e.message)
 
     def set_kbd(self, value: int):
@@ -93,6 +93,6 @@ class Brightness(Service):
             return None
         try:
             exec_brightnessctl_async(f"--device '{kbd}' set {value}")
-            self.emit("kbd", value)
-        except GLib.Error as e:
+            self.emit("kbd", value) # type: ignore
+        except GLib.Error as e: # type: ignore
             print(e.message)

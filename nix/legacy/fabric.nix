@@ -25,7 +25,7 @@ buildPythonPackage rec {
     sha256 = "sha256-kSUnjc6nHCw95SfK7NmQYuDh6Q0fOLQ2P1fMvIDh4KM=";
   };
 
-  # unit tests will fail with hyprland module
+  # Unit tests will fail with hyprland module
   doCheck = false;
 
   nativeBuildInputs = [
@@ -41,7 +41,7 @@ buildPythonPackage rec {
     librsvg
     webkitgtk_4_1
 
-    # defined in requirements.txt
+    # Defined in requirements.txt
     python3Packages.click
     python3Packages.loguru
     python3Packages.pycairo
@@ -51,8 +51,7 @@ buildPythonPackage rec {
   meta = with lib; {
     description = "next-gen GTK+ based desktop widgets python framework";
     homepage = "http://github.com/Fabric-Development/fabric";
-    # To be changed later
-    license = with licenses; [lgpl21Only mpl11];
+    license = with licenses; [agpl3Only];
     platforms = lib.platforms.linux;
   };
 }

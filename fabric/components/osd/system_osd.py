@@ -7,7 +7,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.image import Image
 
 # TODO: use progressbar or custom cairo widget so that I can update the accent color with css
-accent = "#ff8181"
+accent = "#82C480"
 
 
 class SystemOSD(PopupWindow):
@@ -32,7 +32,6 @@ class SystemOSD(PopupWindow):
                 name="quicksettings",
                 orientation="v",
                 children=[self.overlay_fill_box, self.icon],
-                style="margin-right: 10px;",
             ),
             **kwargs,
         )

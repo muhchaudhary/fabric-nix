@@ -5,6 +5,7 @@
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
     astal-notifd.url = "github:astal-sh/notifd";
     fabric-libgray.url = "github:muhchaudhary/gray";
+    fabric-libglace.url = "github:Fabric-Development/glace";
   };
 
   outputs = {
@@ -33,6 +34,11 @@
               in {
                 inherit fabric-libgray;
               })
+              (final: _: let
+                fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
+              in {
+                inherit fabric-libglace;
+              })
             ];
           })
       );
@@ -40,6 +46,7 @@
     devShells = eachSystem (pkgs: let
       fabric = pkgs.python3Packages.callPackage ./nix/legacy/fabric.nix {};
       gir-cvc = pkgs.callPackage ./nix/legacy/gir-cvc.nix {};
+      rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};
     in {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
@@ -47,6 +54,9 @@
           fabric
           astal-notifd
           fabric-libgray
+          fabric-libglace
+
+          rlottie-python
 
           # add aditional python packages here
           python3Packages.psutil
@@ -60,6 +70,7 @@
           vala-language-server # for vala code completions
         ];
         nativeBuildInputs = with pkgs; [
+          rlottie # for animated images
           vala # Vala compiler
           gobject-introspection
           gir-cvc

@@ -1,6 +1,4 @@
 import datetime
-
-import config
 import psutil
 
 from fabric.core.fabricator import Fabricator
@@ -16,13 +14,45 @@ class BatteryIndicator(Box):
         super().__init__(v_align="center", h_align="start", **kwargs)
         if not psutil.sensors_battery():
             self.set_visible(False)
+            self.destroy()
             return
 
-        self.battery = Fabricator(
-            value=[-1, -1, False],
-            poll_from=lambda *args: self.poll_batt(),
-            interval=1000,
+        self.is_charging = None
+        self.curr_percent = None
+
+        self.battery_animation = LottieAnimationWidget(
+            battery,
+            scale=0.25,
+            do_loop=False,
+            h_align="center",
+            v_align="center",
         )
+        self.bolt_animation = LottieAnimationWidget(
+            bolt,
+            scale=0.25,
+            do_loop=False,
+            h_align="center",
+            v_align="center",
+        )
+
+        self.lottie_button = Button(name="panel-button")
+
+        self.battery = Fabricator(poll_from=self.poll_batt, interval=1000)
+
+        self.lottie_battery_box = Box(
+            children=Overlay(
+                children=Box(
+                    children=self.battery_animation,
+                    style=f"min-height: {self.bolt_animation.height}px;",
+                    h_align="center",
+                    v_align="center",
+                ),
+                overlays=[
+                    Box(children=self.bolt_animation, h_align="center"),
+                ],
+            ),
+        )
+
         self.battery.connect("changed", self.update_battery)
 
         self.battery_icon = Image(name="battery-icon")
@@ -34,51 +64,49 @@ class BatteryIndicator(Box):
             transition_type="slide-left",
         )
 
-        self.buttons = Button(
-            name="panel-button",
-        )
-        self.buttons.add(  # type: ignore
-            Box(
-                children=[
-                    self.battery_percent_revealer,
-                    self.battery_icon,
-                ],
-            ),
+        # self.buttons = Button(
+        #     name="panel-button",
+        # )
+        self.lottie_button.add(
+            Box(children=[self.battery_percent_revealer, self.lottie_battery_box])
         )
 
-        self.buttons.connect(
+        self.lottie_button.connect(
             "clicked",
             lambda *args: self.battery_percent_revealer.set_reveal_child(
                 not self.battery_percent_revealer.get_child_revealed(),
             ),
         )
 
-        self.add(self.buttons)
+        self.add(self.lottie_button)
 
     def update_battery(self, _, value):
-        percent = value[0]
-        secsleft = value[1]
-        charging = value[2]
+        percent = value.percent
+        secsleft = value.secsleft
+        charging = value.power_plugged
         self.battery_percent.set_label(str(int(round(percent))) + "%")
 
-        self.buttons.set_tooltip_text(
+        self.lottie_button.set_tooltip_text(
             str(int(round(percent)))
             + "% "
             + str(datetime.timedelta(seconds=secsleft))
             + " left",
-        ) if not charging else self.buttons.set_tooltip_text(
+        ) if not charging else self.lottie_button.set_tooltip_text(
             str(int(round(percent))) + "% " + "Charging",
         )
 
-        if charging:
-            self.battery_icon.set_from_icon_name(
-                config.battery_gtk_icon[25 * round(percent / 25)]
-                + "-charging-symbolic",
-                4,
+        if int(percent) != self.curr_percent:
+            do_reverse: bool = (
+                True
+                if int(percent * 1.5) < self.battery_animation.curr_frame
+                else False
             )
-        else:
-            self.battery_icon.set_from_icon_name(
-                config.battery_gtk_icon[25 * round(percent / 25)] + "-symbolic", 4
+            self.battery_animation.play_animation(
+                is_reverse=do_reverse,
+                start_frame=max(int(percent * 1.5), self.battery_animation.curr_frame)
+                if do_reverse
+                else min(int(percent * 1.5), self.battery_animation.curr_frame),
+                end_frame=int(percent * 1.5),
             )
         self.battery_icon.set_pixel_size(28)
         if charging:
@@ -104,10 +132,7 @@ class BatteryIndicator(Box):
 
     def poll_batt(self):
         battery = psutil.sensors_battery()
-        if battery:
-            return [battery.percent, battery.secsleft, battery.power_plugged]
-        else:
-            return [-1, -1, False]
+        return battery if battery else None
 
     def on_click(self, *args):
         self.battery_percent_revealer.set_reveal_child(

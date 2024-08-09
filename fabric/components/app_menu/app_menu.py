@@ -86,8 +86,10 @@ class ApplicationButton(Button):
         self.add(self.button_box)
 
     def launch_app(self):
-        command = " ".join(
-            [arg for arg in self.app.command_line.split() if "%" not in arg]
+        command = (
+            " ".join([arg for arg in self.app.command_line.split() if "%" not in arg])
+            if self.app.command_line
+            else None
         )
         logger.info(f"Attempting to launch {self.app.name} with command {command}")
         exec_shell_command_async(

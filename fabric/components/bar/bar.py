@@ -46,7 +46,7 @@ class StatusBar(WaylandWindow):
         self.active_window = ActiveWindow(
             name="panel-button",
             formatter=FormattedString(
-                "{test_title(win_class)}",
+                "{test_title(win_title)}",
                 test_title=lambda x, max_length=40: "Desktop"
                 if len(x) == 0
                 else (

@@ -106,7 +106,7 @@ class MprisPlayer(Service):
     # Properties
     @Property(str, "readable")
     def player_name(self) -> int:
-        return self._player.get_property("player-name")
+        return self._player.get_property("player-name")  # type: ignore
 
     @Property(int, "read-write", default_value=0)
     def position(self) -> int:

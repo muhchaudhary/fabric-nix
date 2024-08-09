@@ -1,47 +1,65 @@
 {
   lib,
-  fetchFromGitHub,
+  fetchPypi,
   buildPythonPackage,
-  gtk3,
-  glib,
-  gtk-layer-shell,
-  gobject-introspection,
   python3Packages,
-  libdbusmenu-gtk3,
   pkg-config,
-  wrapGAppsHook,
-  gdk-pixbuf,
-  librsvg,
-  webkitgtk_4_1,
-}:
-buildPythonPackage rec {
-  pname = "rlottie-python";
-  version = "1.3.5";
-
-  src = fetchFromGitHub {
-    owner = "laggykiller";
-    repo = "rlottie-python";
-    rev = "52623947f1fd270bcc1c98a89bc3219cde958d2c";
-    sha256 = "sha256-TLH+ByqTWdDYFOTpREWTAuGSHMlEKNCK0h1nS0CHzwM=";
+  cmake,
+  rlottie,
+}: let
+  pybuild = buildPythonPackage rec {
+    pname = "py-build-cmake";
+    version = "0.1.8";
+    pyproject = true;
+    src = fetchPypi {
+      inherit version pname;
+      sha256 = "sha256-+QuOK5onNnD+clHnROrt51Ey55jlQCR3KCpHASsuW9s=";
+    };
+    doCheck = false;
+    dontUseCmakeConfigure = true;
+    nativeBuildInputs = [
+      cmake
+    ];
+    dependencies = [
+      python3Packages.distlib
+      python3Packages.flit-core
+      python3Packages.tomli
+      python3Packages.click
+    ];
   };
+in
+  buildPythonPackage rec {
+    pname = "rlottie_python";
+    version = "1.3.6";
+    pyproject = true;
 
-  # unit tests will fail with hyprland module
-  doCheck = false;
+    src = fetchPypi {
+      inherit pname version;
+      sha256 = "sha256-VuzBkq3sPHGEiX2/MTTfp5rqf1nIv8Lal9LIBDBQrAQ=";
+    };
 
-  nativeBuildInputs = [
-    cmake
-  ];
+    doCheck = false;
+    dontUseCmakeConfigure = true;
 
-  propagatedBuildInputs = [
-    # defined in requirements.txt
-    python3Packages.cmake
-  ];
+    nativeBuildInputs = [
+      cmake
+      python3Packages.cmake
+      pybuild
+    ];
 
-  meta = with lib; {
-    description = "next-gen GTK+ based desktop widgets python framework";
-    homepage = "http://github.com/Fabric-Development/fabric";
-    # To be changed later
-    license = with licenses; [lgpl21Only mpl11];
-    platforms = lib.platforms.linux;
-  };
-}
+    patches = [
+      ./pyproject.patch
+    ];
+
+    build-system = [
+      pybuild
+    ];
+
+    meta = with lib; {
+      description = "next-gen GTK+ based desktop widgets python framework";
+      homepage = "http://github.com/Fabric-Development/fabric";
+      # To be changed later
+      license = with licenses; [lgpl21Only mpl11];
+      platforms = lib.platforms.linux;
+    };
+  }
