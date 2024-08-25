@@ -59,8 +59,10 @@ class PrayerTimesService(Service):
             with open(PRAYER_TIMES_FILE, "wb") as outfile:
                 outfile.write(data.content)
                 outfile.close()
-
-        json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
+        try:
+            json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
+        except Exception as e:
+            return
         retrived_day = json_data["data"]["date"]["gregorian"]["date"]
         current_day = datetime.datetime.today().strftime("%d-%m-%Y")
 
@@ -122,7 +124,9 @@ class PrayerTimes(Box):
         def time_format(time):
             d = datetime.datetime.strptime(time, "%H:%M")
             return d.strftime("  %I:%M %p")
-
+        if prayer_info["Fajr"][1] == "":
+            return
+        print(prayer_info)
         self.fajr.set_label(prayer_info["Fajr"][0])
         self.fajr_time.set_label(time_format(prayer_info["Fajr"][1]))
 

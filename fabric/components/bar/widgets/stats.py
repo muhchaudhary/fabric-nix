@@ -49,7 +49,7 @@ class Temps(Button):
         gpu_temp = exec_shell_command(
             "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
         ).strip("\n")
-        self.fan_speed_label.set_label(f"{gpu_temp} °C")
+        self.fan_speed_label.set_label(f"{gpu_temp}°C   ")
         return None
 
     def update_labels(self):
