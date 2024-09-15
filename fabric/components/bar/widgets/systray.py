@@ -3,7 +3,11 @@ import gi
 from loguru import logger
 
 from fabric.utils import invoke_repeater
-from fabric.widgets import Box, Button, Image, Revealer
+
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.revealer import Revealer
 
 gi.require_version("Gray", "0.1")
 gi.require_version("Gtk", "3.0")
@@ -42,7 +46,9 @@ class SystemTrayWidget(Box):
         pixbuf: GdkPixbuf.Pixbuf = (
             pixmap.as_pixbuf(self.pixel_size, GdkPixbuf.InterpType.HYPER)
             if pixmap is not None
-            else Gtk.IconTheme().get_default().load_icon(
+            else Gtk.IconTheme()
+            .get_default()
+            .load_icon(
                 item.get_icon_name(),
                 self.pixel_size,
                 Gtk.IconLookupFlags.FORCE_SIZE,
@@ -90,7 +96,7 @@ class SystemTrayRevealer(Box):
             pixel_size=self.icon_size,
         )
         self.reveal_button = Button(
-            icon_image=self.button_image,
+            image=self.button_image,
             name="panel-button",
         )
 
@@ -99,7 +105,7 @@ class SystemTrayRevealer(Box):
         self.revealer = Revealer(
             transition_type="slide-left",
             transition_duration=300,
-            children=self.revealed_box,
+            child=self.revealed_box,
         )
         self.add(self.revealer)
         self.add(self.reveal_button)

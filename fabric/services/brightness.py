@@ -1,6 +1,6 @@
 import os
 
-from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.core.service import Service, Signal, Property
 from fabric.utils import exec_shell_command, exec_shell_command_async, monitor_file
 from gi.repository import GLib
 
@@ -30,10 +30,16 @@ class NoBrightnessError(ImportError):
 
 
 class Brightness(Service):
-    __gsignals__ = SignalContainer(
-        Signal("screen", "run-first", None, (int,)),
-        Signal("kbd", "run-first", None, (int,)),
-    )
+    # __gsignals__ = SignalContainer(
+    #     Signal("screen", "run-first", None, (int,)),
+    #     Signal("kbd", "run-first", None, (int,)),
+    # )
+
+    @Signal
+    def screen(self) -> None: ...
+
+    @Signal
+    def kbd(self) -> None: ...
 
     def __init__(self, **kwargs):
         self.screen_backlight_path = "/sys/class/backlight/" + screen
@@ -58,7 +64,7 @@ class Brightness(Service):
         )
         super().__init__(**kwargs)
 
-    @Property(value_type=int, flags="read-write")
+    @Property(int, "read-write")
     def screen_brightness(self) -> int:
         return (
             int(

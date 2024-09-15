@@ -10,7 +10,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.scale import Scale
-from fabric.widgets.wayland import Window
+from fabric.widgets.wayland import WaylandWindow
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk
@@ -36,7 +36,7 @@ class WorkspaceBox(Box):
         pass
 
 
-class Overview(Window):
+class Overview(WaylandWindow):
     def __init__(self):
         self.overview_box = Box(style="padding: 1px;")
         self.workspace_boxes: dict[int, Gtk.Fixed] = {}

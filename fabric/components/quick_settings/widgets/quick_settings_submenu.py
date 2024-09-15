@@ -6,7 +6,7 @@ from fabric.widgets.revealer import Revealer
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.widget import Widget
-from fabric.service import Signal, SignalContainer
+from fabric.core.service import Signal
 from fabric.utils import invoke_repeater
 
 
@@ -31,7 +31,7 @@ class QuickSubMenu(Box):
         ) if self.submenu_title_box else None
         self.revealer_child.add(self.child) if child else None
 
-        self.revealer = Revealer(children=self.revealer_child, h_expand=True)
+        self.revealer = Revealer(child=self.revealer_child, transition_type="slide-down", h_expand=True)
         self.revealer.connect(
             "notify::child-revealed",
             lambda rev, _: self.set_visible(rev.get_reveal_child()),
@@ -64,10 +64,11 @@ class QuickSubMenu(Box):
 
 
 class QuickSubToggle(Box):
-    __gsignals__ = SignalContainer(
-        Signal("reveal-clicked", "run-first", None, ()),
-        Signal("action-clicked", "run-first", None, ()),
-    )
+    @Signal
+    def reveal_clicked(self) -> None: ...
+
+    @Signal
+    def action_clicked(self) -> None: ...
 
     def __init__(
         self,
@@ -79,22 +80,16 @@ class QuickSubToggle(Box):
     ):
         self.pixel_size = pixel_size
         self.submenu = submenu
-        super().__init__(
-            name="quicksettings-togglebutton",
-            h_align="start",
-            v_align="start",
-            **kwargs,
-        )
 
         submenu.revealer.connect(
             "notify::reveal-child",
             lambda *args: self.animate_spin(submenu.revealer.get_reveal_child()),
         ) if submenu else None
 
-        self.button_image = Image(icon_name="pan-end-symbolic", pixel_size=20)
+        self.button_image = Image(icon_name="pan-end-symbolic", size=20)
 
         self.reveal_button = Button(
-            name="quicksettings-toggle-revealer", icon_image=self.button_image
+            name="quicksettings-toggle-revealer", image=self.button_image
         )
 
         # Action button can hold an icon and a label NOTHING MORE
@@ -111,7 +106,13 @@ class QuickSubToggle(Box):
             )
         )
 
-        self.add_children([self.action_button, self.reveal_button])
+        super().__init__(
+            name="quicksettings-togglebutton",
+            h_align="start",
+            v_align="start",
+            children=[self.action_button, self.reveal_button],
+            **kwargs,
+        )
 
         self.reveal_button.connect("clicked", self.do_reveal_toggle)
         self.action_button.connect("clicked", self.do_action)

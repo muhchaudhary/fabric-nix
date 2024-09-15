@@ -6,8 +6,19 @@ from loguru import logger
 from thefuzz import fuzz, process
 from widgets.popup_window import PopupWindow
 
-from fabric.utils import Application, exec_shell_command_async, get_desktop_applications
-from fabric.widgets import Box, Button, Entry, Image, Label, ScrolledWindow
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.entry import Entry
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.scrolledwindow import ScrolledWindow
+
+from fabric.utils.helpers import (
+    DesktopApp,
+    get_desktop_applications,
+    exec_shell_command_async,
+)
+
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 APP_CACHE = CACHE_DIR + "/app_launcher"
@@ -30,13 +41,13 @@ def get_recent_apps() -> list:
 
 
 class ApplicationButton(Button):
-    def __init__(self, app: Application, **kwargs):
-        self.app: Application = app
+    def __init__(self, app: DesktopApp, **kwargs):
+        self.app: DesktopApp = app
         self.app_icon_symbolic = Image(
-            icon_name=self.app.icon_name + "-symbolic"
-            if self.app.icon_name
+            icon_name=self.app.icon_name
+            if self.app.icon_name and ".png" not in self.app.icon_name
             else "application-x-executable-symbolic",
-            pixel_size=36,
+            size=36,
         )
 
         self.app_name = Label(
@@ -72,17 +83,7 @@ class ApplicationButton(Button):
         )
         super().__init__(name="appmenu-button", **kwargs)
         self.connect("clicked", lambda _: self.launch_app())
-        self.connect("focus", lambda *_: self.set_app_icon(self.is_focus()))
         self.add(self.button_box)
-
-    def set_app_icon(self, focus_event):
-        app_icon = (
-            self.app.icon_name if self.app.icon_name else "application-x-executable"
-        )
-
-        self.app_icon_symbolic.set_from_icon_name(
-            app_icon if not focus_event else app_icon + "-symbolic", 1
-        )
 
     def launch_app(self):
         command = " ".join(
@@ -112,7 +113,7 @@ class AppMenu(PopupWindow):
     def __init__(self, **kwargs):
         self.scrolled_window = ScrolledWindow(
             name="appmenu-scroll",
-            min_content_height=400,
+            max_content_size=(-1, 340),
             visible=False,
         )
         self.applications = sorted(
@@ -140,16 +141,7 @@ class AppMenu(PopupWindow):
             app_button.connect("clicked", self.on_app_launch)
             self.buttons_box.add(app_button)
         self.app_names = self.application_buttons.keys()
-        self.searched_buttons_box = Box(orientation="v", visible=False)
-        self.scrolled_window.add_children(
-            Box(
-                orientation="v",
-                children=[
-                    self.buttons_box,
-                    self.searched_buttons_box,
-                ],
-            ),
-        )
+        self.scrolled_window.children = (Box(orientation="v", children=self.buttons_box),)
 
         self.recent_applications = Box(orientation="v")
         self.update_recent_apps()
@@ -159,6 +151,7 @@ class AppMenu(PopupWindow):
             anchor="center",
             transition_type="slide-down",
             child=Box(
+                size=(700,450),
                 name="appmenu",
                 orientation="v",
                 spacing=20,
@@ -176,14 +169,12 @@ class AppMenu(PopupWindow):
         )
 
     def update_recent_apps(self, recent_apps: list | None = None):
-        self.recent_applications.reset_children()
-        self.recent_applications.add_children(
-            Label(
-                name="appmenu-heading",
-                label="Recently Used",
-                justfication="left",
-                h_align="start",
-            )
+        self.recent_applications.children = []
+        self.recent_applications.children = Label(
+            name="appmenu-heading",
+            label="Recently Used",
+            justfication="left",
+            h_align="start",
         )
         recent_apps = get_recent_apps() if not recent_apps else recent_apps
         for app_id in recent_apps:
@@ -191,7 +182,9 @@ class AppMenu(PopupWindow):
                 if app.name == app_id:
                     recent_app_button = ApplicationButton(app)
                     recent_app_button.connect("clicked", self.on_app_launch)
-                    self.recent_applications.add_children(recent_app_button)
+                    self.recent_applications.children = (
+                        self.recent_applications.children + [recent_app_button]
+                    )
 
     def on_app_launch(self, app_button: ApplicationButton, *_):
         self.toggle_popup()

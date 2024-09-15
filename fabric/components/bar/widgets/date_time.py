@@ -2,7 +2,7 @@ import time
 
 from gi.repository import GLib
 
-from fabric.widgets import Button
+from fabric.widgets.button import Button
 
 
 class DateTime(Button):

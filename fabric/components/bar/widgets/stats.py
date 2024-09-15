@@ -1,7 +1,10 @@
 import psutil
 from gi.repository import GLib
 
-from fabric.widgets import Box, Button, Image, Label
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 
 from fabric.utils import exec_shell_command
 
@@ -45,7 +48,7 @@ class Temps(Button):
 
     def get_gpu_temp(self):
         if self.fan_icon.get_icon_name() != "freon-gpu-temperature-symbolic":
-            self.fan_icon.set_from_icon_name("freon-gpu-temperature-symbolic", 3)
+            self.fan_icon.set_from_icon_name("freon-gpu-temperature-symbolic", 2)
         gpu_temp = exec_shell_command(
             "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
         ).strip("\n")

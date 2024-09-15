@@ -1,5 +1,6 @@
 import math
 import os
+import gi
 from typing import List
 
 from fabric.utils import (
@@ -21,6 +22,11 @@ from services.mpris import MprisPlayer, MprisPlayerManager
 from utils.accent import grab_color
 from utils.bezier import CubicBezier
 from widgets.circleimage import CircleImage
+
+
+gi.require_version("Gtk", "3.0")
+from gi.repository import Gtk, Gdk
+
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -62,25 +68,22 @@ class PlayerBoxHandler(Box):
 
 class PlayerBoxStack(Box):
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
-        super().__init__(orientation="v")
-
         # The player stack
         self.player_stack = Stack(
             transition_type="slide-left-right",
             transition_duration=500,
             name="player-stack",
         )
-        self.hide()
         self.current_stack_pos = 0
 
         # Static buttons
         self.next_player_button = Button(
             name="panel-button",
-            icon_image=Image(icon_name="go-next-symbolic", pixel_size=24),
+            image=Image(icon_name="go-next-symbolic", pixel_size=24),
         )
         self.prev_player_button = Button(
             name="panel-button",
-            icon_image=Image(icon_name="go-previous-symbolic", pixel_size=24),
+            image=Image(icon_name="go-previous-symbolic", pixel_size=24),
         )
         self.next_player_button.connect(
             "clicked",
@@ -92,7 +95,7 @@ class PlayerBoxStack(Box):
         )
 
         # List to store player buttons
-        self.player_buttons = []
+        self.player_buttons: list[Button] = []
 
         # Box to contain all the buttons
         self.buttons_box = CenterBox(
@@ -100,7 +103,10 @@ class PlayerBoxStack(Box):
             end_children=self.next_player_button,
         )
 
-        self.add_children([self.player_stack, self.buttons_box])
+        super().__init__(
+            orientation="v", children=[self.player_stack, self.buttons_box]
+        )
+        self.hide()
 
         self.mpris_manager = mpris_manager
         self.mpris_manager.connect("player-appeared", self.on_new_player)
@@ -113,7 +119,7 @@ class PlayerBoxStack(Box):
 
     def on_player_clicked(self, type):
         # unset active from prev active button
-        self.remove_class(self.player_buttons[self.current_stack_pos], "active")
+        self.player_buttons[self.current_stack_pos].remove_style_class("active")
         if type == "next":
             self.current_stack_pos = (
                 self.current_stack_pos + 1
@@ -127,7 +133,7 @@ class PlayerBoxStack(Box):
                 else len(self.player_stack.get_children()) - 1
             )
         # set new active button
-        self.add_class(self.player_buttons[self.current_stack_pos], "active")
+        self.player_buttons[self.current_stack_pos].add_style_class("active")
         self.player_stack.set_visible_child(
             self.player_stack.get_children()[self.current_stack_pos],
         )
@@ -138,7 +144,11 @@ class PlayerBoxStack(Box):
             self.buttons_box.hide()
         else:
             self.buttons_box.show()
-        self.player_stack.add_children(PlayerBox(player=MprisPlayer(player)))
+
+        self.player_stack.children = self.player_stack.children + [
+            PlayerBox(player=MprisPlayer(player))
+        ]
+
         self.make_new_player_button(self.player_stack.get_children()[-1])
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
@@ -166,9 +176,9 @@ class PlayerBoxStack(Box):
         new_button = Button(name="player-stack-button")
 
         def on_player_button_click(button: Button):
-            self.remove_class(self.player_buttons[self.current_stack_pos], "active")
+            self.player_buttons[self.current_stack_pos].remove_style_class("active")
             self.current_stack_pos = self.player_buttons.index(button)
-            self.add_class(button, "active")
+            button.add_style_class("active")
             self.player_stack.set_visible_child(player_box)
 
         new_button.connect(
@@ -186,12 +196,6 @@ class PlayerBoxStack(Box):
             ],
         )
         self.buttons_box.add_center(self.player_buttons[-1])
-
-    def remove_class(self, widget, class_name: str):
-        GLib.idle_add(widget.get_style_context().remove_class, class_name)
-
-    def add_class(self, widget, class_name: str):
-        GLib.idle_add(widget.get_style_context().add_class, class_name)
 
 
 def easeOutBounce(t: float) -> float:
@@ -243,7 +247,7 @@ class PlayerBox(Box):
             v_align="start",
             style="border-radius: 100%; box-shadow: 0px 0 4px 0px black;",
         )
-        self.image_stack.add_children(self.image_box)
+        self.image_stack.children = self.image_stack.children + [self.image_box]
 
         self.player.connect("notify::arturl", self.set_image)
 
@@ -252,15 +256,17 @@ class PlayerBox(Box):
             label="No Title",
             name="player-title",
             justfication="left",
-            character_max_width=24,
+            max_chars_width=24,
             ellipsization="end",
             h_align="start",
         )
+        self.track_title.set_ellipsize(3)
+
         self.track_artist = Label(
             label="No Artist",
             name="player-artist",
             justfication="left",
-            character_max_width=24,
+            max_chars_width=24,
             ellipsization="end",
             h_align="start",
         )
@@ -396,15 +402,13 @@ class PlayerBox(Box):
             style=f"min-width:{self.player_width}px; min-height:{self.image_size}px;",
         )
         self.overlay_box = Overlay(
-            children=self.outer_box,
+            child=self.outer_box,
             overlays=[
                 self.inner_box,
                 self.player_info_box,
                 self.image_stack,
                 Box(
-                    children=Image(
-                        icon_name=f"{self.player.player_name}-symbolic", icon_size=3
-                    ),
+                    children=Image(icon_name=self.player.player_name, size=21),
                     h_align="end",
                     v_align="start",
                     style="margin-top: 20px; margin-right: 10px;",
@@ -412,14 +416,15 @@ class PlayerBox(Box):
                 ),
             ],
         )
-        self.add_children(self.overlay_box)
+        self.children = self.children + [self.overlay_box]
         self.set_style(f"min-height:{self.image_size + 4}px")
 
         invoke_repeater(1000, self.move_seekbar)
 
     def on_scale_move(self, scale: Scale, event, moved_pos: int):
         scale.set_value(moved_pos)
-        self.player.set_position(moved_pos)
+        self.player.position = moved_pos
+        # self.player.set_position(moved_pos)
 
     def on_player_exit(self, _, value):
         self.exit = value
@@ -436,12 +441,12 @@ class PlayerBox(Box):
         self.player.previous()
 
     def shuffle_update(self, _, __):
-        child = self.shuffle_button.get_child()
-        status = self.player.shuffle
-        if status is True:
-            child.set_style("color: #B8BB26;")  # type: ignore
+        if self.player.shuffle is True:
+            self.shuffle_icon.style_classes = []
+            self.shuffle_icon.add_style_class("shuffle-on")
         else:
-            child.set_style("")  # type: ignore
+            self.shuffle_icon.style_classes = []
+            self.shuffle_icon.add_style_class("shuffle-off")
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status

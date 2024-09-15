@@ -1,14 +1,15 @@
 # from fabric.widgets.wayland import Window
 from typing import Literal
 
+from fabric.widgets.widget import Widget
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.wayland import Window
+from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GLib
 
 
-class inhibitOverlay(Window):
+class inhibitOverlay(WaylandWindow):
     def __init__(self, size: int = 1920):
         self.eventbox = EventBox(
             events=["button-press", "key-release"],
@@ -21,15 +22,15 @@ class inhibitOverlay(Window):
             all_visible=False,
             visible=False,
             exclusive=False,
-            children=self.eventbox,
+            child=self.eventbox,
             keyboard_mode="on-demand",
         )
 
 
-class PopupWindow(Window):
+class PopupWindow(WaylandWindow):
     def __init__(
         self,
-        child=None,
+        child: Widget | None = None,
         transition_type: Literal[
             "none",
             "crossfade",
@@ -52,11 +53,10 @@ class PopupWindow(Window):
         self.currtimeout = 0
         self.popup_running = False
         self.enable_inhibitor = enable_inhibitor
-
         self.revealer = Revealer(
+            child=child,
             transition_type=transition_type,
             transition_duration=transition_duration,
-            children=child,
             visible=False,
         )
         self.revealer_box = Box(style="padding:1px;", children=self.revealer)
@@ -67,7 +67,7 @@ class PopupWindow(Window):
             all_visible=False,
             visible=False,
             exclusive=False,
-            children=self.revealer_box,
+            child=self.revealer_box,
             keyboard_mode=keyboard_mode,
             *kwargs,
         )

@@ -5,9 +5,14 @@ import os
 import requests
 from gi.repository import GLib
 
-from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.core.service import Property, Service, Signal
 from fabric.utils import invoke_repeater
-from fabric.widgets import Box, Button, CenterBox, Label
+
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
+
 from widgets.popup_window import PopupWindow
 
 city = "Toronto"
@@ -28,10 +33,11 @@ if not os.path.exists(PRAYER_TIMES_FILE):
 
 
 class PrayerTimesService(Service):
-    __gsignals__ = SignalContainer(
-        Signal("update", "run-first", None, (object,)),
-        Signal("changed", "run-first", None, ()),
-    )
+    @Signal
+    def update(self, json_data: object) -> object: ...
+
+    @Signal
+    def changed(self) -> None: ...
 
     def __init__(self, **kwargs):
         self.prayer_info: dict = {
@@ -77,21 +83,20 @@ class PrayerTimesService(Service):
         self.update_times(json_data)
         return True if not run_once else False
 
-    @Property(value_type=object, flags="readable")
+    @Property(object, "readable")
     def prayer_data(self) -> dict:
         return self.prayer_info
 
     def update_times(self, data):
-        print("Updating times")
         times = data["data"]["timings"]
         for prayer_name in self.prayer_info.keys():
             self.prayer_info[prayer_name][1] = times[prayer_name]
         self.notifier("prayer-data")
-        self.emit("update", self.prayer_info)
+        self.update(self.prayer_info)
 
     def notifier(self, name: str, args=None):
         self.notify(name)
-        self.emit("changed")
+        self.changed()
 
 
 class PrayerTimes(Box):
@@ -124,9 +129,9 @@ class PrayerTimes(Box):
         def time_format(time):
             d = datetime.datetime.strptime(time, "%H:%M")
             return d.strftime("  %I:%M %p")
+
         if prayer_info["Fajr"][1] == "":
             return
-        print(prayer_info)
         self.fajr.set_label(prayer_info["Fajr"][0])
         self.fajr_time.set_label(time_format(prayer_info["Fajr"][1]))
 

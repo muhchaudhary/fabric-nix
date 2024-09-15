@@ -1,7 +1,7 @@
 import datetime
 import subprocess
 
-from fabric.service import Service
+from fabric.core.service import Service
 from fabric.utils import exec_shell_command
 from gi.repository import GLib, Gio
 from loguru import logger

@@ -12,7 +12,9 @@ from components.quick_settings.widgets.sliders import AudioSlider, BrightnessSli
 from widgets.player import PlayerBoxStack
 from widgets.popup_window import PopupWindow
 
-from fabric.widgets import Box, Button, Image
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
 
 
 class QuickSettingsButtonBox(Box):
@@ -23,6 +25,7 @@ class QuickSettingsButtonBox(Box):
             h_align="start",
             v_align="start",
             h_expand=True,
+            v_expand=True,
             **kwargs,
         )
         self.buttons = Box(
@@ -64,13 +67,13 @@ class QuickSettings(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
         self.mprisBox = PlayerBoxStack(config.mprisplayer)
-        self.screen_bright_slider = BrightnessSlider(config.brightness)
-        self.audio_slider_box = AudioSlider(config.audio)
+        # self.screen_bright_slider = BrightnessSlider(config.brightness)
+        # self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
 
         self.add(self.buttons_box)
-        self.add(self.audio_slider_box)
-        self.add(self.screen_bright_slider)
+        # self.add(self.audio_slider_box)
+        # self.add(self.screen_bright_slider)
         self.add(self.mprisBox)
 
 
@@ -89,8 +92,8 @@ class QuickSettingsButton(Button):
             "visible",
         )
 
-        self.audio_icon = Image(name="panel-icon")
-        config.audio.connect("speaker-changed", self.update_audio)
+        # self.audio_icon = Image(name="panel-icon")
+        # config.audio.connect("speaker-changed", self.update_audio)
 
         def get_network_icon(_):
             wifi = config.network.wifi_device
@@ -103,7 +106,13 @@ class QuickSettingsButton(Button):
         config.network.connect("device-ready", get_network_icon)
 
         self.add(
-            Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])
+            Box(
+                children=[
+                    self.network_icon,
+                    self.bluetooth_icon,
+                    # self.audio_icon
+                ]
+            )
         )
         self.connect("clicked", self.on_click)
 
@@ -116,7 +125,7 @@ class QuickSettingsButton(Button):
 
     def update_audio(self, *args):
         vol = config.audio.speaker.volume
-        if config.audio.speaker.is_muted:
+        if config.audio.speaker.muted:
             self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], 1)
             return
         if vol >= 66:

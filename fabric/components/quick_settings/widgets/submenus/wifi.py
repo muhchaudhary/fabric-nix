@@ -6,7 +6,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
-from fabric.widgets.scrolled_window import ScrolledWindow
+from fabric.widgets.scrolledwindow import ScrolledWindow
 
 from services.wifi import NetworkClient, Wifi
 
@@ -28,9 +28,11 @@ class WifiSubMenu(QuickSubMenu):
         )
 
         self.child = ScrolledWindow(
-            min_content_height=200,
-            propagate_natural_width=True,
-            children=self.available_networks_box,
+            min_content_size=(-1, 100),
+            max_content_size=(-1, 100),
+            propagate_width=True,
+            propagate_height=True,
+            child=self.available_networks_box,
         )
 
         super().__init__(
@@ -45,11 +47,10 @@ class WifiSubMenu(QuickSubMenu):
         self.build_wifi_options()
 
     def build_wifi_options(self):
-        self.available_networks_box.reset_children()
+        self.available_networks_box.children = []
         if not self.wifi_device:
             return
-        access_points = self.wifi_device.get_access_points()
-        for ap in access_points:
+        for ap in self.wifi_device.access_points:
             if ap.get("ssid") != "Unknown":
                 btn = self.make_button_from_ap(ap)
                 self.available_networks_box.add(btn)

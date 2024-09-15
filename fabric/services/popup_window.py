@@ -1,14 +1,13 @@
-# from fabric.widgets.wayland import Window
 from typing import Literal
 
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.wayland import Window
+from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GLib
 
 
-class inhibitOverlay(Window):
+class inhibitOverlay(WaylandWindow):
     def __init__(self, size: int = 1920):
         self.eventbox = EventBox(
             events=["button-press", "key-release"],
@@ -28,7 +27,7 @@ class inhibitOverlay(Window):
         self.eventbox.set_can_focus(True)
 
 
-class PopupWindow(Window):
+class PopupWindow(WaylandWindow):
     def __init__(
         self,
         child=None,

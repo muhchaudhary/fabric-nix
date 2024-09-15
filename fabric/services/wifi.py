@@ -1,6 +1,6 @@
 from typing import List, Literal
 import gi
-from fabric.service import Property, Service, Signal, SignalContainer
+from fabric.core.service import Property, Service, Signal
 from fabric.utils import bulk_connect
 from gi.repository import Gio
 from loguru import logger
@@ -15,10 +15,11 @@ except ValueError:
 
 
 class Wifi(Service):
-    __gsignals__ = SignalContainer(
-        Signal("changed", "run-first", None, ()),
-        Signal("enabled", "run-first", None, (bool,)),
-    )
+    @Signal
+    def changed(self) -> None: ...
+
+    @Signal
+    def enabled(self) -> bool: ...
 
     def __init__(self, client: NM.Client, device: NM.DeviceWifi, **kwargs):
         self._client: NM.Client = client
@@ -71,7 +72,74 @@ class Wifi(Service):
     def toggle_wifi(self):
         self._client.wireless_set_enabled(not self._client.wireless_get_enabled())
 
-    def get_access_points(self):
+    # def set_active_ap(self, ap):
+    #     self._device.access
+
+    def scan(self):
+        self._device.request_scan_async(
+            None,
+            lambda device, result: [
+                device.request_scan_finish(result),
+                self.emit("changed"),
+            ],
+        )
+
+    def notifier(self, name: str, *args):
+        self.notify(name)
+        self.emit("changed")
+        return
+
+    @Property(bool, "read-write", default_value=False)
+    def enabled(self) -> bool:  # type: ignore
+        return bool(self._client.wireless_get_enabled())
+
+    @enabled.setter
+    def enabled(self, value: bool):
+        self._client.wireless_set_enabled(value)
+
+    @Property(int, "readable")
+    def strength(self):
+        return self._ap.get_strength() if self._ap else -1
+
+    @Property(str, "readable")
+    def icon_name(self):
+        if not self._ap:
+            return "network-wireless-disabled-symbolic"
+
+        if self.internet == "activated":
+            return {
+                80: "network-wireless-signal-excellent-symbolic",
+                60: "network-wireless-signal-good-symbolic",
+                40: "network-wireless-signal-ok-symbolic",
+                20: "network-wireless-signal-weak-symbolic",
+                00: "network-wireless-signal-none-symbolic",
+            }.get(
+                min(80, 20 * round(self._ap.get_strength() / 20)),
+                "network-wireless-no-route-symbolic",
+            )
+        if self.internet == "activating":
+            return "network-wireless-acquiring-symbolic"
+
+        return "network-wireless-offline-symbolic"
+
+    @Property(int, "readable")
+    def frequency(self):
+        return self._ap.get_frequency() if self._ap else -1
+
+    @Property(int, "readable")
+    def internet(self):
+        return {
+            NM.ActiveConnectionState.ACTIVATED: "activated",
+            NM.ActiveConnectionState.ACTIVATING: "activating",
+            NM.ActiveConnectionState.DEACTIVATING: "deactivating",
+            NM.ActiveConnectionState.DEACTIVATED: "deactivated",
+        }.get(
+            self._device.get_active_connection().get_state(),
+            "unknown",
+        )
+
+    @Property(object, "readable")
+    def access_points(self) -> List[object]:
         points: list[NM.AccessPoint] = self._device.get_access_points()
 
         def make_ap_dict(ap: NM.AccessPoint):
@@ -99,84 +167,14 @@ class Wifi(Service):
 
         return list(map(make_ap_dict, points))
 
-    # def set_active_ap(self, ap):
-    #     self._device.access
-
-    def scan(self):
-        self._device.request_scan_async(
-            None,
-            lambda device, result: [
-                device.request_scan_finish(result),
-                self.emit("changed"),
-            ],
-        )
-
-    def notifier(self, name: str, *args):
-        self.notify(name)
-        self.emit("changed")
-        return
-
-    @Property(value_type=bool, flags="read-write", default_value=False)
-    def enabled(self) -> bool:  # type: ignore
-        return bool(self._client.wireless_get_enabled())
-
-    @enabled.setter
-    def enabled(self, value: bool):
-        self._client.wireless_set_enabled(value)
-
-    @Property(value_type=int, flags="readable")
-    def strength(self):
-        return self._ap.get_strength() if self._ap else -1
-
-    @Property(value_type=str, flags="readable")
-    def icon_name(self):
-        if not self._ap:
-            return "network-wireless-disabled-symbolic"
-
-        if self.internet == "activated":
-            return {
-                80: "network-wireless-signal-excellent-symbolic",
-                60: "network-wireless-signal-good-symbolic",
-                40: "network-wireless-signal-ok-symbolic",
-                20: "network-wireless-signal-weak-symbolic",
-                00: "network-wireless-signal-none-symbolic",
-            }.get(
-                min(80, 20 * round(self._ap.get_strength() / 20)),
-                "network-wireless-no-route-symbolic",
-            )
-        if self.internet == "activating":
-            return "network-wireless-acquiring-symbolic"
-
-        return "network-wireless-offline-symbolic"
-
-    @Property(value_type=int, flags="readable")
-    def frequency(self):
-        return self._ap.get_frequency() if self._ap else -1
-
-    @Property(value_type=int, flags="readable")
-    def internet(self):
-        return {
-            NM.ActiveConnectionState.ACTIVATED: "activated",
-            NM.ActiveConnectionState.ACTIVATING: "activating",
-            NM.ActiveConnectionState.DEACTIVATING: "deactivating",
-            NM.ActiveConnectionState.DEACTIVATED: "deactivated",
-        }.get(
-            self._device.get_active_connection().get_state(),
-            "unknown",
-        )
-
-    @Property(value_type=object, flags="readable")
-    def access_points(self) -> List[dict]:
-        return self.get_access_points()
-
-    @Property(value_type=str, flags="readable")
+    @Property(str, "readable")
     def ssid(self):
         if not self._ap:
             return "Disconnected"
         ssid = self._ap.get_ssid().get_data()
         return NM.utils_ssid_to_utf8(ssid) if ssid else "Unknown"
 
-    @Property(value_type=int, flags="readable")
+    @Property(int, "readable")
     def state(self):
         return {
             NM.DeviceState.UNMANAGED: "unmanaged",
@@ -195,7 +193,8 @@ class Wifi(Service):
 
 
 class NetworkClient(Service):
-    __gsignals__ = SignalContainer(Signal("device-ready", "run-first", None, ()))
+    @Signal
+    def device_ready(self) -> None: ...
 
     def __init__(self, **kwargs):
         self._client: NM.Client | None = None
@@ -242,6 +241,6 @@ class NetworkClient(Service):
             f"nmcli device wifi connect {bssid}", lambda *args: print(args)
         )
 
-    @Property(value_type=str, flags="readable")
+    @Property(str, "readable")
     def primary_device(self) -> Literal["wifi", "wired"] | None:
         return self.get_primary_device()

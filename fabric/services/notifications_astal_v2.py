@@ -1,7 +1,7 @@
 import gi
 from loguru import logger
 
-from fabric.service import Service
+from fabric.core.service import Service
 
 gi.require_version("AstalNotifd", "0.1")
 from gi.repository import AstalNotifd

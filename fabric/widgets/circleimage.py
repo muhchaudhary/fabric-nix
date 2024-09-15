@@ -37,24 +37,21 @@ class CircleImage(Gtk.DrawingArea, Widget):
     ):
         Gtk.DrawingArea.__init__(
             self,
-            **(self.do_get_filtered_kwargs(kwargs)),
+            **kwargs,
         )
         Widget.__init__(
             self,
+            name,
             visible,
             all_visible,
             style,
-            style_compiled,
-            style_append,
-            style_add_brackets,
             tooltip_text,
             tooltip_markup,
             h_align,
             v_align,
             h_expand,
             v_expand,
-            name,
-            None,
+            size=size
         )
 
         self.transition_type = transition_type
@@ -71,7 +68,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
             else None
         )
         self.set_size_request(self.size, self.size)
-        self.do_connect_signals_for_kwargs(kwargs)
+        # self.do_connect_signals_for_kwargs(kwargs)
         self.connect("draw", self.draw)
 
     def draw(self, wdiget: Gtk.DrawingArea, ctx: cairo.Context):

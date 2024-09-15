@@ -1,6 +1,10 @@
 from utils.hadith_grabber import Hadith
 
-from fabric.widgets import Box, CenterBox, DateTime, Label, WaylandWindow
+from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.datetime import DateTime
+from fabric.widgets.label import Label
+from fabric.widgets.wayland import WaylandWindow
 
 
 class ClockWidget(WaylandWindow):
@@ -24,7 +28,7 @@ class ClockWidget(WaylandWindow):
             # margin="100px 0px 0px 0px",
             all_visible=True,
             exclusive=False,
-            children=self.center_box,
+            child=self.center_box,
         )
 
         self.show_all()

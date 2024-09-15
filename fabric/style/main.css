@@ -12,7 +12,7 @@
   --bg3: #665c54;
   --bg4: #7c6f64;
 
-  --fg: #f7efd1;
+  --fg: #edebe2;
   --fg1: #ebdbb2;
   --fg2: #d5c4a1;
   --fg3: #bdae93;
@@ -43,6 +43,11 @@
   font-weight: 500;
   font-size: 15px;
   color: var(--fg);
+}
+
+
+#test-icons {
+  color: green;
 }
 
 #main-window {
@@ -105,6 +110,7 @@ scale {
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
+
 }
 
 #quicksettings-box {
@@ -171,6 +177,7 @@ scale {
 #player-stack-button {
   border-radius: 5px;
   min-width: 30px;
+  min-height: 10px;
   margin: 10px 1px 10px 1px;
   background-color: var(--fg);
 }
@@ -437,8 +444,6 @@ scale {
   border-width: 2px;
   border-style: solid;
   border-color: #b2b2b2;
-  min-width: 700px;
-  min-height: 450px;
 }
 
 #appmenu-heading {
@@ -545,3 +550,5 @@ scale {
   /* border-radius: 10px; */
 }
 /* ------------------------------------------------------------------------------------------ */
+
+

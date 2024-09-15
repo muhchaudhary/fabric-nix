@@ -3,8 +3,12 @@ import datetime
 import config
 import psutil
 
-from fabric.utils.fabricator import Fabricator
-from fabric.widgets import Box, Button, Image, Label, Revealer
+from fabric.core.fabricator import Fabricator
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
 
 
 class BatteryIndicator(Box):
@@ -80,23 +84,23 @@ class BatteryIndicator(Box):
         if charging:
             if self.current_class != "charging":
                 self.current_class = "charging"
-                self.battery_icon.set_style_classes([self.current_class])
-                self.battery_percent.set_style_classes([self.current_class])
+                self.battery_icon.style_classes = [self.current_class]
+                self.battery_percent.style_classes = [self.current_class]
         elif 30 < int(round(percent)) < 50:
             if self.current_class != "low":
                 self.current_class = "low"
-                self.battery_icon.set_style_classes([self.current_class])
-                self.battery_percent.set_style_classes([self.current_class])
+                self.battery_icon.style_classes = [self.current_class]
+                self.battery_percent.style_classes = [self.current_class]
 
         elif int(round(percent)) <= 30:
             if self.current_class != "critical":
                 self.current_class = "critical"
-                self.battery_icon.set_style_classes([self.current_class])
-                self.battery_percent.set_style_classes([self.current_class])
+                self.battery_icon.style_classes = [self.current_class]
+                self.battery_percent.style_classes = [self.current_class]
         elif self.current_class != "":
             self.current_class = ""
-            self.battery_icon.set_style_classes([])
-            self.battery_percent.set_style_classes([])
+            self.battery_icon.style_classes = []
+            self.battery_percent.style_classes = []
 
     def poll_batt(self):
         battery = psutil.sensors_battery()

@@ -7,7 +7,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
-from fabric.widgets.scrolled_window import ScrolledWindow
+from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
 
 
@@ -15,31 +15,32 @@ class BluetoothDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
         # TODO: FIX STYLING, make it look better
         super().__init__(spacing=2, name="panel-button", h_expand=True, **kwargs)
-        self.device = device
-        self.device.connect("closed", lambda _: self.destroy())
+        self.device: BluetoothDevice = device
 
         self.connect_button = Button(name="panel-button")
         self.connect_button.connect(
             "clicked",
-            lambda _: self.device.set_connection(not self.device.connected),
+            lambda _: self.device.set_property("connecting", not self.device.connected),
         )
-        self.device.connect("connecting", self.on_device_connecting)
+
+        self.device.connect("notify::connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
+
 
         self.add_start(
             Image(
-                icon_name=device.icon + "-symbolic", icon_size=2, name="submenu-icon"
-            ),
-        )  # type: ignore
+                icon_name=device.icon_name + "-symbolic", size=16, name="submenu-icon"
+            )
+        )
         self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore
         self.add_end(self.connect_button)
 
-    def on_device_connecting(self, device: BluetoothDevice, connecting):
-        if connecting:
+        self.on_device_connect()
+
+    def on_device_connecting(self, device, _):
+        if self.device.connecting:
             self.connect_button.set_label("connecting...")
-        elif device.connected:
-            self.connect_button.set_label("connected")
-        else:
+        elif self.device.connected is False:
             self.connect_button.set_label("failed to connect")
 
     def on_device_connect(self, *args):
@@ -59,6 +60,11 @@ class BluetoothSubMenu(QuickSubMenu):
             h_expand=True,
             children=Label("Paired Devices", h_align="start"),
         )
+
+        for device in self.client.devices:
+            if device.paired:
+                self.paired_devices.add(BluetoothDeviceBox(device))
+
         self.available_devices = Box(
             orientation="v",
             spacing=4,
@@ -69,13 +75,15 @@ class BluetoothSubMenu(QuickSubMenu):
         self.scan_image = Image(
             icon_name="view-refresh-symbolic", icon_size=1, pixel_size=20
         )
-        self.scan_button = Button(icon_image=self.scan_image, name="panel-button")
+        self.scan_button = Button(image=self.scan_image, name="panel-button")
         self.scan_button.connect("clicked", self.on_scan_toggle)
 
         self.child = ScrolledWindow(
-            min_content_height=200,
-            propagate_natural_width=True,
-            children=Box(
+            min_content_size=(-1, 100),
+            max_content_size=(-1, 100),
+            propagate_width=True,
+            propagate_height=True,
+            child=Box(
                 orientation="v",
                 children=Box(
                     orientation="v",
@@ -87,7 +95,10 @@ class BluetoothSubMenu(QuickSubMenu):
         super().__init__(
             title="Bluetooth",
             title_icon="bluetooth-active-symbolic",
-            child=Box(orientation="v", children=[self.scan_button, self.child]),
+            child=Box(
+                orientation="v",
+                children=[self.scan_button, self.child],
+            ),
             **kwargs,
         )
 
@@ -98,8 +109,7 @@ class BluetoothSubMenu(QuickSubMenu):
         ) if self.client.scanning else btn.set_style_classes([""])
 
     def populate_new_device(self, client: BluetoothClient, address: str):
-        device: BluetoothDevice = client.get_device_from_addr(address)
-        # device.connect("notify:connected", self.on_device_connect)
+        device: BluetoothDevice = client.get_device(address)
         if device.paired:
             self.paired_devices.add(BluetoothDeviceBox(device))
         else:
@@ -133,7 +143,7 @@ class BluetoothToggle(QuickSubToggle):
             self.action_label.set_label("Disabled")
 
     def new_device(self, client: BluetoothClient, address):
-        device: BluetoothDevice = client.get_device_from_addr(address)
+        device: BluetoothDevice = client.get_device(address)
         device.connect("notify::connected", self.device_connected)
 
     def device_connected(self, device: BluetoothDevice, _):

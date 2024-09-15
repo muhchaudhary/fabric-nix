@@ -1,6 +1,14 @@
 import gi
 from services.notifications_astal_v2 import NotificationServer
-from fabric.widgets import Box, Button, Image, Label, Revealer, WaylandWindow
+
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
+from fabric.widgets.revealer import Revealer
+from fabric.widgets.wayland import WaylandWindow
+
+
 from fabric.utils import invoke_repeater
 from loguru import logger
 
@@ -74,14 +82,14 @@ class NotificationBox(Revealer):
                                 Label(
                                     notification.get_summary(),
                                     h_align="start",
-                                    character_max_width=40,
+                                    max_chars_width=40,
                                     ellipsization="end",
                                     markup=True,
                                 ),
                                 Label(
                                     notification.get_body(),
                                     h_align="start",
-                                    character_max_width=40,
+                                    max_chars_width=40,
                                     ellipsization="end",
                                     markup=True,
                                 ),
@@ -141,7 +149,7 @@ class NotificationPopup(WaylandWindow):
         )
         super().__init__(
             anchor="top right",
-            children=self.notifications,
+            child=self.notifications,
             layer="top",
             all_visible=True,
             visible=True,
