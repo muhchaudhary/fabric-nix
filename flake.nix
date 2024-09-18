@@ -44,9 +44,8 @@
       );
   in {
     devShells = eachSystem (pkgs: let
-      fabric = pkgs.python3Packages.callPackage ./nix/legacy/fabric.nix {};
-      gir-cvc = pkgs.callPackage ./nix/legacy/gir-cvc.nix {};
-      rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};
+      fabric = pkgs.python3Packages.callPackage ./nix/fabric.nix {};
+      gir-cvc = pkgs.callPackage ./nix/cvc/gir-cvc.nix {};
     in {
       default = pkgs.mkShell {
         buildInputs = with pkgs; [
