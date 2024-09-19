@@ -36,10 +36,10 @@ class Brightness(Service):
     # )
 
     @Signal
-    def screen(self) -> None: ...
+    def screen(self, value: int) -> None: ...
 
     @Signal
-    def kbd(self) -> None: ...
+    def kbd(self, value: int) -> None: ...
 
     def __init__(self, **kwargs):
         self.screen_backlight_path = "/sys/class/backlight/" + screen
@@ -65,7 +65,7 @@ class Brightness(Service):
         super().__init__(**kwargs)
 
     @Property(int, "read-write")
-    def screen_brightness(self) -> int:
+    def screen_brightness(self) -> int: # type: ignore
         return (
             int(
                 os.read(
