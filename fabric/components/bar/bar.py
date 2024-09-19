@@ -61,10 +61,10 @@ class StatusBar(WaylandWindow):
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.sysinfo = Temps()
-        # self.sys_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
+        self.sys_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
         self.center_box.end_children = [
             self.sysinfo,
-            # self.sys_tray,
+            self.sys_tray,
             self.quick_settings,
             self.battery,
             self.date_time,

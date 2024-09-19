@@ -37,11 +37,11 @@ class SystemOSD(PopupWindow):
         )
 
     def update_label_audio(self, *args):
-        icon_name = "-".join(str(config.audio.speaker.icon).split("-")[0:2])
+        icon_name = "-".join(str(config.audio.speaker.icon_name).split("-")[0:2])
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
         quick_accent = accent
-        if config.audio.speaker.is_muted:
+        if config.audio.speaker.muted:
             quick_accent = "#a89984"
         self.overlay_fill_box.set_style(
             f"background-image: linear-gradient(to top, alpha({quick_accent}, 0.8) {round(self.vol)}%, alpha(#303030, 0.8) {round(self.vol)}%);",

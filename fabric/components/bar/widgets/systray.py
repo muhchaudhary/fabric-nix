@@ -21,8 +21,6 @@ class SystemTrayWidget(Box):
         self.watcher = Gray.Watcher()
         self.watcher.connect("item-added", self.on_item_added)
 
-    # 6901 markwood place misissauga
-
     def on_item_added(self, _, identifier: str):
         item = self.watcher.get_item_for_identifier(identifier)
         item_button = self.do_bake_item_button(item)
@@ -73,6 +71,7 @@ class SystemTrayWidget(Box):
                 except Exception as e:
                     logger.error(e)
             case 3:
+                return  # can't get item.get_menu() working just yet
                 menu = item.get_menu()
                 menu.set_name("system-tray-menu")
                 if menu:

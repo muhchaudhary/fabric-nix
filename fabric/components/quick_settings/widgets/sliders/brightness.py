@@ -6,21 +6,22 @@ class BrightnessSlider(QuickSettingsScale):
     def __init__(
         self,
         client: Brightness,
-        **kwargs,
     ):
         self.client = client
         super().__init__(
             min=0,
-            max=client.max_screen,
+            max=client.max_screen if client.max_screen != -1 else 0,
             start_value=client.screen_brightness,
             icon_name="display-brightness-symbolic",
-            **kwargs,
         )
 
-        self.scale.connect("change-value", self.on_scale_move)
-        self.client.connect("screen", self.on_brightness_change)
         if self.client.screen_brightness == -1:
             self.destroy()
+            return
+
+        if self.scale:
+            self.scale.connect("change-value", self.on_scale_move)
+            self.client.connect("screen", self.on_brightness_change)
 
     def on_scale_move(self, _, __, moved_pos):
         # TODO switch to getters and setters

@@ -67,13 +67,13 @@ class QuickSettings(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
         self.mprisBox = PlayerBoxStack(config.mprisplayer)
-        # self.screen_bright_slider = BrightnessSlider(config.brightness)
-        # self.audio_slider_box = AudioSlider(config.audio)
+        self.screen_bright_slider = BrightnessSlider(config.brightness)
+        self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
 
         self.add(self.buttons_box)
-        # self.add(self.audio_slider_box)
-        # self.add(self.screen_bright_slider)
+        self.add(self.audio_slider_box)
+        self.add(self.screen_bright_slider)
         self.add(self.mprisBox)
 
 

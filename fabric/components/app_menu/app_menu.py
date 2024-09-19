@@ -47,8 +47,9 @@ class ApplicationButton(Button):
             icon_name=self.app.icon_name
             if self.app.icon_name and ".png" not in self.app.icon_name
             else "application-x-executable-symbolic",
-            size=36,
+            icon_size=36,
         )
+        self.app_icon_symbolic.set_pixel_size(36)
 
         self.app_name = Label(
             name="appmenu-app-name",
@@ -115,7 +116,8 @@ class AppMenu(PopupWindow):
     def __init__(self, **kwargs):
         self.scrolled_window = ScrolledWindow(
             name="appmenu-scroll",
-            max_content_size=(-1, 340),
+            max_content_size=(-1, 437),
+            min_content_size=(-1,437),
             visible=False,
         )
         self.applications = sorted(

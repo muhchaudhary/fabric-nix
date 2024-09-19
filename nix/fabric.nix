@@ -22,7 +22,7 @@ buildPythonPackage rec {
     owner = "Fabric-Development";
     repo = "fabric";
     rev = "581a38ad5f224d382a98639afa2611ebb5039cd5";
-    sha256 = "sha256-kSUnjc6nHCw95SfK7NmQYuDh6Q0fOLQ2P1fMvIDh4xM=";
+    sha256 = "sha256-goG7uIbyJTk/+G40hUyOv9DvRAotZkVgajjxHjCMZzc=";
   };
 
   # Unit tests will fail with hyprland module

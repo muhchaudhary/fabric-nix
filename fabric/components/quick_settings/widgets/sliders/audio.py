@@ -4,15 +4,12 @@ import config
 
 
 class AudioSlider(QuickSettingsScale):
-    def __init__(self, client: Audio, **kwargs):
+    def __init__(self, client: Audio):
         self.client = client
         self.icon_name = ""
         super().__init__(
             min=0,
-            max=100,  # type: ignore
-            # start_value=self.client.speaker.volume,
-            # icon_name=self.client.speaker.icon_name,
-            **kwargs,
+            max=100,
         )
         self.scale.connect("change-value", self.on_scale_move)
         self.client.connect("speaker-changed", self.on_speaker_change)
@@ -37,4 +34,4 @@ class AudioSlider(QuickSettingsScale):
             self.icon.set_pixel_size(28)
 
     def on_button_click(self, *_):
-        self.client.speaker.is_muted = not self.client.speaker.is_muted
+        self.client.speaker.muted = not self.client.speaker.muted
