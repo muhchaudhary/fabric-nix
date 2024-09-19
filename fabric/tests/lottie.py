@@ -7,7 +7,13 @@ from rlottie_python.rlottie_wrapper import LottieAnimation
 
 import fabric
 from fabric.utils import set_stylesheet_from_string
-from fabric.widgets import Box, Button, Overlay, WaylandWindow, Widget
+
+
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.overlay import Overlay
+from fabric.widgets.wayland import Window as WaylandWindow
+from fabric.widgets.widget import Widget
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
@@ -56,23 +62,20 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
     ):
         Gtk.DrawingArea.__init__(
             self,
-            **(self.do_get_filtered_kwargs(kwargs)),
+            # **(self.do_get_filtered_kwargs(kwargs)),
         )
         Widget.__init__(
             self,
+            name,
             visible,
             all_visible,
             style,
-            None,
-            None,
-            None,
             tooltip_text,
             tooltip_markup,
             h_align,
             v_align,
             h_expand,
             v_expand,
-            name,
             None,
         )
         # TODO: switch to just giving it a json/tgs file

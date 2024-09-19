@@ -7,6 +7,8 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
+from fabric.widgets.overlay import Overlay
+from tests.lottie import LottieAnimationWidget, LottieAnimation
 
 
 class BatteryIndicator(Box):
@@ -19,6 +21,9 @@ class BatteryIndicator(Box):
 
         self.is_charging = None
         self.curr_percent = None
+
+        battery = LottieAnimation.from_file("/home/muhammad/Downloads/battery.json")
+        bolt = LottieAnimation.from_file("/home/muhammad/Downloads/bolt.json")
 
         self.battery_animation = LottieAnimationWidget(
             battery,
@@ -41,7 +46,7 @@ class BatteryIndicator(Box):
 
         self.lottie_battery_box = Box(
             children=Overlay(
-                children=Box(
+                child=Box(
                     children=self.battery_animation,
                     style=f"min-height: {self.bolt_animation.height}px;",
                     h_align="center",
@@ -60,7 +65,7 @@ class BatteryIndicator(Box):
         self.battery_percent = Label(name="battery-label")
 
         self.battery_percent_revealer = Revealer(
-            children=self.battery_percent,
+            child=self.battery_percent,
             transition_type="slide-left",
         )
 

@@ -15,15 +15,14 @@ from fabric.widgets.label import Label
 
 from widgets.popup_window import PopupWindow
 
-city = "Ottawa"
+city = "Toronto"
 country = "Canada"
 api_request = (
     f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
 )
 
-# General setup and env vars
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
-PRAYER_TIMES_CACHE = CACHE_DIR + "/prayer_times"
+PRAYER_TIMES_CACHE = CACHE_DIR + "/prayer-times"
 PRAYER_TIMES_FILE = PRAYER_TIMES_CACHE + "/" + "current_times.json"
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
@@ -41,59 +40,28 @@ class PrayerTimesService(Service):
     def changed(self) -> None: ...
 
     def __init__(self, **kwargs):
-        self.names = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
-        self.curr_fajr_time = ""
-        self.curr_zuhr_time = ""
-        self.curr_asr_time = ""
-        self.curr_maghrib_time = ""
-        self.curr_isha_time = ""
-
-        self.failed_attempts = 0
-        self.max_tries = 10
-
+        self.prayer_info: dict = {
+            "Fajr": ["Fajr", ""],
+            "Dhuhr": ["Dhuhr", ""],
+            "Asr": ["Asr", ""],
+            "Maghrib": ["Maghrib", ""],
+            "Isha": ["Isha", ""],
+        }
         super().__init__(**kwargs)
         invoke_repeater(
             12 * 60 * 60 * 60,
-            lambda: self._parse_json(),
+            lambda: self.get_data(False),
         )
-        self._parse_json()
 
-    # Properties
-    def time_format(self, time) -> str:
-        try:
-            d = datetime.datetime.strptime(time, "%H:%M")
-        except ValueError:
-            return time
-        else:
-            return d.strftime("  %I:%M %p")
+    def refresh(self):
+        self.get_data(True)
+        return self.props.prayer_data
 
-    @Property(value_type=str, flags="readable")
-    def fajr_time(self) -> str:
-        return self.time_format(self.curr_fajr_time)
-
-    @Property(value_type=str, flags="readable")
-    def zuhr_time(self) -> str:
-        return self.time_format(self.curr_zuhr_time)
-
-    @Property(value_type=str, flags="readable")
-    def asr_time(self) -> str:
-        return self.time_format(self.curr_asr_time)
-
-    @Property(value_type=str, flags="readable")
-    def maghrib_time(self) -> str:
-        return self.time_format(self.curr_maghrib_time)
-
-    @Property(value_type=str, flags="readable")
-    def isha_time(self) -> str:
-        return self.time_format(self.curr_isha_time)
-
-    def _do_request(self) -> None:
-        logger.info("[PrayerTimes] Requesting data from server")
-        try:
+    def get_data(self, run_once, *args):
+        json_data = {}
+        if os.stat(PRAYER_TIMES_FILE).st_size == 0:
+            print("Getting Fresh Data")
             data = requests.get(api_request)
-        except:
-            logger.error("[PrayerTimes] Failed to get data")
-        else:
             with open(PRAYER_TIMES_FILE, "wb") as outfile:
                 outfile.write(data.content)
                 outfile.close()
@@ -111,33 +79,6 @@ class PrayerTimesService(Service):
                 outfile.write(data.content)
                 outfile.close()
             json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
-        except ValueError:
-            logger.info(
-                "[PrayerTimes] Could not read from local storage, atttempting to grab: "
-                + f"{self.failed_attempts}"
-            )
-            if self.failed_attempts == self.max_tries:
-                logger.info("[PrayerTimes] Maximum fetch attempts exceeded, giving up")
-                return None
-            self.failed_attempts += 1
-            self._do_request()
-            self._parse_json()
-        else:
-            logger.info("[PrayerTimes] Data is cached, proceeding")
-            retrived_day: str = json_data["data"]["date"]["gregorian"]["date"]
-            current_day: str = GLib.DateTime.new_now_local().format("%d-%m-%Y")
-            if retrived_day != current_day:
-                # TODO: move to tmp file instead and move back if we couldn't grab latest data
-                os.rename(PRAYER_TIMES_FILE, PRAYER_TIMES_FILE + ".old")
-                self._parse_json()
-                return
-            times = json_data["data"]["timings"]
-            self.curr_fajr_time = times[self.names[0]]
-            self.curr_zuhr_time = times[self.names[1]]
-            self.curr_asr_time = times[self.names[2]]
-            self.curr_maghrib_time = times[self.names[3]]
-            self.curr_isha_time = times[self.names[4]]
-            self.notify_all()
 
         self.update_times(json_data)
         return True if not run_once else False
@@ -158,15 +99,15 @@ class PrayerTimesService(Service):
         self.changed()
 
 
-class PrayerTimesWidget(Box):
+class PrayerTimes(Box):
     def __init__(self, **kwargs):
         super().__init__(orientation="v", name="prayer-info", **kwargs)
-        self.service: PrayerTimes = PrayerTimes()
-        self.fajr = Label("Fajr")
-        self.zhr = Label("Zuhr")
-        self.asr = Label("Asr")
-        self.mgrb = Label("Maghrib")
-        self.isha = Label("Isha")
+        self.prayer_info_service = PrayerTimesService()
+        self.fajr = Label()
+        self.zhr = Label()
+        self.asr = Label()
+        self.mgrb = Label()
+        self.isha = Label()
 
         self.fajr_time = Label()
         self.zhr_time = Label()
@@ -174,15 +115,9 @@ class PrayerTimesWidget(Box):
         self.mgrb_time = Label()
         self.isha_time = Label()
 
-        self.service.bind_property("fajr-time", self.fajr_time, "label")
-        self.service.bind_property("zuhr-time", self.zhr_time, "label")
-        self.service.bind_property("asr-time", self.asr_time, "label")
-        self.service.bind_property("maghrib-time", self.mgrb_time, "label")
-        self.service.bind_property("isha-time", self.isha_time, "label")
-
-        self.service.notify_all()
-
         # Initilize
+        self.on_prayer_update(None, self.prayer_info_service.refresh())
+        self.prayer_info_service.connect("update", self.on_prayer_update)
 
         self.add(CenterBox(start_children=self.fajr, end_children=self.fajr_time))
         self.add(CenterBox(start_children=self.zhr, end_children=self.zhr_time))
@@ -238,6 +173,6 @@ PrayerTimesPopup = PopupWindow(
     transition_duration=350,
     anchor="top left",
     transition_type="slide-down",
-    child=PrayerTimesWidget(),
+    child=PrayerTimes(),
     enable_inhibitor=True,
 )
