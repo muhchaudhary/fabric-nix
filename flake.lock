@@ -23,6 +23,24 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
+        "lastModified": 1717935434,
+        "narHash": "sha256-+IOL+uBVgV3y/g2+Ht/Qe92bQLwH2wQTrPNX2pF31DI=",
+        "owner": "Fabric-Development",
+        "repo": "glace",
+        "rev": "9c49b157f45c36573b9a0a035b64df756050b17e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Fabric-Development",
+        "repo": "glace",
+        "type": "github"
+      }
+    },
+    "fabric-libgray": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_3"
+      },
+      "locked": {
         "lastModified": 1718684210,
         "narHash": "sha256-w5ys+A2uH6CRiJ+x28xFZ/aIJl2epH+myOdAzpzH9Zg=",
         "owner": "muhchaudhary",
@@ -120,11 +138,11 @@
     },
     "nixpkgs_5": {
       "locked": {
-        "lastModified": 1724395761,
-        "narHash": "sha256-zRkDV/nbrnp3Y8oCADf5ETl1sDrdmAW6/bBVJ8EbIdQ=",
+        "lastModified": 1726583932,
+        "narHash": "sha256-zACxiQx8knB3F8+Ze+1BpiYrI+CbhxyWpcSID9kVhkQ=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ae815cee91b417be55d43781eb4b73ae1ecc396c",
+        "rev": "658e7223191d2598641d50ee4e898126768fe847",
         "type": "github"
       },
       "original": {
