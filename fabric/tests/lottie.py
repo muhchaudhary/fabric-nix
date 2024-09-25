@@ -141,8 +141,8 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
             return False if not self.do_loop else True
         elif not self.do_reverse and self.curr_frame >= self.end_frame:
             self.is_playing = False if not self.do_loop else True
-            self.curr_frame = 0
-            return False if not self.do_loop else True
+            self.curr_frame = 0 if self.do_loop else self.curr_frame
+            return self.do_loop
         self.curr_frame += -1 if self.do_reverse else 1
         return True
 
@@ -168,66 +168,3 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
         )
         # self.curr_frame = self.anim_total_frames if self.is_reverse else 0
         GLib.timeout_add(self.timeout_delay, self.on_update)
-
-
-class LottieWindow(WaylandWindow):
-    def __init__(self):
-        self.lottie_button = Button(style="background-color: alpha(red, 0.0);")
-
-        self.battery_animation = LottieAnimationWidget(
-            anim,
-            scale=0.5,
-            do_loop=False,
-            h_align="center",
-            v_align="center",
-        )
-        self.bolt_animation = LottieAnimationWidget(
-            anim2,
-            scale=0.5,
-            do_loop=False,
-            h_align="center",
-            v_align="center",
-        )
-        self.battery_animation.play_animation(0, int(1.5 * 15))
-        self.bolt_animation.play_animation()
-        # self.lottie_button.connect(
-        #     "enter-notify-event", lambda *args: self.animation.play_animation()
-        # )
-        self.lottie_button.connect(
-            "clicked",
-            lambda *args: self.bolt_animation.play_animation(
-                is_reverse=not self.bolt_animation.do_reverse
-            ),
-        )
-        self.image_box = Box(
-            children=Overlay(
-                children=Box(
-                    children=self.battery_animation,
-                    style=f"min-height: {self.bolt_animation.height}px;",
-                ),
-                overlays=[
-                    Box(children=self.bolt_animation, h_align="center"),
-                    self.lottie_button,
-                ],
-            ),
-        )
-        super().__init__(
-            layer="top",
-            anchor="center",
-            exclusive=False,
-            style="background-color:transparent;",
-            children=self.image_box,
-        )
-
-
-# set_stylesheet_from_string("""
-# * {
-#   all: unset;
-#   font-family: "roboto";
-#   font-weight: 500;
-#   font-size: 15px;
-#   color: var(--fg);
-# }
-# """)
-# LottieWindow()
-# fabric.start()

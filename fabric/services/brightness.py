@@ -10,7 +10,7 @@ from gi.repository import GLib
 # BUG This will open a new file every single time for some
 #     reason, seems like brightnessctil does not stop function after completion
 def exec_brightnessctl_async(args: str):
-    exec_shell_command_async(f"brightnessctl {args}", None)
+    exec_shell_command_async(f"brightnessctl {args}", lambda _: None)
 
 
 screen = str(exec_shell_command("ls -w1 /sys/class/backlight")).split("\n")[0]

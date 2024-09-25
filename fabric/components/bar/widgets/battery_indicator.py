@@ -101,6 +101,7 @@ class BatteryIndicator(Box):
         )
 
         if int(percent) != self.curr_percent:
+            self.curr_percent = int(percent)
             do_reverse: bool = (
                 True
                 if int(percent * 1.5) < self.battery_animation.curr_frame
@@ -114,6 +115,15 @@ class BatteryIndicator(Box):
                 end_frame=int(percent * 1.5),
             )
         self.battery_icon.set_pixel_size(28)
+
+        if self.is_charging != charging:
+            self.is_charging = charging
+            if self.is_charging:
+                self.bolt_animation.play_animation()
+            else:
+                self.bolt_animation.play_animation(is_reverse=True)
+
+
         if charging:
             if self.current_class != "charging":
                 self.current_class = "charging"
