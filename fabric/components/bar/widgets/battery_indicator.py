@@ -16,12 +16,10 @@ class BatteryIndicator(Box):
         super().__init__(v_align="center", h_align="start", **kwargs)
         if not psutil.sensors_battery():
             self.set_visible(False)
-            self.destroy()
             return
 
         self.is_charging = None
         self.curr_percent = None
-
         battery = LottieAnimation.from_file("/home/muhammad/Downloads/battery.json")
         bolt = LottieAnimation.from_file("/home/muhammad/Downloads/bolt.json")
 
