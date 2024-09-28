@@ -42,7 +42,7 @@ class NotificationBox(Revealer):
             Image(
                 icon_name=app_icon + "-symbolic",
                 style="color: white;",
-                pixel_size=24,
+                icon_size=24,
             )
             if app_icon
             else Image(
@@ -54,58 +54,52 @@ class NotificationBox(Revealer):
 
         self.action_buttons = Box(name="notification-action-buttons")
         for action in notification.get_actions():
-            self.action_buttons.add_children(
+            self.action_buttons.children = self.action_buttons.children + [
                 self.make_action_button(action.label, action.id)
-            )
-        self.notification_box.add_children(
+            ]
+        self.notification_box.children = self.notification_box.children + [
             Box(
                 children=[
                     self.app_icon_image,
                     Label(notification.get_app_name()),
                 ]
             )
-        )
+        ]
 
-        self.notification_box.add_children(
-            [
-                Box(
-                    children=[
-                        Box(
-                            name="notification-image",
-                            style=f"background-image: url('{notification.get_image() }')",
-                        ),
-                        Box(
-                            orientation="v",
-                            h_align="start",
-                            v_align="start",
-                            children=[
-                                Label(
-                                    notification.get_summary(),
-                                    h_align="start",
-                                    max_chars_width=40,
-                                    ellipsization="end",
-                                    markup=True,
-                                ),
-                                Label(
-                                    notification.get_body(),
-                                    h_align="start",
-                                    max_chars_width=40,
-                                    ellipsization="end",
-                                    markup=True,
-                                ),
-                                self.action_buttons,
-                            ],
-                        ),
-                    ]
-                )
-            ]
-        )
-
-        # self.add_children(
-
-        # )
+        self.notification_box.children = self.notification_box.children + [
+            Box(
+                children=[
+                    Box(
+                        name="notification-image",
+                        style=f"background-image: url('{notification.get_image() }')",
+                    ),
+                    Box(
+                        orientation="v",
+                        h_align="start",
+                        v_align="start",
+                        children=[
+                            Label(
+                                label=(notification.get_summary()),
+                                h_align="start",
+                                max_chars_width=40,
+                                ellipsization="end",
+                                # markup="True",
+                            ),
+                            Label(
+                                label=(notification.get_body()),
+                                h_align="start",
+                                max_chars_width=40,
+                                ellipsization="end",
+                                # markup=True,
+                            ),
+                            self.action_buttons,
+                        ],
+                    ),
+                ]
+            )
+        ]
         super().__init__(
-            children=self.notification_box,
+            child=self.notification_box,
             transition_duration=500,
             transition_type="slide-right",
         )
@@ -164,7 +158,7 @@ class NotificationPopup(WaylandWindow):
         # self.toggle_popup()
         self.show_all()
 
-    def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int):
+    def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int, idk):
         new_box = NotificationBox(astal_notifd.get_notification(id))
         self.notifications.add(
             Box(style="padding: 1px", children=new_box, h_align="end")
