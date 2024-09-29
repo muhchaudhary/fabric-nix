@@ -4,7 +4,7 @@
     systems.url = "github:nix-systems/default";
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
     astal-notifd.url = "github:astal-sh/notifd";
-    fabric-libgray.url = "github:muhchaudhary/gray";
+    fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:Fabric-Development/glace";
   };
 

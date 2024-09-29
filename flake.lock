@@ -41,15 +41,15 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1718684210,
+        "lastModified": 1718805815,
         "narHash": "sha256-w5ys+A2uH6CRiJ+x28xFZ/aIJl2epH+myOdAzpzH9Zg=",
-        "owner": "muhchaudhary",
+        "owner": "Fabric-Development",
         "repo": "gray",
-        "rev": "3b3ee9afe0868d117b03702da67a2d50bad35e3c",
+        "rev": "cb5b84f14fddb3d89754d8be191e28834a575fc1",
         "type": "github"
       },
       "original": {
-        "owner": "muhchaudhary",
+        "owner": "Fabric-Development",
         "repo": "gray",
         "type": "github"
       }

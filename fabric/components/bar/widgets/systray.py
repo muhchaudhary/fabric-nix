@@ -71,8 +71,7 @@ class SystemTrayWidget(Box):
                 except Exception as e:
                     logger.error(e)
             case 3:
-                return  # can't get item.get_menu() working just yet
-                menu = item.get_menu()
+                menu = item.get_property("menu")
                 menu.set_name("system-tray-menu")
                 if menu:
                     menu.popup_at_widget(
