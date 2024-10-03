@@ -14,8 +14,8 @@ class ClockWidget(WaylandWindow):
         self.main_box = Box(
             name="clockbox",
             children=[
-                DateTime(format_list=["%I:%M"], name="clock"),
-                DateTime(format_list=["%A %B %d"], name="date", interval=10000),
+                DateTime(formatters=("%I:%M %p"), name="clock"),
+                DateTime(formatters=("%A %B %d"), name="date", interval=10000),
             ],
             orientation="v",
         )

@@ -2,23 +2,23 @@
 #clock>label {
     /* font-family: "Ubuntu Nerd Font"; */
     /* color: alpha(@fg, 0.8); */
-    color: alpha(#82C480, 1);
+    color: alpha(@accent, 1);
     font-size: 96px;
     font-weight: 900;
 }
 
-#date>label {
-    text-shadow: alpha(#376f4f, 1) 3px 3px;
+/* #date>label {
+    text-shadow: alpha(mix(@accent, white, 0.3), 1) 3px 3px;
 }
 
 #clock>label {
-    text-shadow: alpha(#376f4f, 1) 5px 5px;
-}
+    text-shadow: alpha(mix(@accent, white, 0.3), 1) 5px 5px;
+} */
 
 #date,
 #clock {
     padding: 0px 10px 0px 10px;
-    background-color: rgba(0, 0, 0, 0.0005);
+    background-color: transparent;
 }
 
 #date {
@@ -30,21 +30,19 @@
     border-radius: 0px 0px 22px 22px;
 }
 
-
-
 #date>label {
     font-size: 40px;
     padding-bottom: 6px;
 }
 
-#sysinfo-container {
+/* #sysinfo-container {
     padding: 20px;
     background-color: alpha(#000000, 0.6);
     border-radius: 1.5em;
     min-width: 10px;
-}
+} */
 
-#battery-circular-progress-bar {
+/* #battery-circular-progress-bar {
     border-color: alpha(#009d15, 0.5);
     color: alpha(#767676, 0.3);
     min-width: 1em;
@@ -55,4 +53,4 @@
     border-color: green;
     color: alpha(#767676, 0.3);
     min-width: 1em;
-}
+} */
