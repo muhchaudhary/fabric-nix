@@ -7,6 +7,7 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import GLib
+from utils.hyprland_monitor import HyprlandWithMonitors
 
 
 class inhibitOverlay(WaylandWindow):
@@ -19,6 +20,7 @@ class inhibitOverlay(WaylandWindow):
         super().__init__(
             layer="top",
             anchor="center top",
+            type="popup",
             all_visible=False,
             visible=False,
             exclusive=False,
@@ -46,13 +48,15 @@ class PopupWindow(WaylandWindow):
         enable_inhibitor: bool = False,
         keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
-        *kwargs,
+        **kwargs,
     ):
         self.timeout = timeout
         self.eventID = -1
         self.currtimeout = 0
         self.popup_running = False
         self.enable_inhibitor = enable_inhibitor
+        self.monitor_number: int | None = None
+        self.hyprland_monitor = HyprlandWithMonitors()
         self.revealer = Revealer(
             child=child,
             transition_type=transition_type,
@@ -69,7 +73,7 @@ class PopupWindow(WaylandWindow):
             exclusive=False,
             child=self.revealer_box,
             keyboard_mode=keyboard_mode,
-            *kwargs,
+            **kwargs,
         )
 
         self.revealer.connect(
@@ -85,12 +89,11 @@ class PopupWindow(WaylandWindow):
             self.inhibitor.connect("key-release-event", self.on_key_release)
         self.show()
 
-    def on_key_release(self, entry, event_key):
+    def on_key_release(self, _, event_key):
         if event_key.get_keycode()[1] == 9:
             self.visible = False
             self.revealer.set_reveal_child(self.visible)
-            if self.enable_inhibitor:
-                self.inhibitor.set_visible(self.visible)
+            self.inhibitor.set_visible(self.visible)
 
     def on_inhibit_click(self, *_):
         self.visible = False
@@ -98,7 +101,18 @@ class PopupWindow(WaylandWindow):
         if self.enable_inhibitor:
             self.inhibitor.set_visible(self.visible)
 
-    def toggle_popup(self):
+    def toggle_popup(self, monitor: bool = False):
+        if monitor:
+            curr_monitor = self.hyprland_monitor.get_current_gdk_monitor_id()
+            self.monitor = curr_monitor
+            self.inhibitor.monitor = curr_monitor
+
+            if self.monitor_number != curr_monitor and self.visible:
+                self.monitor_number = curr_monitor
+                return
+
+            self.monitor_number = curr_monitor
+
         if not self.visible:
             self.revealer.show()
         self.visible = not self.visible
