@@ -40,7 +40,9 @@ class BatteryIndicator(Box):
 
         self.lottie_button = Button(name="panel-button")
 
-        self.battery = Fabricator(poll_from=self.poll_batt, interval=1000)
+        self.battery = Fabricator(
+            poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
+        )
 
         self.lottie_battery_box = Box(
             children=Overlay(
@@ -55,8 +57,6 @@ class BatteryIndicator(Box):
                 ],
             ),
         )
-
-        self.battery.connect("changed", self.update_battery)
 
         self.battery_icon = Image(name="battery-icon")
         self.current_class = ""
@@ -120,7 +120,6 @@ class BatteryIndicator(Box):
                 self.bolt_animation.play_animation()
             else:
                 self.bolt_animation.play_animation(is_reverse=True)
-
 
         if charging:
             if self.current_class != "charging":
