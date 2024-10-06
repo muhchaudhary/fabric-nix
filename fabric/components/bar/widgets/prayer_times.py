@@ -73,13 +73,14 @@ class PrayerTimesService(Service):
         current_day = datetime.datetime.today().strftime("%d-%m-%Y")
 
         if retrived_day != current_day:
-            print("Getting Fresh Data")
-            data = requests.get(api_request)
-            with open(PRAYER_TIMES_FILE, "wb") as outfile:
-                outfile.write(data.content)
-                outfile.close()
-            json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
-
+            try:
+                data = requests.get(api_request)
+                with open(PRAYER_TIMES_FILE, "wb") as outfile:
+                    outfile.write(data.content)
+                    outfile.close()
+                json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
+            except:
+                return False
         self.update_times(json_data)
         return True if not run_once else False
 

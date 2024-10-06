@@ -144,18 +144,11 @@ class NotificationPopup(WaylandWindow):
         super().__init__(
             anchor="top right",
             child=self.notifications,
-            layer="top",
+            layer="overlay",
             all_visible=True,
             visible=True,
             exclusive=False,
         )
-        # self.revealer.connect(
-        #     "notify::child-revealed",
-        #     lambda revealer, *args: self.notifications.reset_children()
-        #     if not revealer.get_child_revealed()
-        #     else None,
-        # )
-        # self.toggle_popup()
         self.show_all()
 
     def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int, idk):
