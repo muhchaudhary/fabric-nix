@@ -40,9 +40,6 @@ class BatteryIndicator(Box):
 
         self.lottie_button = Button(name="panel-button")
 
-        self.battery = Fabricator(
-            poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
-        )
 
         self.lottie_battery_box = Box(
             children=Overlay(
@@ -67,6 +64,9 @@ class BatteryIndicator(Box):
             transition_type="slide-left",
         )
 
+        self.battery = Fabricator(
+            poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
+        )
         # self.buttons = Button(
         #     name="panel-button",
         # )
