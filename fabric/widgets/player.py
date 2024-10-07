@@ -235,6 +235,7 @@ class PlayerBox(Box):
         self.image_size = 160
         self.player_height = 140
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
+        self.angle_direction = 1
 
         self.skipped = False
 
@@ -431,12 +432,12 @@ class PlayerBox(Box):
         self.destroy()
 
     def on_player_next(self, _):
-        self.image_box.set_transition_type("bezier")
+        self.angle_direction = 1
         self.skipped = True
         self.player.next()
 
     def on_player_prev(self, _):
-        self.image_box.set_transition_type("negbezier")
+        self.angle_direction = -1
         self.skipped = True
         self.player.previous()
 
@@ -467,7 +468,7 @@ class PlayerBox(Box):
 
     def update_image(self):
         self.update_colors(5)
-        self.image_box.set_image(self.cover_path)
+        self.image_box.set_image_from_file(self.cover_path)
         self.rotate_animation()
 
     def update_colors(self, n):
@@ -518,9 +519,9 @@ class PlayerBox(Box):
             if anim_time <= 1:
                 anim_time += 0.005
                 rot = 360 * easeOutElastic(anim_time)
-                self.image_box.rotate_more(rot)
+                self.image_box.angle = self.angle_direction * rot
                 return True
-            self.image_box.rotate_more(0)
+            self.image_box.angle = 0
             self.skipped = False
             return False
 
