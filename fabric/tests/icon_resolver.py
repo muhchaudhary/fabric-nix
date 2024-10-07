@@ -1,33 +1,25 @@
-from typing import TypedDict
-import gi
-import os
 import json
+import os
 import re
 
-from fabric.widgets.box import Box
-from fabric.widgets.image import Image
-from fabric.widgets.button import Button
+import gi
 
-from fabric.widgets.wayland import WaylandWindow
-from fabric import Application
-
-gi.require_version("Glace", "0.1")
-from gi.repository import GLib, Glace, Gtk
+gi.require_version("Gtk", "3.0")
+from gi.repository import GLib, Gtk
 from loguru import logger
 
 
-# Idea: nearest string matching algorithm
-#       if already exists: retrieve from json
-#       if found: stor in json: app_id -> icon_name
-#       if not found: store in json -> misisng-icon
+# TODO WIP
 
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 ICON_CACHE_FILE = CACHE_DIR + "/icons.json"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
 
 
 class IconResolver:
-    def __init__(self):
+    def __init__(self, default_applicaiton_icon: str = "application-x-symbolic"):
         if os.path.exists(ICON_CACHE_FILE):
             f = open(ICON_CACHE_FILE)
             try:
@@ -37,6 +29,8 @@ class IconResolver:
             f.close()
         else:
             self._icon_dict = {}
+
+        self.default_applicaiton_icon = default_applicaiton_icon
 
     def get_icon(self, app_id: str):
         if app_id in self._icon_dict:
@@ -55,11 +49,12 @@ class IconResolver:
             f.close()
 
     def _get_icon_from_desktop_file(self, desktop_file_path: str):
+        # TODO: get icon in the [Desktop Entry] section only
         with open(desktop_file_path) as f:
             for line in f.readlines():
                 if "Icon=" in line:
                     return "".join(line[5:].split())
-            return "application-x-symbolic"
+            return self.default_applicaiton_icon
 
     def _get_desktop_file(self, app_id: str) -> str | None:
         data_dirs = GLib.get_system_data_dirs()
@@ -91,32 +86,5 @@ class IconResolver:
         return (
             self._get_icon_from_desktop_file(desktop_file)
             if desktop_file
-            else "application-x-symbolic"
+            else self.default_applicaiton_icon
         )
-
-
-class OpenAppsBar(Box):
-    def __init__(self):
-        super().__init__(spacing=10)
-        self.icon_resolver = IconResolver()
-        self._manager = Glace.Manager()
-        self._manager.connect("client-added", self.on_client_added)
-
-    def on_client_added(self, _, client: Glace.Client):
-        client_image = Image()
-        client_button = Button(
-            name="panel-button",
-            image=client_image,
-        )
-        client.connect(
-            "notify::app-id",
-            lambda *_: client_image.set_from_icon_name(
-                self.icon_resolver.get_icon(client.get_app_id())
-            ),
-        )
-        client.bind_property("title", client_button, "tooltip-text", 0)
-        client_button.connect("button-press-event", lambda *_: client.activate())
-
-        self.add(client_button)
-
-        client.connect("close", lambda *_: self.remove(client_button))

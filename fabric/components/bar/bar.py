@@ -12,6 +12,7 @@ from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow
 from fabric.utils import FormattedString
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.wayland import WaylandWindow
+from tests.glace import OpenAppsBar
 
 
 class WorkspaceButtonNoLabel(WorkspaceButton):
@@ -56,6 +57,7 @@ class StatusBar(WaylandWindow):
                 ),
             ),
         )
+        self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime()
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
@@ -71,10 +73,11 @@ class StatusBar(WaylandWindow):
         ]
 
         self.center_box.start_children = [
-            self.workspaces,
             self.prayer_times,
             self.active_window,
+            self.open_apps_bar,
         ]
+        self.center_box.center_children = [self.workspaces]
 
         super().__init__(
             layer="top",
