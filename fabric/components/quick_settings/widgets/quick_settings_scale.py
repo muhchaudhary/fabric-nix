@@ -15,7 +15,7 @@ class QuickSettingsScale(Box):
         **kwargs,
     ):
         self.pixel_size = pixel_size
-        self.icon = Image(icon_name=icon_name, icon_size=pixel_size)
+        self.icon = Image(icon_name=icon_name, icon_size="large-toolbar")
         self.icon_button = Button(image=self.icon, name="panel-button")
 
         self.scale = Scale(

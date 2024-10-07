@@ -35,6 +35,9 @@
   --aqua-dim: #689d6a;
   --gray-dim: #a89984;
   --orange-dim: #d65d0e;
+
+
+  --placeholder_text_color: rgb(114, 114, 114);
 }
 
 * {
@@ -517,7 +520,7 @@ scale {
 }
 
 #appmenu-entry image {
-  color: #6D685C;
+  color: #000000;
   margin-right: 5px;
 }
 
