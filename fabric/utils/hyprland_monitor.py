@@ -10,6 +10,7 @@ from fabric.hyprland import Hyprland
 gi.require_version("Gdk", "3.0")
 from gi.repository import Gdk
 
+
 # IDC,  Gdk.Screen.get_monitor_plug_name is deprecated
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
@@ -26,6 +27,7 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 # Annoyingly, Gdk 4.0 has a solution to this with
 #       Gdk.Monitor.get_description() or Gdk.Monitor.get_connector()
 #       which both can be used to uniquely identify a monitor
+
 
 class HyprlandWithMonitors(Hyprland):
     def __init__(self, commands_only: bool = False, **kwargs):

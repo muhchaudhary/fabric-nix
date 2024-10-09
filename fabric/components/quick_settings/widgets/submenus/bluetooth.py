@@ -26,7 +26,6 @@ class BluetoothDeviceBox(CenterBox):
         self.device.connect("notify::connecting", self.on_device_connecting)
         self.device.connect("notify::connected", self.on_device_connect)
 
-
         self.add_start(
             Image(
                 icon_name=device.icon_name + "-symbolic", size=16, name="submenu-icon"
@@ -129,6 +128,14 @@ class BluetoothToggle(QuickSubToggle):
         self.client.connect("notify::enabled", self.toggle_bluetooth)
         self.client.connect("device-added", self.new_device)
 
+        self.toggle_bluetooth(client)
+
+        for device in self.client.devices:
+            self.new_device(client, device.address)
+        self.device_connected(
+            self.client.connected_devices[0]
+        ) if self.client.connected_devices else None
+
         # Button Signals
         self.connect("action-clicked", lambda *_: self.client.toggle_power())
 
@@ -144,15 +151,14 @@ class BluetoothToggle(QuickSubToggle):
 
     def new_device(self, client: BluetoothClient, address):
         device: BluetoothDevice = client.get_device(address)
-        device.connect("notify::connected", self.device_connected)
+        device.connect("changed", self.device_connected)
 
-    def device_connected(self, device: BluetoothDevice, _):
-        connection = device.connected
-        if connection:
+    def device_connected(self, device: BluetoothDevice):
+        if device.connected:
             self.action_label.set_label(device.name)
         elif self.action_label.get_label() == device.name:
-            connected_devices = self.client.connected_devices
-            if connected_devices:
-                self.action_label.set_label(connected_devices[0].name)
-            else:
-                self.action_label.set_label("Not Connected")
+            self.action_label.set_label(
+                self.client.connected_devices[0].name
+                if self.client.connected_devices
+                else "Not Connected"
+            )
