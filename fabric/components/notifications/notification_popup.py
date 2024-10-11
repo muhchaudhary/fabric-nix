@@ -7,7 +7,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
-
+from fabric.widgets.centerbox import CenterBox
 
 from fabric.utils import invoke_repeater
 from loguru import logger
@@ -19,87 +19,86 @@ from gi.repository import AstalNotifd  # noqa: E402
 # TODO: group notifications by type
 
 
-class NotificationBox(Revealer):
-    def __init__(self, notification: AstalNotifd.Notification, **kwargs):
-        self.notification_box = Box(
-            h_expand=True,
-            orientation="v",
+class NotificationBox(Box):
+    def __init__(self, notification: AstalNotifd.Notification):
+        self.app_body = notification.get_body()
+        self.app_title = notification.get_summary()
+
+        self.action_buttons = [
+            Button(
+                label=action.label,
+                on_clicked=lambda *_: notification.invoke(action.id),
+                h_expand=True,
+            )
+            for action in notification.get_actions()
+        ]
+
+        logger.error(f"APP ICON: {notification.get_app_icon()}")
+
+        self.notification_box = CenterBox(
             name="notification-box",
-            spacing=5,
-            **kwargs,
+            orientation="v",
+            start_children=[
+                Box(
+                    spacing=5,
+                    children=[
+                        Image(
+                            icon_name=notification.get_app_icon()
+                            if notification.get_app_icon()
+                            else "dialog-information-symbolic"
+                        ),
+                        Label(
+                            markup=f"<span font_weight='heavy' >{
+                                        notification.get_app_name()
+                                        }</span>",
+                            h_align="start",
+                        ),
+                    ],
+                )
+            ],
+            center_children=[
+                Box(
+                    name="notification-content",
+                    spacing=10,
+                    children=[
+                        Box(
+                            name="notification-image",
+                            style=f"background-image: url('{notification.get_image() }')",
+                        ),
+                        Box(
+                            orientation="v",
+                            children=[
+                                Label(
+                                    markup=f"<span font_weight='heavy' >{
+                                        notification.get_summary()
+                                        }</span>  \n"
+                                    + notification.get_body(),
+                                    line_wrap="char",
+                                    max_chars_width=40,
+                                    h_align="start",
+                                ),
+                            ],
+                        ),
+                    ],
+                )
+            ],
+            end_children=[
+                Box(
+                    name="notification-action-buttons",
+                    children=self.action_buttons,
+                    h_expand=True,
+                )
+            ],
         )
+
+        super().__init__(children=self.notification_box)
+
+
+class NotificationRevealer(Revealer):
+    def __init__(self, notification: AstalNotifd.Notification, **kwargs):
         self.popup_timeout = 5000
-        # Notification signals
-        self.notification = notification
-        self.notification.connect("resolved", self.on_resolved)
-        self.notification.connect("invoked", lambda *args: self.notification.dismiss())
-
-        # Grabbing the file path
-        # TODO: find a better way to check if file path is a path or just an icon (app_icon can be path)
-        # TODO: consider if using a custom cairo widget to display the image is better
-        app_icon = notification.get_app_icon()
-        self.app_icon_image = (
-            Image(
-                icon_name=app_icon + "-symbolic",
-                style="color: white;",
-                icon_size=24,
-            )
-            if app_icon
-            else Image(
-                icon_name="dialog-information-symbolic",
-                style="color: white;",
-                pixel_size=24,
-            )
-        )
-
-        self.action_buttons = Box(name="notification-action-buttons")
-        for action in notification.get_actions():
-            self.action_buttons.children = self.action_buttons.children + [
-                self.make_action_button(action.label, action.id)
-            ]
-        self.notification_box.children = self.notification_box.children + [
-            Box(
-                children=[
-                    self.app_icon_image,
-                    Label(notification.get_app_name()),
-                ]
-            )
-        ]
-
-        self.notification_box.children = self.notification_box.children + [
-            Box(
-                children=[
-                    Box(
-                        name="notification-image",
-                        style=f"background-image: url('{notification.get_image() }')",
-                    ),
-                    Box(
-                        orientation="v",
-                        h_align="start",
-                        v_align="start",
-                        children=[
-                            Label(
-                                label=(notification.get_summary()),
-                                h_align="start",
-                                max_chars_width=40,
-                                ellipsization="end",
-                                # markup="True",
-                            ),
-                            Label(
-                                label=(notification.get_body()),
-                                h_align="start",
-                                max_chars_width=40,
-                                ellipsization="end",
-                                # markup=True,
-                            ),
-                            self.action_buttons,
-                        ],
-                    ),
-                ]
-            )
-        ]
         super().__init__(
-            child=self.notification_box,
+            child=NotificationBox(notification),
             transition_duration=500,
             transition_type="slide-right",
         )
@@ -125,11 +124,6 @@ class NotificationBox(Revealer):
         )
         self.set_reveal_child(False)
 
-    def make_action_button(self, label: str, action_id: str) -> Button:
-        action_button = Button(label=label, h_align="center", v_align="center")
-        action_button.connect("clicked", lambda *_: self.notification.invoke(action_id))
-        return action_button
-
 
 class NotificationPopup(WaylandWindow):
     def __init__(self, notification_server: NotificationServer):
@@ -152,7 +146,7 @@ class NotificationPopup(WaylandWindow):
         self.show_all()
 
     def on_new_notification(self, astal_notifd: AstalNotifd.Notifd, id: int, idk):
-        new_box = NotificationBox(astal_notifd.get_notification(id))
+        new_box = NotificationRevealer(astal_notifd.get_notification(id))
         self.notifications.add(
             Box(style="padding: 1px", children=new_box, h_align="end")
         )

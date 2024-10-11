@@ -10,21 +10,12 @@ from gi.repository import AstalNotifd
 class NotificationServer(Service):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.astal_notifd: AstalNotifd.Notifd = AstalNotifd.Notifd.new()
-        self.astal_notifd.connect("active", self.on_client_ready)
+        self.astal_notifd: AstalNotifd.Notifd = AstalNotifd.Notifd.get_default()
+        self.astal_notifd.connect("notified", self.on_new_notification)
+        self.astal_notifd.connect("resolved", self.on_notification_resolved)
 
-    def on_client_ready(
-        self, client: AstalNotifd.Notifd, active_type: AstalNotifd.ActiveType
-    ):
-        logger.info(
-            f"Client is ready, in {'daemon' if active_type == AstalNotifd.ActiveType.DAEMON else 'proxy'} mode"
-        )
-
-        client.connect("notified", self.on_new_notification)
-        client.connect("resolved", self.on_notification_resolved)
-
-    def on_new_notification(self, _, notification_id: int):
-        logger.info(f"New notification with id: {notification_id}")
+    def on_new_notification(self, _, id: int, is_replaced: bool):
+        logger.info(f"New notification with id: {id}")
 
     def on_notification_resolved(
         self, _, notification_id: int, reason: AstalNotifd.ClosedReason
