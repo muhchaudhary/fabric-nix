@@ -3,7 +3,7 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     systems.url = "github:nix-systems/default";
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
-    astal-notifd.url = "github:astal-sh/notifd";
+    astal.url = "github:aylur/astal";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:Fabric-Development/glace";
   };
@@ -25,7 +25,7 @@
                 inherit gtk-session-lock;
               })
               (final: _: let
-                astal-notifd = inputs.astal-notifd.packages.${system}.default;
+                astal-notifd = inputs.astal.packages.${system}.notifd;
               in {
                 inherit astal-notifd;
               })

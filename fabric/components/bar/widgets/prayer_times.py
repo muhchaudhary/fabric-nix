@@ -55,7 +55,7 @@ class PrayerTimesService(Service):
 
     def refresh(self):
         self.get_data(True)
-        return self.props.prayer_data
+        return self.get_property("prayer-data")
 
     def get_data(self, run_once, *args):
         json_data = {}
@@ -67,7 +67,7 @@ class PrayerTimesService(Service):
                 outfile.close()
         try:
             json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
-        except Exception as e:
+        except Exception as _:
             return
         retrived_day = json_data["data"]["date"]["gregorian"]["date"]
         current_day = datetime.datetime.today().strftime("%d-%m-%Y")
@@ -79,7 +79,7 @@ class PrayerTimesService(Service):
                     outfile.write(data.content)
                     outfile.close()
                 json_data = json.load(open(PRAYER_TIMES_FILE, "rb"))
-            except:
+            except Exception as _:
                 return False
         self.update_times(json_data)
         return True if not run_once else False
@@ -98,6 +98,24 @@ class PrayerTimesService(Service):
     def notifier(self, name: str, args=None):
         self.notify(name)
         self.changed()
+
+
+class PrayerTimesButton(Button):
+    def __init__(self, **kwargs):
+        super().__init__(name="panel-button", **kwargs)
+        self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
+        self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
+        self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
+        self.connect("clicked", self.on_click)
+        PrayerTimesPopup.revealer.connect(
+            "notify::reveal-child",
+            lambda *args: self.set_name("panel-button-active")
+            if PrayerTimesPopup.visible
+            else self.set_name("panel-button"),
+        )
+
+    def on_click(self, button, *args):
+        PrayerTimesPopup.toggle_popup()
 
 
 class PrayerTimes(Box):
@@ -147,27 +165,6 @@ class PrayerTimes(Box):
 
         self.isha.set_label(prayer_info["Isha"][0])
         self.isha_time.set_label(time_format(prayer_info["Isha"][1]))
-
-
-class PrayerTimesButton(Button):
-    def __init__(self, **kwargs):
-        super().__init__(name="panel-button", **kwargs)
-        self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
-        self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
-        self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
-        self.connect("clicked", self.on_click)
-        PrayerTimesPopup.revealer.connect(
-            "notify::reveal-child",
-            lambda *args: self.set_name("panel-button-active")
-            if PrayerTimesPopup.visible
-            else self.set_name("panel-button"),
-        )
-
-    def on_click(self, button, *args):
-        PrayerTimesPopup.toggle_popup_offset(
-            button.get_allocation().x,
-            button.get_allocated_width(),
-        )
 
 
 PrayerTimesPopup = PopupWindow(

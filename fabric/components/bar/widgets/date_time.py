@@ -14,7 +14,7 @@ class DayInMonthHighlightingCalendar(calendar.TextCalendar):
     def formatday(self, day: int, weekday: int, width: int) -> str:
         s = super().formatday(day, weekday, width)
         if day == self._day_to_highlight:
-            s = f"<span foreground='green'>{s}</span>"
+            s = f"<span foreground='red' background='black'>{s}</span>"
         return s
 
 

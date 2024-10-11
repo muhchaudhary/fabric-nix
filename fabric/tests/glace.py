@@ -8,6 +8,8 @@ from utils.icon_resolver import IconResolver
 
 gi.require_version("Glace", "0.1")
 from gi.repository import Glace
+
+
 class OpenAppsBar(Box):
     def __init__(self):
         super().__init__(spacing=10)
@@ -24,7 +26,7 @@ class OpenAppsBar(Box):
         client.connect(
             "notify::app-id",
             lambda *_: client_image.set_from_pixbuf(
-                self.icon_resolver.get_icon_pixbuf(client.get_app_id(), 16)
+                self.icon_resolver.get_icon_pixbuf(client.get_app_id(), 24)
             ),
         )
         client.bind_property("title", client_button, "tooltip-text", 0)

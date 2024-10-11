@@ -74,8 +74,8 @@ class StatusBar(WaylandWindow):
 
         self.center_box.start_children = [
             self.prayer_times,
-            self.active_window,
             self.open_apps_bar,
+            # self.active_window,
         ]
         self.center_box.center_children = [self.workspaces]
 
