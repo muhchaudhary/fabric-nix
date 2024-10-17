@@ -63,7 +63,6 @@ class PopupWindow(WaylandWindow):
             transition_duration=transition_duration,
             visible=False,
         )
-        self.revealer_box = Box(style="padding:1px;", children=self.revealer)
         self.visible = visible
         super().__init__(
             layer="overlay",
@@ -71,14 +70,14 @@ class PopupWindow(WaylandWindow):
             all_visible=False,
             visible=False,
             exclusive=False,
-            child=self.revealer_box,
+            child=Box(style="margin: 1px;", children=self.revealer),
             keyboard_mode=keyboard_mode,
             **kwargs,
         )
 
         self.revealer.connect(
             "notify::child-revealed",
-            lambda revealer, is_reveal: self.revealer.hide()
+            lambda revealer, is_reveal: revealer.hide()
             if not revealer.get_child_revealed()
             else None,
         )
@@ -105,14 +104,14 @@ class PopupWindow(WaylandWindow):
         if monitor:
             curr_monitor = self.hyprland_monitor.get_current_gdk_monitor_id()
             self.monitor = curr_monitor
-            self.inhibitor.monitor = curr_monitor
+            if self.enable_inhibitor:
+                self.inhibitor.monitor = curr_monitor
 
             if self.monitor_number != curr_monitor and self.visible:
                 self.monitor_number = curr_monitor
                 return
 
             self.monitor_number = curr_monitor
-
         if not self.visible:
             self.revealer.show()
         self.visible = not self.visible

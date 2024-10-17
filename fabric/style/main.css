@@ -2,7 +2,7 @@
 @import "./style/player-dark.css";
 
 :vars {
-  --accent: #03C4BA;
+  --accent: #03c4ba;
 
   --bg_h: #1d2021;
   --bg: #1e1e1e;
@@ -36,7 +36,6 @@
   --gray-dim: #a89984;
   --orange-dim: #d65d0e;
 
-
   --placeholder_text_color: rgb(114, 114, 114);
 }
 
@@ -47,7 +46,6 @@
   font-size: 15px;
   color: var(--fg);
 }
-
 
 #test-icons {
   color: green;
@@ -76,7 +74,7 @@ scale {
   margin-bottom: 10px;
 }
 
-#system-tray>button,
+#system-tray > button,
 #panel-button-active,
 #date-time,
 #panel-button {
@@ -89,7 +87,7 @@ scale {
 }
 
 #date-time:hover,
-#system-tray>button:hover,
+#system-tray > button:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -106,18 +104,17 @@ scale {
 
 #date-time:active,
 #date-time:active label,
-#system-tray>button:active,
+#system-tray > button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active>*>*>label,
-#panel-button:active>*>label,
-#panel-button-active>box>label,
+#panel-button:active > * > * > label,
+#panel-button:active > * > label,
+#panel-button-active > box > label,
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
-
 }
 
 #quicksettings-box {
@@ -125,7 +122,11 @@ scale {
   border-radius: 20px;
 }
 
-#quicksettings-box>box>button {
+#quicksettings-slider slider:hover {
+  background-color: mix(var(--accent), white, 0.6);
+}
+
+#quicksettings-box > box > button {
   margin: 10px -10px 10px 5px;
 }
 
@@ -161,12 +162,12 @@ scale {
   min-width: 140px;
 }
 
-#prayer-info * * * * {
+#prayer-info > * > * > * > * {
   font-size: 16px;
 }
 
-#workspaces>button {
-  border-radius: 10px;
+#workspaces > button {
+  border-radius: 100%;
   min-width: 10px;
   margin: 13px 2px 13px 2px;
   transition-property: border-radius;
@@ -191,7 +192,7 @@ scale {
 }
 
 #player-stack-button.active,
-#workspaces>button.active {
+#workspaces > button.active {
   border-radius: 5px;
   min-width: 30px;
   margin: 10px 1px 10px 1px;
@@ -199,21 +200,18 @@ scale {
 }
 
 #player-stack-button.empty,
-#workspaces>button.empty {
+#workspaces > button.empty {
   min-width: 9px;
   margin: 14px 2px 14px 2px;
   background-color: var(--fg4);
 }
 
-#workspaces>button.urgent {
+#workspaces > button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces>button:hover {
-  background-color: mix(var(--accent), white, 0.7);
-  min-width: 30px;
-  margin: 10px 1px 10px 1px;
-  border-radius: 5px;
+#workspaces > button:hover {
+  background-color: var(--bg4);
 }
 
 #prayer-info,
@@ -227,8 +225,8 @@ scale {
   padding: 15px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:hover,
-#system-tray-menu>menuitem:hover,
+#system-tray-menu > menuitem menu > menuitem:hover,
+#system-tray-menu > menuitem:hover,
 #submenu-button:hover {
   background-color: alpha(var(--bg4), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -238,7 +236,7 @@ scale {
   background-color: var(--accent);
 }
 
-#submenu-button:active>* {
+#submenu-button:active > * {
   color: var(--bg);
 }
 
@@ -261,16 +259,16 @@ scale {
   margin: 5px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
   border-width: 1px;
   border-style: double;
   border-color: var(--fg4);
   margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:disabled,
-#system-tray-menu>menuitem:disabled {
+#system-tray-menu > menuitem menu > menuitem:disabled,
+#system-tray-menu > menuitem:disabled {
   background-color: var(--bg_h);
 }
 
@@ -280,14 +278,14 @@ scale {
   border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
   background-color: var(--bg2);
   padding: 5px;
   border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu,
+#system-tray-menu > menuitem menu,
 #system-tray-menu,
 #submenu {
   /* min-width: 450px; */
@@ -456,12 +454,16 @@ scale {
 
 /* ---------------------------------------- APP MENU ---------------------------------------- */
 #appmenu {
-  background-color: alpha(var(--bg), 0.8);
+  background-color: alpha(black, 1);
   padding: 20px;
-  border-width: 2px;
-  border-style: solid;
-  border-color: var(--fg);
-  border-radius: 20px;
+  border-top-right-radius: 50px;
+  border-bottom-right-radius: 50px;
+  min-height: 1000px;
+  min-width: 300px;
+}
+
+#appmenu-corner * {
+  background-color: alpha(black, 1);
 }
 
 #appmenu-heading {
@@ -472,12 +474,9 @@ scale {
 }
 
 #appmenu-button {
-  margin: 4px;
+  margin: 5px;
   padding: 10px;
-  border-style: solid;
   border-radius: 10px;
-  border-width: 2px;
-  border-color: var(--fg);
 }
 
 #appmenu-app-name {
@@ -489,10 +488,9 @@ scale {
   color: #bababa;
 }
 
-#appmenu-button:hover label,
+/* #appmenu-button:hover label, */
 #appmenu-button:hover {
-  background-color: var(--fg);
-  color: var(--bg);
+  background-color: alpha(#ffffff, 0.25);
 }
 
 #clockbox {
@@ -517,16 +515,22 @@ scale {
 }
 
 #appmenu-button label {
-  font-size: 17px;
+  font-size: 14px;
 }
 
 #appmenu-entry {
-  background-color: #e6e6e6;
-  font-size: 20px;
+  background-color: alpha(white, 0.3);
+  font-size: 16px;
+  font-weight: 500;
   padding: 10px;
-  color: #6D685C;
-  caret-color: #6D685C;
-  border-radius: 10px;
+  color: #ffffff;
+  caret-color: white;
+  border-radius: 50px;
+  transition: min-width 0.2s cubic-bezier(.42,0,.58,1);
+}
+
+#appmenu-entry.active {
+  min-width: 250px;
 }
 
 #appmenu-entry image {
