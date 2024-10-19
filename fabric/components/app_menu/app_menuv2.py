@@ -7,7 +7,7 @@ from thefuzz import fuzz, process
 from widgets.popup_window import PopupWindow
 
 from fabric.widgets.box import Box
-from fabric.widgets.shapes import Corner, CornerOrientation
+from fabric.widgets.shapes import Corner
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
@@ -18,6 +18,7 @@ from fabric.utils.helpers import (
     DesktopApp,
     get_desktop_applications,
     exec_shell_command_async,
+    invoke_repeater,
 )
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
@@ -60,6 +61,7 @@ class ApplicationButtonV2(Button):
                                 h_align="start",
                                 max_chars_width=80,
                                 ellipsization="end",
+                                name="appmenu-app-name",
                             ),
                             Label(
                                 app_info.description if app_info.description else "",
@@ -67,6 +69,7 @@ class ApplicationButtonV2(Button):
                                 h_align="start",
                                 max_chars_width=80,
                                 ellipsization="end",
+                                name="appmenu-app-desc",
                             ),
                         ],
                     ),
@@ -96,7 +99,7 @@ class ApplicationButtonV2(Button):
             if self.app_info.name in data:
                 data.remove(self.app_info.name)
             data.insert(0, self.app_info.name)
-            data.pop() if len(data) > 6 else None
+            data.pop() if len(data) > 8 else None
             json.dump(data, f)
             f.close()
 
@@ -122,11 +125,14 @@ class AppMenu(PopupWindow):
             h_align="center",
         )
 
+        self.search_app_entry.props.xalign = 0.5
+
         # Scrolled Window
         self.scrolled_window = ScrolledWindow(
             name="appmenu-scroll",
-            max_content_size=(-1, 920),
-            min_content_size=(-1, 920),
+            max_content_size=(-1, 540),
+            min_content_size=(-1, 540),
+            propagate_height=False,
             visible=False,
             child=self.buttons_box,
         )
@@ -148,8 +154,9 @@ class AppMenu(PopupWindow):
 
         super().__init__(
             transition_duration=300,
+            decorations="margin: 1px 1px 1px 0px;",
             anchor="center left",
-            transition_type="slide-up",
+            transition_type="crossfade",
             child=Box(
                 orientation="v",
                 children=[
@@ -179,7 +186,7 @@ class AppMenu(PopupWindow):
                     ),
                 ],
             ),
-            enable_inhibitor=False,
+            enable_inhibitor=True,
             keyboard_mode="on-demand",
         )
 
@@ -206,7 +213,6 @@ class AppMenu(PopupWindow):
     def toggle_popup(self, monitor: int | None = None):
         self.search_app_entry.set_text("")
         self.search_app_entry.remove_style_class("active")
-        self.reset_app_menu()
         self.scrolled_window.hide()
         self.recent_applications.show()
         super().toggle_popup(monitor=True)
@@ -214,25 +220,34 @@ class AppMenu(PopupWindow):
     def on_entry_change(self, entry: Entry):
         if entry.get_text() == " " or entry.get_text() == "":
             self.search_app_entry.remove_style_class("active")
-            self.reset_app_menu()
             self.scrolled_window.hide()
             self.recent_applications.show()
             return
         self.scrolled_window.show()
         self.recent_applications.hide()
-        self.search_app_entry.add_style_class("active")
+        self.search_app_entry.add_style_class(
+            "active"
+        ) if "active" not in self.search_app_entry.style_classes else None
+        for child in self.buttons_box.children:
+            self.reset_button(child)
         lister = process.extract(
             entry.get_text(),
             self.application_buttons.keys(),
             scorer=fuzz.partial_ratio,
             limit=10,
         )
-        for elem_i in range(len(lister)):
-            name = lister[elem_i][0]
-            self.buttons_box.reorder_child(self.application_buttons[name], elem_i)
 
-    def reset_app_menu(self):
-        i = 0
-        for app_button in self.application_buttons.values():
-            self.buttons_box.reorder_child(app_button, i)
-            i += 1
+        for i, name in enumerate(lister):
+            child = self.application_buttons[name[0]]
+            self.buttons_box.reorder_child(child, i)
+            GLib.timeout_add((i+1) * 50, self.set_button, child)
+
+    def set_button(self, child):
+        child.set_style("animation-duration: 1000ms;")
+        child.add_style_class("shine")
+        return False
+
+    def reset_button(self, child):
+        child.set_style("")
+        child.remove_style_class("shine")
+        return False

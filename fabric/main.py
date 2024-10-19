@@ -3,7 +3,7 @@ from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
 import config
-from components.app_menu.app_menu import AppMenu
+from components.app_menu.app_menuv2 import AppMenu
 from components.bar.bar import StatusBar
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD

@@ -48,6 +48,7 @@ class PopupWindow(WaylandWindow):
         enable_inhibitor: bool = False,
         keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
+        decorations: str = "margin: 1px",
         **kwargs,
     ):
         self.timeout = timeout
@@ -70,7 +71,7 @@ class PopupWindow(WaylandWindow):
             all_visible=False,
             visible=False,
             exclusive=False,
-            child=Box(style="margin: 1px;", children=self.revealer),
+            child=Box(style=decorations, children=self.revealer),
             keyboard_mode=keyboard_mode,
             **kwargs,
         )

@@ -36,7 +36,7 @@
   --gray-dim: #a89984;
   --orange-dim: #d65d0e;
 
-  --placeholder_text_color: rgb(114, 114, 114);
+  --placeholder_text_color: rgb(255, 255, 255);
 }
 
 * {
@@ -74,7 +74,7 @@ scale {
   margin-bottom: 10px;
 }
 
-#system-tray > button,
+#system-tray>button,
 #panel-button-active,
 #date-time,
 #panel-button {
@@ -87,7 +87,7 @@ scale {
 }
 
 #date-time:hover,
-#system-tray > button:hover,
+#system-tray>button:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -104,14 +104,14 @@ scale {
 
 #date-time:active,
 #date-time:active label,
-#system-tray > button:active,
+#system-tray>button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active > * > * > label,
-#panel-button:active > * > label,
-#panel-button-active > box > label,
+#panel-button:active>*>*>label,
+#panel-button:active>*>label,
+#panel-button-active>box>label,
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
@@ -126,7 +126,7 @@ scale {
   background-color: mix(var(--accent), white, 0.6);
 }
 
-#quicksettings-box > box > button {
+#quicksettings-box>box>button {
   margin: 10px -10px 10px 5px;
 }
 
@@ -162,11 +162,11 @@ scale {
   min-width: 140px;
 }
 
-#prayer-info > * > * > * > * {
+#prayer-info>*>*>*>* {
   font-size: 16px;
 }
 
-#workspaces > button {
+#workspaces>button {
   border-radius: 100%;
   min-width: 10px;
   margin: 13px 2px 13px 2px;
@@ -192,7 +192,7 @@ scale {
 }
 
 #player-stack-button.active,
-#workspaces > button.active {
+#workspaces>button.active {
   border-radius: 5px;
   min-width: 30px;
   margin: 10px 1px 10px 1px;
@@ -200,17 +200,17 @@ scale {
 }
 
 #player-stack-button.empty,
-#workspaces > button.empty {
+#workspaces>button.empty {
   min-width: 9px;
   margin: 14px 2px 14px 2px;
   background-color: var(--fg4);
 }
 
-#workspaces > button.urgent {
+#workspaces>button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces > button:hover {
+#workspaces>button:hover {
   background-color: var(--bg4);
 }
 
@@ -225,8 +225,8 @@ scale {
   padding: 15px;
 }
 
-#system-tray-menu > menuitem menu > menuitem:hover,
-#system-tray-menu > menuitem:hover,
+#system-tray-menu>menuitem menu>menuitem:hover,
+#system-tray-menu>menuitem:hover,
 #submenu-button:hover {
   background-color: alpha(var(--bg4), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -236,7 +236,7 @@ scale {
   background-color: var(--accent);
 }
 
-#submenu-button:active > * {
+#submenu-button:active>* {
   color: var(--bg);
 }
 
@@ -259,16 +259,16 @@ scale {
   margin: 5px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   border-width: 1px;
   border-style: double;
   border-color: var(--fg4);
   margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu > menuitem menu > menuitem:disabled,
-#system-tray-menu > menuitem:disabled {
+#system-tray-menu>menuitem menu>menuitem:disabled,
+#system-tray-menu>menuitem:disabled {
   background-color: var(--bg_h);
 }
 
@@ -278,14 +278,14 @@ scale {
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   background-color: var(--bg2);
   padding: 5px;
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu,
+#system-tray-menu>menuitem menu,
 #system-tray-menu,
 #submenu {
   /* min-width: 450px; */
@@ -454,16 +454,17 @@ scale {
 
 /* ---------------------------------------- APP MENU ---------------------------------------- */
 #appmenu {
-  background-color: alpha(black, 1);
+  background-color: alpha(black, 0.9);
   padding: 20px;
   border-top-right-radius: 50px;
   border-bottom-right-radius: 50px;
-  min-height: 1000px;
-  min-width: 300px;
+  min-height: 600px;
+  min-width: 350px;
+  transition: min-height 10s cubic-bezier(.42, 0, .58, 1);
 }
 
 #appmenu-corner * {
-  background-color: alpha(black, 1);
+  background-color: alpha(black, 0.9);
 }
 
 #appmenu-heading {
@@ -473,14 +474,68 @@ scale {
   margin-bottom: 10px;
 }
 
+
+#appmenu-entry {
+  background-color: alpha(white, 0.3);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 0px 8px 0px;
+  color: #ffffff;
+  caret-color: white;
+  border-radius: 50px;
+  transition: min-width 0.5s cubic-bezier(.33, 1.29, 1, 1.15);
+}
+
+#appmenu-entry.active {
+  min-width: 250px;
+}
+
+#appmenu-entry image {
+  color: #000000;
+  margin-right: 5px;
+}
+
+#appmenu-entry selection {
+  background-color: #2c2c2c;
+  color: #e8e8e8;
+}
+
+#appmenu-scroll slider {
+  border-width: 2px;
+  border-color: rgb(227, 227, 227);
+  border-radius: 20px;
+  border-style: solid;
+}
+
+
+@keyframes app-slot-shine {
+  50% {
+    background-color: alpha(white, 0.4);
+    padding: 10px 20px 10px 20px;
+
+  }
+
+  100% {
+    background-color: unset;
+  }
+}
+
+
+#appmenu-button.shine {
+  animation: app-slot-shine;
+}
+
+
+
 #appmenu-button {
+  /* background-color: red; */
   margin: 5px;
   padding: 10px;
   border-radius: 10px;
 }
 
 #appmenu-app-name {
-  color: var(--fg);
+  color: white;
 }
 
 #appmenu-app-desc {
@@ -500,48 +555,31 @@ scale {
   background-color: alpha(black, 0.3);
 }
 
-#appmenu-button:focus label,
 #appmenu-button:focus image,
+#appmenu-button:focus label {
+  color: black;
+}
+
 #appmenu-button:focus {
-  background-color: mix(var(--fg), black, 0.2);
-  color: var(--bg);
+  background-color: alpha(#ffffff, 0.8);
 }
 
 #appmenu-button:active label,
-#appmenu-button:active image,
+#appmenu-button:active image {
+  color: black;
+
+}
+
 #appmenu-button:active {
-  background-color: mix(var(--fg), black, 0.2);
-  color: var(--bg);
+  background-color: alpha(#ffffff, 1);
 }
 
 #appmenu-button label {
-  font-size: 14px;
-}
-
-#appmenu-entry {
-  background-color: alpha(white, 0.3);
+  font-weight: bold;
   font-size: 16px;
-  font-weight: 500;
-  padding: 10px;
-  color: #ffffff;
-  caret-color: white;
-  border-radius: 50px;
-  transition: min-width 0.2s cubic-bezier(.42,0,.58,1);
 }
 
-#appmenu-entry.active {
-  min-width: 250px;
-}
 
-#appmenu-entry image {
-  color: #000000;
-  margin-right: 5px;
-}
-
-#appmenu-entry selection {
-  background-color: #2c2c2c;
-  color: #e8e8e8;
-}
 
 /* ------------------------------------------------------------------------------------------ */
 
