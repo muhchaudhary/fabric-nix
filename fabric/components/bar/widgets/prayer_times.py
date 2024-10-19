@@ -13,7 +13,7 @@ from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 
-from widgets.popup_window import PopupWindow
+from widgets.popup_window_v2 import PopupWindow
 
 city = "Toronto"
 country = "Canada"
@@ -107,10 +107,10 @@ class PrayerTimesButton(Button):
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
-        PrayerTimesPopup.revealer.connect(
+        PrayerTimesPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
             lambda *args: self.set_name("panel-button-active")
-            if PrayerTimesPopup.visible
+            if PrayerTimesPopup.popup_visible
             else self.set_name("panel-button"),
         )
 
@@ -169,7 +169,7 @@ class PrayerTimes(Box):
 
 PrayerTimesPopup = PopupWindow(
     transition_duration=350,
-    anchor="top left",
+    anchor="top-left",
     transition_type="slide-down",
     child=PrayerTimes(),
     enable_inhibitor=True,

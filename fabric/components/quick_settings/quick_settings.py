@@ -10,7 +10,7 @@ from components.quick_settings.widgets.submenus import (
 from components.quick_settings.widgets.sliders import AudioSlider, BrightnessSlider
 
 from widgets.player import PlayerBoxStack
-from widgets.popup_window import PopupWindow
+from widgets.popup_window_v2 import PopupWindow
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -116,10 +116,10 @@ class QuickSettingsButton(Button):
         )
         self.connect("clicked", self.on_click)
 
-        QuickSettingsPopup.revealer.connect(
+        QuickSettingsPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
             lambda *args: self.set_name("panel-button-active")
-            if QuickSettingsPopup.visible
+            if QuickSettingsPopup.popup_visible
             else self.set_name("panel-button"),
         )
 
@@ -145,7 +145,7 @@ class QuickSettingsButton(Button):
 
 QuickSettingsPopup = PopupWindow(
     transition_duration=400,
-    anchor="top right",
+    anchor="top-right",
     transition_type="slide-down",
     child=QuickSettings(),
     enable_inhibitor=True,

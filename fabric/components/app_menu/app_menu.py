@@ -4,7 +4,7 @@ import os
 from gi.repository import GLib, Gdk
 from loguru import logger
 from thefuzz import fuzz, process
-from widgets.popup_window import PopupWindow
+from widgets.popup_window_v2 import PopupWindow
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
