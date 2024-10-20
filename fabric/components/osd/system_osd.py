@@ -7,6 +7,7 @@ from gi.repository import GLib
 
 from fabric.widgets.widget import Widget
 from fabric.widgets.image import Image
+from fabric.widgets.shapes import Corner
 from fabric.widgets.box import Box
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
@@ -123,6 +124,30 @@ class PopupWindow(WaylandWindow):
         GLib.timeout_add(500, popup_func)
 
 
+class ProgressBar(Box):
+    def __init__(self, progress_ticks: int = 10):
+        self.progress_filled_class = "filled"
+        self.progress_ticks = progress_ticks
+        self.tick_boxes = [
+            Box(v_expand=True, h_expand=True) for _ in range(self.progress_ticks)
+        ]
+        super().__init__(
+            name="osd-progress-bar",
+            spacing=5,
+            v_expand=True,
+            h_expand=True,
+            orientation="v",
+            children=self.tick_boxes,
+        )
+
+    def set_progress_filled(self, percent: float):
+        # TODO: rework this later, just to get it working, am sleepy frfr
+        for child in super().children:
+            child.remove_style_class(self.progress_filled_class)
+        for tick in range(int(self.progress_ticks * percent)):
+            super().children[-(tick + 1)].add_style_class(self.progress_filled_class)
+
+
 class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
         self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
@@ -133,19 +158,45 @@ class SystemOSD(PopupWindow):
         self.disp_backlight = 0
         self.kbd_backlight = 0
         self.vol = 0
-
+        self.progress_bar = ProgressBar(progress_ticks=20)
         self.overlay_fill_box = Box(name="osd-box")
-        self.icon = Image()
+        self.icon = Image(name="osd-icon")
 
         super().__init__(
             transition_duration=150,
-            anchor="center-right",
-            transition_type="slide-up",
+            anchor="center right",
+            transition_type="crossfade",
             keyboard_mode="none",
+            decorations="margin: 1px 0px 1px 1px;",
             child=Box(
-                name="quicksettings",
                 orientation="v",
-                children=[self.overlay_fill_box, self.icon],
+                children=[
+                    Box(
+                        name="osd-corner",
+                        children=Corner(
+                            orientation="bottom-right",
+                            size=50,
+                        ),
+                    ),
+                    Box(
+                        name="on-screen-display",
+                        v_expand=True,
+                        h_expand=True,
+                        orientation="v",
+                        spacing=10,
+                        children=[
+                            self.progress_bar,
+                            self.icon,
+                        ],
+                    ),
+                    Box(
+                        name="osd-corner",
+                        children=Corner(
+                            orientation="top-right",
+                            size=50,
+                        ),
+                    ),
+                ],
             ),
             **kwargs,
         )
@@ -154,19 +205,14 @@ class SystemOSD(PopupWindow):
         icon_name = "-".join(str(config.audio.speaker.icon_name).split("-")[0:2])
         self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
         self.vol = config.audio.speaker.volume
-        quick_accent = accent
-        if config.audio.speaker.muted:
-            quick_accent = "#a89984"
-        self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({quick_accent}, 0.8) {round(self.vol)}%, alpha(#303030, 0.8) {round(self.vol)}%);",
-        )
+        self.progress_bar.set_progress_filled(round(self.vol) / 100)
 
     def update_label_brightness(self):
         brightness = self.brightness.screen_brightness / self.max_disp_backlight * 100
 
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.8) {brightness}%, alpha(#303030, 0.8) {brightness}%);",
+            f"background-image: linear-gradient(to top, alpha(white, 0.8) {brightness}%, alpha(black, 0.8) {brightness}%);",
         )
 
     def update_label_keyboard(self, *args):
@@ -182,7 +228,7 @@ class SystemOSD(PopupWindow):
 
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha({accent}, 0.8) {brightness}%, alpha(#303030, 0.8) {brightness}%);",
+            f"background-image: linear-gradient(to top, alpha(white, 0.8) {brightness}%, alpha(black, 0.8) {brightness}%);",
         )
 
     def enable_popup(self, type: str):

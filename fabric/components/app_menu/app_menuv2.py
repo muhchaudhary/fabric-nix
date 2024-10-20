@@ -18,7 +18,6 @@ from fabric.utils.helpers import (
     DesktopApp,
     get_desktop_applications,
     exec_shell_command_async,
-    invoke_repeater,
 )
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
@@ -59,7 +58,7 @@ class ApplicationButtonV2(Button):
                                 app_info.display_name,
                                 justfication="left",
                                 h_align="start",
-                                max_chars_width=80,
+                                max_chars_width=30,
                                 ellipsization="end",
                                 name="appmenu-app-name",
                             ),
@@ -67,7 +66,7 @@ class ApplicationButtonV2(Button):
                                 app_info.description if app_info.description else "",
                                 justfication="left",
                                 h_align="start",
-                                max_chars_width=80,
+                                max_chars_width=30,
                                 ellipsization="end",
                                 name="appmenu-app-desc",
                             ),
@@ -156,7 +155,7 @@ class AppMenu(PopupWindow):
             transition_duration=300,
             decorations="margin: 1px 1px 1px 0px;",
             anchor="center-left",
-            transition_type="slide-up",
+            transition_type="crossfade",
             child=Box(
                 orientation="v",
                 children=[
@@ -194,31 +193,27 @@ class AppMenu(PopupWindow):
         self.recent_applications.children = []
         recent_apps = get_recent_apps() if not recent_apps else recent_apps
         for app_id in recent_apps:
-            for app in self.applications:
-                if app.name == app_id:
-                    recent_app_button = ApplicationButtonV2(
-                        app, on_clicked=self.on_app_launch
-                    )
-                    self.recent_applications.add(recent_app_button)
+            [
+                self.recent_applications.add(
+                    ApplicationButtonV2(app, on_clicked=self.on_app_launch)
+                )
+                for app in self.applications
+                if app.name == app_id
+            ]
 
     def on_app_launch(self, app_button: ApplicationButtonV2, *_):
         app_button.launch_app()
         self.toggle_popup()
         self.update_recent_apps(app_button.add_app_to_json())
 
-
     # Overrides
-    def toggle_popup(self, monitor: int | None = None):
+    def toggle_popup(self, monitor: bool | None = None):
         self.search_app_entry.set_text("")
         self.search_app_entry.remove_style_class("active")
         self.scrolled_window.hide()
         self.recent_applications.show()
         self.search_app_entry.grab_focus()
         super().toggle_popup(monitor=True)
-
-    def on_key_release(self, _, event_key):
-        self.search_app_entry.do_key_press_event(self.search_app_entry,event_key)
-        return super().on_key_release(_, event_key)
 
     def on_entry_change(self, entry: Entry):
         if entry.get_text() == " " or entry.get_text() == "":
@@ -243,10 +238,10 @@ class AppMenu(PopupWindow):
         for i, name in enumerate(lister):
             child = self.application_buttons[name[0]]
             self.buttons_box.reorder_child(child, i)
-            GLib.timeout_add((i + 1) * 50, self.set_button, child)
+            GLib.timeout_add((i + 1) * 20, self.set_button, child)
 
     def set_button(self, child):
-        child.set_style("animation-duration: 1000ms;")
+        child.set_style("animation-duration: 500ms;")
         child.add_style_class("shine")
         return False
 
