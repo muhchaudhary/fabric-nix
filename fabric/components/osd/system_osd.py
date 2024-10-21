@@ -30,8 +30,7 @@ class PopupWindow(WaylandWindow):
             "slide-left",
             "slide-up",
             "slide-down",
-        ]
-        | None = None,
+        ] = "none",
         transition_duration: int = 100,
         visible: bool = False,
         anchor: str = "top right",
@@ -54,7 +53,7 @@ class PopupWindow(WaylandWindow):
         )
         self.visible = visible
         super().__init__(
-            layer="overlay",
+            layer="top",
             anchor=anchor,
             all_visible=False,
             visible=False,
@@ -164,26 +163,27 @@ class SystemOSD(PopupWindow):
 
         super().__init__(
             transition_duration=150,
-            anchor="center right",
+            anchor="right",
             transition_type="crossfade",
             keyboard_mode="none",
             decorations="margin: 1px 0px 1px 1px;",
             child=Box(
                 orientation="v",
+                h_align="end",
                 children=[
                     Box(
                         name="osd-corner",
                         children=Corner(
+                            h_align="end",
                             orientation="bottom-right",
                             size=50,
                         ),
                     ),
                     Box(
                         name="on-screen-display",
-                        v_expand=True,
-                        h_expand=True,
                         orientation="v",
                         spacing=10,
+                        h_align="end",
                         children=[
                             self.progress_bar,
                             self.icon,
@@ -192,6 +192,7 @@ class SystemOSD(PopupWindow):
                     Box(
                         name="osd-corner",
                         children=Corner(
+                            h_align="end",
                             orientation="top-right",
                             size=50,
                         ),
@@ -208,14 +209,12 @@ class SystemOSD(PopupWindow):
         self.progress_bar.set_progress_filled(round(self.vol) / 100)
 
     def update_label_brightness(self):
-        brightness = self.brightness.screen_brightness / self.max_disp_backlight * 100
-
         self.icon.set_from_icon_name("display-brightness-symbolic", 6)
-        self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha(white, 0.8) {brightness}%, alpha(black, 0.8) {brightness}%);",
-        )
+        brightness = self.brightness.screen_brightness / self.max_disp_backlight
+        self.progress_bar.set_progress_filled(brightness)
 
     def update_label_keyboard(self, *args):
+        self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
         brightness = (
             int(
                 os.read(
@@ -223,13 +222,8 @@ class SystemOSD(PopupWindow):
                 ),
             )
             / self.max_kbd_backlight
-            * 100
         )
-
-        self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
-        self.overlay_fill_box.set_style(
-            f"background-image: linear-gradient(to top, alpha(white, 0.8) {brightness}%, alpha(black, 0.8) {brightness}%);",
-        )
+        self.progress_bar.set_progress_filled(brightness)
 
     def enable_popup(self, type: str):
         if type == "sound":
