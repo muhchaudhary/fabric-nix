@@ -51,14 +51,6 @@
   color: green;
 }
 
-#main-window {
-  /* border: solid 2px black; */
-  /* border-radius: 10px; */
-  /* border-color: #171717; */
-  /* background-color: alpha(#171717, 0.7); */
-  background-color: alpha(#171717, 0.8);
-}
-
 tooltip {
   padding: 10px;
   border-radius: 10px;
@@ -73,6 +65,34 @@ scale {
   margin-top: 10px;
   margin-bottom: 10px;
 }
+
+/* SYSTEM BAR */
+#system-bar {
+  background-color: alpha(white, 0.01)
+}
+
+#system-bar-corner {
+  margin-bottom: 15px;
+}
+
+#system-bar-corner * {
+  background-color: alpha(black, 0.9);
+}
+
+#system-bar-group {
+  padding: 0px 10px 0px 10px;
+  background-color: alpha(black, 0.9);
+  border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 15px;
+  /* border-bottom-width: 5px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent); */
+}
+
+
+
+/*  */
+
 
 #system-tray>button,
 #panel-button-active,
@@ -101,6 +121,16 @@ scale {
   font-weight: 900;
   /* color: var(--orange); */
 }
+
+
+#panel-button.activated {
+  background-color: alpha(white, 0.15);
+  border-style: solid;
+  border-color: transparent;
+  border-bottom-style: solid;
+  border-bottom-color: alpha(white, 0.5);
+}
+
 
 #date-time:active,
 #date-time:active label,
@@ -346,6 +376,10 @@ scale {
   padding: 20px;
   border-top-left-radius: 50px;
   border-bottom-left-radius: 50px;
+}
+
+#osd-icon image {
+  color: white;
 }
 
 /*  */
@@ -634,9 +668,9 @@ scale {
 }
 
 #notification-action-buttons button {
-  background-color: alpha(#393939,0.4);
+  background-color: alpha(#393939, 0.4);
   border-color: black;
-  border-style:solid;
+  border-style: solid;
   padding: 5px;
 }
 
@@ -657,12 +691,15 @@ scale {
   border-radius: 10px;
   margin-bottom: 15px;
 }
+
 #notification-title * {
   margin-right: 10px;
 }
+
 #notification-title {
   margin: 10px 0px 0px 20px;
 }
+
 #notification-content {
   margin: 20px 20px 0px 20px;
 }

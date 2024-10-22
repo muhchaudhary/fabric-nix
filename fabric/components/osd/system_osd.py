@@ -126,9 +126,10 @@ class PopupWindow(WaylandWindow):
 class ProgressBar(Box):
     def __init__(self, progress_ticks: int = 10):
         self.progress_filled_class = "filled"
-        self.progress_ticks = progress_ticks
+        self.total_progress_ticks = progress_ticks
+        self.visible_progress_ticks = progress_ticks
         self.tick_boxes = [
-            Box(v_expand=True, h_expand=True) for _ in range(self.progress_ticks)
+            Box(v_expand=True, h_expand=True) for _ in range(self.total_progress_ticks)
         ]
         super().__init__(
             name="osd-progress-bar",
@@ -139,11 +140,18 @@ class ProgressBar(Box):
             children=self.tick_boxes,
         )
 
+    def set_tick_number(self, ticks: int):
+        self.visible_progress_ticks = ticks
+        for child in super().children:
+            child.set_visible(True)
+        for i in range(self.total_progress_ticks - ticks):
+            super().children[i].set_visible(False)
+
     def set_progress_filled(self, percent: float):
         # TODO: rework this later, just to get it working, am sleepy frfr
         for child in super().children:
             child.remove_style_class(self.progress_filled_class)
-        for tick in range(int(self.progress_ticks * percent)):
+        for tick in range(int(self.visible_progress_ticks * percent)):
             super().children[-(tick + 1)].add_style_class(self.progress_filled_class)
 
 
@@ -159,7 +167,7 @@ class SystemOSD(PopupWindow):
         self.vol = 0
         self.progress_bar = ProgressBar(progress_ticks=20)
         self.overlay_fill_box = Box(name="osd-box")
-        self.icon = Image(name="osd-icon")
+        self.icon = Image()
 
         super().__init__(
             transition_duration=150,
@@ -186,7 +194,7 @@ class SystemOSD(PopupWindow):
                         h_align="end",
                         children=[
                             self.progress_bar,
-                            self.icon,
+                            Box(name="osd-icon", children=self.icon),
                         ],
                     ),
                     Box(

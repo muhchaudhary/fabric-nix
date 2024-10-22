@@ -4,7 +4,7 @@ from loguru import logger
 
 import config
 from components.app_menu.app_menuv2 import AppMenu
-from components.bar.bar import StatusBar
+from components.bar.bar import StatusBarSeperated
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
 from components.notifications.notification_popup import NotificationPopup
@@ -19,7 +19,7 @@ if __name__ == "__main__":
     sc = config.sc
 
     logger.disable("fabric.hyprland.widgets")
-    bar = StatusBar()
+    bar = StatusBarSeperated()
     clockWidget = ClockWidget()
     systemOverlay = SystemOSD()
     nc = NotificationPopup(config.notification_server)
