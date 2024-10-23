@@ -1,52 +1,41 @@
-:vars {
-    --background: #150d16;
-    --foreground: #f5dbc4;
-    --color0: #150d16;
-    --color1: #72448D;
-    --color2: #9C5995;
-    --color3: #D5719F;
-    --color4: #9A62F3;
-    --color5: #E075DF;
-    --color6: #F98F9F;
-    --color7: #f5dbc4;
-    --color8: #ab9989;
-    --color9: #72448D;
-    --color10: #9C5995;
-    --color11: #393939;
-    --color12: #9A62F3;
-    --color13: #E075DF;
-    --color14: #F98F9F;
-    --color15: #f5dbc4;
-    --window-bg: alpha(var(--background), 0.6);
-    --module-bg: alpha(var(--background), 0.4);
-    --border-color: var(--color11);
-    --ws-active: var(--color9);
-    --ws-inactive: var(--color3);
-    --ws-empty: var(--color8);
-    --ws-hover: var(--color1);
-    --ws-urgent: var(--color11);
+* {
+    all: unset;
 }
 
-#main-window {
-    border: solid 2px;
-    border-color: var(--border-color);
-    border-radius: 100px;
-    margin: 10px;
-}
 
-#window-box {
-    /* margin: 10px; */
-    font-size: 70px;
-    border: solid 2px;
-    border-color: var(--border-color);
-    background-color: grey;
-    border-radius: 30px;
-}
-
-#workspace-box {
+#overview-window {
+    background-color: alpha(black,0.9);
+    border-radius: 50px;
     padding: 10px;
-    padding-left: 25px;
-    padding-right: 25px;
-    background-color: black;
-    /* border-radius: 50px; */
+}
+
+#overview-workspace-bg,
+#overview-client-box {
+    background-color: alpha(white, 0.1);
+    border-radius: 20px;
+}
+
+#overview-client-box:hover {
+    background-color: alpha(white, 0.2);
+}
+
+#overview-client-box:active {
+    background-color: alpha(white, 0.4);
+}
+
+#overview-workspace-bg {
+
+    background-color: alpha(white, 0.07);
+}
+
+#overview-workspace-box {
+    min-height: 50px;
+    padding: 15px;
+}
+
+#overview-workspace-box label {
+    margin-top: 5px;
+    font-size: 20px;
+    font-weight: bold;
+    font-family: "roboto";
 }

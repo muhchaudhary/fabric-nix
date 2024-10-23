@@ -4,6 +4,7 @@ from loguru import logger
 
 import config
 from components.app_menu.app_menuv2 import AppMenu
+from components.overview.overview import Overview
 from components.bar.bar import StatusBarSeperated
 from components.desktop.desktop_widget import ClockWidget
 from components.osd.system_osd import SystemOSD
@@ -21,6 +22,7 @@ if __name__ == "__main__":
     logger.disable("fabric.hyprland.widgets")
     bar = StatusBarSeperated()
     clockWidget = ClockWidget()
+    overview = Overview()
     systemOverlay = SystemOSD()
     nc = NotificationPopup(config.notification_server)
     appMenu = AppMenu()
@@ -28,7 +30,9 @@ if __name__ == "__main__":
     file = monitor_file(get_relative_path("style/main.css"))
     file.connect("changed", lambda *args: apply_style(app))
 
-    app = Application("fabric-bar", bar, clockWidget, systemOverlay, nc, appMenu)
+    app = Application(
+        "fabric-bar", bar, clockWidget, systemOverlay, nc, appMenu, overview
+    )
     apply_style(app)
 
     def quit_fabric():

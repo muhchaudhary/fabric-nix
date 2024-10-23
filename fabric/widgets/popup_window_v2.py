@@ -23,7 +23,7 @@ class Padding(EventBox):
             events=["button-press"],
             **kwargs,
         )
-        self.set_can_focus = False
+        self.set_can_focus(False)
 
 
 class PopupRevealer(Box):
