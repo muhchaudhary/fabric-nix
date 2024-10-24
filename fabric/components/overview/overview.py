@@ -88,7 +88,12 @@ class WorkspaceEventBox(EventBox):
             name="overview-workspace-bg",
             child=fixed
             if fixed
-            else Image(pixbuf=IconResolver().get_icon_pixbuf("list-add", 36)),
+            # TODO this is lazy, do it right later lol
+            else Image(
+                pixbuf=Gtk.IconTheme()
+                .get_default()
+                .load_icon("list-add", 36, Gtk.IconLookupFlags.FORCE_SIZE)
+            ),
             on_drag_data_received=lambda _w,
             _c,
             _x,
@@ -171,7 +176,7 @@ class Overview(PopupWindow):
                     abs(client["at"][1] - monitors[client["monitor"]][1]) * SCALE,
                 )
         total_workspaces = (
-            range(1, max(self.workspace_boxes.keys()) + 1)
+            range(1, max(self.workspace_boxes.keys()) + 2)
             if len(self.workspace_boxes) != 0
             else []
         )
