@@ -53,7 +53,7 @@ class PopupWindow(WaylandWindow):
         )
         self.visible = visible
         super().__init__(
-            layer="top",
+            layer="overlay",
             anchor=anchor,
             all_visible=False,
             visible=False,

@@ -86,8 +86,6 @@ class WorkspaceEventBox(EventBox):
         self.fixed = fixed
         super().__init__(
             name="overview-workspace-bg",
-            h_expand=True,
-            v_expand=True,
             child=fixed
             if fixed
             else Image(pixbuf=IconResolver().get_icon_pixbuf("list-add", 36)),
@@ -124,14 +122,13 @@ class Overview(PopupWindow):
 
         connection.connect("event::openwindow", self.do_update)
         connection.connect("event::closewindow", self.do_update)
-        connection.connect("event::movewindowv2", self.do_update)
-        # connection.connect("event::createworkspace", self.do_update)
+        connection.connect("event::movewindow", self.do_update)
 
         super().__init__(
             anchor="center",
             keyboard_mode="on-demand",
             transition_type="crossfade",
-            child=Box(style="padding: 10px;", children=self.overview_box),
+            child=self.overview_box,
         )
 
     def update(self):
@@ -144,6 +141,13 @@ class Overview(PopupWindow):
         self.workspace_boxes.clear()
 
         self.overview_box.children = []
+
+        monitors = {
+            monitor["id"]: (monitor["x"], monitor["y"])
+            for monitor in json.loads(
+                connection.send_command("j/monitors").reply.decode()
+            )
+        }
 
         for client in json.loads(
             str(connection.send_command("j/clients").reply.decode())
@@ -163,8 +167,8 @@ class Overview(PopupWindow):
                     )
                 self.workspace_boxes[client["workspace"]["id"]].put(
                     self.clients[client["address"]],
-                    client["at"][0] * SCALE,
-                    client["at"][1] * SCALE,
+                    abs(client["at"][0] - monitors[client["monitor"]][0]) * SCALE,
+                    abs(client["at"][1] - monitors[client["monitor"]][1]) * SCALE,
                 )
         total_workspaces = (
             range(1, max(self.workspace_boxes.keys()) + 1)
@@ -176,6 +180,8 @@ class Overview(PopupWindow):
                 Box(
                     name="overview-workspace-box",
                     orientation="vertical",
+                    h_align="end",
+                    v_align="end",
                     children=[
                         WorkspaceEventBox(
                             w_id,
@@ -191,3 +197,7 @@ class Overview(PopupWindow):
     def do_update(self, *_):
         print("Updating for :", _[1].name)
         self.update()
+
+    def toggle_popup(self, monitor: bool | None = None):
+        self.update()
+        return super().toggle_popup(monitor=False)

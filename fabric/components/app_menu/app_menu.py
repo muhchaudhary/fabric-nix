@@ -1,7 +1,7 @@
 import json
 import os
 
-from gi.repository import GLib, Gdk
+from gi.repository import GLib
 from loguru import logger
 from thefuzz import fuzz, process
 from widgets.popup_window_v2 import PopupWindow

@@ -17,10 +17,10 @@ class OpenAppsBar(Box):
         self._manager = Glace.Manager()
         self._manager.connect("client-added", self.on_client_added)
 
-    def on_active_window(self, _, event):
-        print(event.data)
-        print(self.client_buttons)
-        # client_buttons[]
+    # def on_active_window(self, _, event):
+    #     print(event.data)
+    #     print(self.client_buttons)
+    # client_buttons[]
 
     def on_client_added(self, _, client: Glace.Client):
         client_image = Image()
@@ -33,12 +33,9 @@ class OpenAppsBar(Box):
 
         client.connect(
             "notify::app-id",
-            lambda *_: [
-                client_image.set_from_pixbuf(
-                    self.icon_resolver.get_icon_pixbuf(client.get_app_id(), 24)
-                ),
-                print(client.get_id()),
-            ],
+            lambda *_: client_image.set_from_pixbuf(
+                self.icon_resolver.get_icon_pixbuf(client.get_app_id(), 24)
+            ),
         )
 
         client.connect(
