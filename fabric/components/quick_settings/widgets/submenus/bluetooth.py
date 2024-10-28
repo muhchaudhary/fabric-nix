@@ -28,7 +28,7 @@ class BluetoothDeviceBox(CenterBox):
 
         self.add_start(
             Image(
-                icon_name=device.icon_name + "-symbolic", size=16, name="submenu-icon"
+                icon_name=device.icon_name + "-symbolic", icon_size=24, name="submenu-icon"
             )
         )
         self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore
@@ -71,9 +71,7 @@ class BluetoothSubMenu(QuickSubMenu):
             children=Label("Available Devices", h_align="start"),
         )
 
-        self.scan_image = Image(
-            icon_name="view-refresh-symbolic", icon_size=1, pixel_size=20
-        )
+        self.scan_image = Image(icon_name="view-refresh-symbolic", icon_size=24)
         self.scan_button = Button(image=self.scan_image, name="panel-button")
         self.scan_button.connect("clicked", self.on_scan_toggle)
 
@@ -142,11 +140,11 @@ class BluetoothToggle(QuickSubToggle):
     def toggle_bluetooth(self, client: BluetoothClient, *_):
         if client.enabled:
             self.set_active_style(True)
-            self.action_icon.set_from_icon_name("bluetooth-active-symbolic", 1)
+            self.action_icon.set_from_icon_name("bluetooth-active-symbolic", 24)
             self.action_label.set_label("Not Connected")
         else:
             self.set_active_style(False)
-            self.action_icon.set_from_icon_name("bluetooth-disabled-symbolic", 1)
+            self.action_icon.set_from_icon_name("bluetooth-disabled-symbolic",24)
             self.action_label.set_label("Disabled")
 
     def new_device(self, client: BluetoothClient, address):

@@ -59,7 +59,7 @@ class WifiSubMenu(QuickSubMenu):
         ap_button.add(
             Box(
                 children=[
-                    Image(icon_name=ap.get("icon-name"), icon_size=2),
+                    Image(icon_name=ap.get("icon-name"), icon_size=24),
                     Label(label=ap.get("ssid")),
                 ]
             )
@@ -86,7 +86,7 @@ class WifiToggle(QuickSubToggle):
                 lambda *args: self.set_active_style(wifi.get_property("enabled")),  # type: ignore
             )
 
-            self.action_icon.set_from_icon_name(wifi.get_property("icon-name"), 2)
+            self.action_icon.set_from_icon_name(wifi.get_property("icon-name"), 24)
             wifi.bind_property("icon-name", self.action_icon, "icon-name")
 
             self.action_label.set_label(wifi.get_property("ssid"))

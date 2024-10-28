@@ -27,8 +27,8 @@ def invoke_repeater_threaded(timeout: int, callback: callable, *args):
 class Temps(Button):
     def __init__(self, **kwargs):
         super().__init__(name="panel-button", **kwargs)
-        self.fan_icon = Image(icon_name="sensors-fan-symbolic", pixel_size=20)
-        self.cpu_icon = Image(icon_name="cpu-symbolic", pixel_size=20)
+        self.fan_icon = Image(icon_name="sensors-fan-symbolic", icon_size=20)
+        self.cpu_icon = Image(icon_name="cpu-symbolic", icon_size=20)
         self.fan_speed_label = Label("-1 RPM")
         self.cpu_temp_label = Label("-1°C")
         self.add(
@@ -48,7 +48,7 @@ class Temps(Button):
 
     def get_gpu_temp(self):
         if self.fan_icon.get_icon_name() != "freon-gpu-temperature-symbolic":
-            self.fan_icon.set_from_icon_name("freon-gpu-temperature-symbolic", 2)
+            self.fan_icon.set_from_icon_name("freon-gpu-temperature-symbolic", 20)
         gpu_temp = exec_shell_command(
             "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
         ).strip("\n")

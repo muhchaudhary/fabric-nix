@@ -80,11 +80,12 @@ class QuickSettings(Box):
 class QuickSettingsButton(Button):
     def __init__(self, **kwargs):
         super().__init__(name="panel-button", **kwargs)
+        self.planel_icon_size = 20
 
         self.bluetooth_icon = Image(
             name="panel-icon",
             icon_name=config.bluetooth_icons_names["bluetooth"],
-            pixel_size=20,
+            icon_size=self.planel_icon_size,
         )
         config.bluetooth_client.bind_property(
             "enabled",
@@ -92,27 +93,23 @@ class QuickSettingsButton(Button):
             "visible",
         )
 
-        # self.audio_icon = Image(name="panel-icon")
-        # config.audio.connect("speaker-changed", self.update_audio)
+        self.audio_icon = Image(name="panel-icon")
+        config.audio.connect("speaker-changed", self.update_audio)
 
         def get_network_icon(_):
             wifi = config.network.wifi_device
             if not wifi:
                 return
-            self.network_icon.set_from_icon_name(wifi.get_property("icon-name"), 2)
+            self.network_icon.set_from_icon_name(
+                wifi.get_property("icon-name"), self.planel_icon_size
+            )
             wifi.bind_property("icon-name", self.network_icon, "icon-name")
 
-        self.network_icon = Image(name="panel-icon", pixel_size=20)
+        self.network_icon = Image(name="panel-icon", icon_size=self.planel_icon_size)
         config.network.connect("device-ready", get_network_icon)
 
         self.add(
-            Box(
-                children=[
-                    self.network_icon,
-                    self.bluetooth_icon,
-                    # self.audio_icon
-                ]
-            )
+            Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])
         )
         self.connect("clicked", self.on_click)
 
@@ -126,18 +123,26 @@ class QuickSettingsButton(Button):
     def update_audio(self, *args):
         vol = config.audio.speaker.volume
         if config.audio.speaker.muted:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["mute"], 1)
+            self.audio_icon.set_from_icon_name(
+                config.audio_icons_names["mute"], self.planel_icon_size
+            )
             return
         if vol >= 66:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["high"], 1)
+            self.audio_icon.set_from_icon_name(
+                config.audio_icons_names["high"], self.planel_icon_size
+            )
         elif 33 <= vol < 66:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["medium"], 1)
+            self.audio_icon.set_from_icon_name(
+                config.audio_icons_names["medium"], self.planel_icon_size
+            )
         elif 0 < vol < 33:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["low"], 1)
+            self.audio_icon.set_from_icon_name(
+                config.audio_icons_names["low"], self.planel_icon_size
+            )
         else:
-            self.audio_icon.set_from_icon_name(config.audio_icons_names["off"], 1)
-
-        self.audio_icon.set_pixel_size(20)
+            self.audio_icon.set_from_icon_name(
+                config.audio_icons_names["off"], self.planel_icon_size
+            )
 
     def on_click(self, *args):
         QuickSettingsPopup.toggle_popup()

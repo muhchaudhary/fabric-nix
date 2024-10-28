@@ -212,17 +212,17 @@ class SystemOSD(PopupWindow):
 
     def update_label_audio(self, *args):
         icon_name = "-".join(str(config.audio.speaker.icon_name).split("-")[0:2])
-        self.icon.set_from_icon_name(icon_name + "-symbolic", 6)
+        self.icon.set_from_icon_name(icon_name + "-symbolic", 42)
         self.vol = config.audio.speaker.volume
         self.progress_bar.set_progress_filled(round(self.vol) / 100)
 
     def update_label_brightness(self):
-        self.icon.set_from_icon_name("display-brightness-symbolic", 6)
+        self.icon.set_from_icon_name("display-brightness-symbolic", 42)
         brightness = self.brightness.screen_brightness / self.max_disp_backlight
         self.progress_bar.set_progress_filled(brightness)
 
     def update_label_keyboard(self, *args):
-        self.icon.set_from_icon_name("keyboard-brightness-symbolic", 6)
+        self.icon.set_from_icon_name("keyboard-brightness-symbolic", 42)
         brightness = (
             int(
                 os.read(

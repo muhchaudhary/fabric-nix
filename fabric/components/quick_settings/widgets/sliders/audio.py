@@ -27,7 +27,7 @@ class AudioSlider(QuickSettingsScale):
         icon_name = "-".join(str(self.client.speaker.icon_name).split("-")[0:2])
         if icon_name != self.icon_name:
             self.icon_name = icon_name
-            self.icon.set_from_icon_name(icon_name + "-symbolic", 1)
+            self.icon.set_from_icon_name(icon_name + "-symbolic", 24)
             self.icon.set_pixel_size(self.pixel_size)
 
     def on_button_click(self, *_):

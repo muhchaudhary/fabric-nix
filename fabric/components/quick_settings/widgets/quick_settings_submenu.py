@@ -31,7 +31,9 @@ class QuickSubMenu(Box):
         ) if self.submenu_title_box else None
         self.revealer_child.add(self.child) if child else None
 
-        self.revealer = Revealer(child=self.revealer_child, transition_type="slide-down", h_expand=True)
+        self.revealer = Revealer(
+            child=self.revealer_child, transition_type="slide-down", h_expand=True
+        )
         self.revealer.connect(
             "notify::child-revealed",
             lambda rev, _: self.set_visible(rev.get_reveal_child()),
@@ -46,9 +48,7 @@ class QuickSubMenu(Box):
             return None
         submenu_box = Box(spacing=4)
         if self.title_icon:
-            submenu_box.add(
-                Image(icon_name=self.title_icon, icon_size=2, pixel_size=20)
-            )
+            submenu_box.add(Image(icon_name=self.title_icon, icon_size=24))
         if self.title:
             submenu_box.add(Label(name="submenu-title-label", label=self.title))
         return submenu_box
@@ -94,7 +94,9 @@ class QuickSubToggle(Box):
 
         # Action button can hold an icon and a label NOTHING MORE
         self.action_icon = Image(
-            name="panel-icon", icon_name=action_icon, icon_size=3, pixel_size=pixel_size
+            name="panel-icon",
+            icon_name=action_icon,
+            icon_size=pixel_size,
         )
         self.action_label = Label(name="panel-text", label=action_label)
         self.action_button = Button(name="quicksettings-toggle-action")

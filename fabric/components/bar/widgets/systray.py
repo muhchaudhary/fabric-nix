@@ -91,7 +91,7 @@ class SystemTrayRevealer(Box):
 
         self.button_image = Image(
             icon_name="pan-start-symbolic",
-            pixel_size=self.icon_size,
+            icon_size=self.icon_size,
         )
         self.reveal_button = Button(
             image=self.button_image,
