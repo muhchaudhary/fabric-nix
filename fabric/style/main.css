@@ -2,7 +2,7 @@
 @import "./style/player-dark.css";
 
 :vars {
-  --accent: #009CD4;
+  --accent: #009cd4;
 
   --bg_h: #1d2021;
   --bg: #1e1e1e;
@@ -68,7 +68,7 @@ scale {
 
 /* SYSTEM BAR */
 #system-bar {
-  background-color: alpha(white, 0.01)
+  background-color: alpha(white, 0.01);
 }
 
 #system-bar-corner {
@@ -89,12 +89,9 @@ scale {
   border-bottom-color: var(--accent); */
 }
 
-
-
 /*  */
 
-
-#system-tray>button,
+#system-tray > button,
 #panel-button-active,
 #date-time,
 #panel-button {
@@ -107,7 +104,7 @@ scale {
 }
 
 #date-time:hover,
-#system-tray>button:hover,
+#system-tray > button:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -122,7 +119,6 @@ scale {
   /* color: var(--orange); */
 }
 
-
 #panel-button.activated {
   background-color: alpha(white, 0.15);
   border-style: solid;
@@ -131,17 +127,16 @@ scale {
   border-bottom-color: alpha(white, 0.5);
 }
 
-
 #date-time:active,
 #date-time:active label,
-#system-tray>button:active,
+#system-tray > button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active>*>*>label,
-#panel-button:active>*>label,
-#panel-button-active>box>label,
+#panel-button:active > * > * > label,
+#panel-button:active > * > label,
+#panel-button-active > box > label,
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
@@ -156,7 +151,7 @@ scale {
   background-color: mix(var(--accent), white, 0.6);
 }
 
-#quicksettings-box>box>button {
+#quicksettings-box > box > button {
   margin: 10px -10px 10px 5px;
 }
 
@@ -183,7 +178,11 @@ scale {
   min-width: 140px;
 }
 
-#workspaces>button {
+#prayer-info > * > * > * > * {
+  font-size: 16px;
+}
+
+#workspaces > button {
   border-radius: 100%;
   min-width: 10px;
   min-height: 8px;
@@ -210,7 +209,7 @@ scale {
 }
 
 #player-stack-button.active,
-#workspaces>button.active {
+#workspaces > button.active {
   border-radius: 5px;
   min-width: 30px;
   margin: 10px 1px 10px 1px;
@@ -218,17 +217,17 @@ scale {
 }
 
 #player-stack-button.empty,
-#workspaces>button.empty {
+#workspaces > button.empty {
   min-width: 9px;
   margin: 14px 2px 14px 2px;
   background-color: var(--fg4);
 }
 
-#workspaces>button.urgent {
+#workspaces > button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces>button:hover {
+#workspaces > button:hover {
   background-color: var(--bg4);
 }
 
@@ -243,8 +242,8 @@ scale {
   padding: 15px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:hover,
-#system-tray-menu>menuitem:hover,
+#system-tray-menu > menuitem menu > menuitem:hover,
+#system-tray-menu > menuitem:hover,
 #submenu-button:hover {
   background-color: alpha(var(--bg4), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -254,7 +253,7 @@ scale {
   background-color: var(--accent);
 }
 
-#submenu-button:active>* {
+#submenu-button:active > * {
   color: var(--bg);
 }
 
@@ -277,16 +276,16 @@ scale {
   margin: 5px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
   border-width: 1px;
   border-style: double;
   border-color: var(--fg4);
   margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu>menuitem menu>menuitem:disabled,
-#system-tray-menu>menuitem:disabled {
+#system-tray-menu > menuitem menu > menuitem:disabled,
+#system-tray-menu > menuitem:disabled {
   background-color: var(--bg_h);
 }
 
@@ -296,14 +295,14 @@ scale {
   border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
+#system-tray-menu > menuitem menu > menuitem,
+#system-tray-menu > menuitem {
   background-color: var(--bg2);
   padding: 5px;
   border-radius: 10px;
 }
 
-#system-tray-menu>menuitem menu,
+#system-tray-menu > menuitem menu,
 #system-tray-menu,
 #submenu {
   /* min-width: 450px; */
@@ -346,7 +345,7 @@ scale {
   background-color: #202020;
   transition-property: background-color, box-shadow;
   transition-duration: 0.25s;
-  transition-timing-function: cubic-bezier(.42, 0, .58, 1);
+  transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
   /* transition: background-color 0.3s cubic-bezier(.42,0,.58,1); */
 }
 
@@ -601,7 +600,7 @@ scale {
 /* -------------------------------------- Notifications ------------------------------------- */
 
 #notification-box {
-  background-color: alpha(black, 0.9);
+  background-color: alpha(#171717, 0.8);
   border-top-left-radius: 20px;
   border-bottom-left-radius: 20px;
   min-width: 400px;
@@ -612,43 +611,56 @@ scale {
   color: white;
 }
 
-
-#notification-action-buttons button.id0 {
-  border-bottom-left-radius: 20px;
-  border-right-width: 2px;
+#notification-action-buttons button.start-action {
+  border-radius: 0px 0px 0px 20px;
+  margin-left: 0px;
 }
 
-#notification-action-buttons button.id1 {
-  border-right-width: 2px;
+#notification-action-buttons button.end-action {
+  margin-right: 0px;
+}
+
+
+#notification-seperator {
+  min-height: 3px;
+  background-color: alpha(white, 0.4);
+
 }
 
 #notification-action-buttons button {
   background-color: alpha(#393939, 0.4);
-  border-color: black;
-  border-style: solid;
-  padding: 5px;
+  padding: 7px;
+  margin: 0px 2px 0px 2px;
+
 }
 
+#notification-title button {
+  margin-right: 0px;
+  border-radius: 10px;
+  background-color: alpha(#393939, 0.4);
+  border-color: black;
+  padding: 2px;
+}
+
+#notification-title button:hover,
 #notification-action-buttons button:hover {
   background-color: #404040;
 }
 
+#notification-title button:active,
+#notification-title button:active image,
 #notification-action-buttons button:active label,
 #notification-action-buttons button:active {
   background-color: #dadada;
   color: #2c2c2c;
 }
 
-#notification-image {
-  background-size: cover;
-  min-width: 75px;
-  min-height: 75px;
+#notification-image image {
   border-radius: 10px;
-  margin-bottom: 15px;
 }
 
-#notification-title * {
-  margin-right: 10px;
+#notification-icon {
+  margin-right: 5px;
 }
 
 #notification-title {
@@ -656,7 +668,7 @@ scale {
 }
 
 #notification-content {
-  margin: 20px 20px 0px 20px;
+  margin: 5px 15px 15px 15px;
 }
 
 /* ------------------------------------------Overview---------------------------------------- */
@@ -682,7 +694,6 @@ scale {
 }
 
 #overview-workspace-bg {
-
   background-color: alpha(white, 0.07);
 }
 

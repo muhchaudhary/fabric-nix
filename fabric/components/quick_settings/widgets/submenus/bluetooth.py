@@ -140,11 +140,11 @@ class BluetoothToggle(QuickSubToggle):
     def toggle_bluetooth(self, client: BluetoothClient, *_):
         if client.enabled:
             self.set_active_style(True)
-            self.action_icon.set_from_icon_name("bluetooth-active-symbolic", 24)
+            self.action_icon.set_from_icon_name("bluetooth-active-symbolic", 20)
             self.action_label.set_label("Not Connected")
         else:
             self.set_active_style(False)
-            self.action_icon.set_from_icon_name("bluetooth-disabled-symbolic",24)
+            self.action_icon.set_from_icon_name("bluetooth-disabled-symbolic", 20)
             self.action_label.set_label("Disabled")
 
     def new_device(self, client: BluetoothClient, address):

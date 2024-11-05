@@ -5,7 +5,6 @@ from services.brightness import Brightness
 from services.mpris import MprisPlayerManager
 from services.screen_record import ScreenRecorder
 from services.wifi import NetworkClient
-from services.notifications_astal_v2 import NotificationServer
 
 # Services
 mprisplayer = MprisPlayerManager()
@@ -14,7 +13,6 @@ audio = Audio()
 sc = ScreenRecorder()
 brightness = Brightness()
 network = NetworkClient()
-notification_server = NotificationServer()
 
 # Icons
 bluetooth_icons = {

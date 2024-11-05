@@ -24,7 +24,7 @@ if __name__ == "__main__":
     clockWidget = ClockWidget()
     overview = Overview()
     systemOverlay = SystemOSD()
-    nc = NotificationPopup(config.notification_server)
+    nc = NotificationPopup()
     appMenu = AppMenu()
 
     file = monitor_file(get_relative_path("style/main.css"))

@@ -70,13 +70,18 @@ class ScreenRecorder(Service):
                 "view=View",
                 "-A",
                 "edit=Edit",
+                "-i",
+                "camera-photo-symbolic",
+                "-a",
+                "Fabric Screenshot Utility",
                 "-h",
                 f"STRING:image-path:{file_path}",
-                f"Screenshot {file_path}",
+                "Screenshot Saved",
+                f"Saved Screenshot at {file_path}"
             ]
         ) if file_path else ["Screenshot Sent to Clipboard"]
 
-        proc = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.STDOUT_PIPE)
+        proc: Gio.Subprocess = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.STDOUT_PIPE)
 
         def do_callback(process: Gio.Subprocess, task: Gio.Task):
             try:
