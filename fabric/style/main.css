@@ -114,7 +114,7 @@ scale {
 }
 
 #panel-button label {
-  font-weight: 800;
+  font-weight: 700;
 }
 
 #date-time label {
@@ -160,45 +160,33 @@ scale {
   margin: 10px -10px 10px 5px;
 }
 
-#battery-label,
-#battery-icon {
-  color: mix(var(--accent), rgb(0, 255, 0), 0.2);
-  font-size: 25px;
-  -gtk-icon-transform: rotate(90deg);
-}
-
-#battery-label.charging,
-#battery-icon.charging {
-  color: var(--green);
-}
-
-#battery-label.low,
-#battery-icon.low {
-  color: var(--yellow);
-}
-
-#battery-label.critical,
-#battery-icon.critical {
-  color: var(--red);
-}
-
 #battery-label {
   margin: 0px 5px -2px 2px;
   font-size: 15px;
   font-weight: 900;
 }
 
-#prayer-info {
-  min-width: 140px;
+#battery-label.charging {
+  color: var(--green);
 }
 
-#prayer-info>*>*>*>* {
-  font-size: 16px;
+#battery-label.low {
+  color: var(--yellow);
+}
+
+#battery-label.critical {
+  color: var(--red);
+}
+
+
+#prayer-info {
+  min-width: 140px;
 }
 
 #workspaces>button {
   border-radius: 100%;
   min-width: 10px;
+  min-height: 8px;
   margin: 13px 2px 13px 2px;
   transition-property: border-radius;
   transition: min-width 0.25s cubic-bezier(0.075, 0.82, 0.165, 1);
@@ -382,37 +370,6 @@ scale {
   color: white;
 }
 
-/*  */
-
-#hadith-box {
-  padding: 40px;
-  border-radius: 40px;
-  min-width: 1500px;
-  background-color: alpha(var(--bg_h), 0.6);
-}
-
-#hadith-ref {
-  font-weight: bold;
-  font-family: Noto Naskh Arabic UI;
-  font-size: 30px;
-  color: var(--fg3);
-}
-
-#hadith-text {
-  font-family: Noto Naskh Arabic UI;
-  font-size: 35px;
-  color: var(--fg);
-}
-
-#hadith-number,
-#hadith-book {
-  font-weight: bold;
-  font-size: 20px;
-  margin-bottom: 20px;
-  margin-right: 15px;
-  margin-top: 20px;
-  color: var(--fg3);
-}
 
 /* --------------------------------- QUICK SETTINGS BUTTONS --------------------------------- */
 #quicksettings-togglebutton.active button image,
@@ -536,11 +493,9 @@ scale {
   background-color: alpha(black, 0.9);
 }
 
-#appmenu-heading {
-  margin-left: 10px;
-  font-size: large;
-  font-weight: bolder;
-  margin-bottom: 10px;
+#appmenu-entry,
+#appmenu-button label {
+  font-family: "league spartan";
 }
 
 #appmenu-entry {
@@ -615,7 +570,7 @@ scale {
   margin-top: 100px;
   border-radius: 30px;
   padding: 10px;
-  background-color: alpha(black, 0.3);
+  background-color: alpha(black, 0.4);
 }
 
 #appmenu-button:focus image,
@@ -703,10 +658,11 @@ scale {
 #notification-content {
   margin: 20px 20px 0px 20px;
 }
+
 /* ------------------------------------------Overview---------------------------------------- */
 
 #overview-window {
-  background-color: alpha(black,0.9);
+  background-color: alpha(black, 0.9);
   border-radius: 50px;
   padding: 10px;
 }
@@ -739,6 +695,6 @@ scale {
   margin-top: 5px;
   font-size: 20px;
   font-weight: bold;
-  font-family: "roboto";
 }
+
 /* ------------------------------------------------------------------------------------------ */
