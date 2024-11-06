@@ -65,6 +65,7 @@
           python3Packages.lxml
           python3Packages.pam
           python3Packages.thefuzz
+          python3Packages.pywayland
 
           ruff # Formatter
           vala-language-server # for vala code completions
@@ -75,6 +76,7 @@
           gobject-introspection
           gir-cvc
           sox
+          pkg-config
 
           # non python aditional packages
           gtk-session-lock # For gtk lock screen
