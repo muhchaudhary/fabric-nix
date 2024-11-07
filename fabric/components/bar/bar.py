@@ -1,4 +1,3 @@
-import math
 from typing import Literal
 from components.bar.widgets import (
     BatteryIndicator,
@@ -6,11 +5,11 @@ from components.bar.widgets import (
     SystemTrayRevealer,
     Temps,
 )
-from components.bar.widgets.date_time import DateTime
 from components.quick_settings.quick_settings import QuickSettingsButton
 
 from fabric.hyprland.widgets import WorkspaceButton, Workspaces, ActiveWindow
 
+from fabric.widgets.datetime import DateTime
 from fabric.utils import FormattedString
 from fabric.widgets.box import Box
 from fabric.widgets.shapes import Corner
@@ -65,7 +64,7 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.open_apps_bar = OpenAppsBar()
-        self.date_time = DateTime()
+        self.date_time = DateTime(formatters="%a %b %d  %I:%M %p", name="panel-button")
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
