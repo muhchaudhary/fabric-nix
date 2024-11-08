@@ -1,8 +1,8 @@
 import mmap
 
 import cairo
-from pywayland.client.display import Display
-from pywayland.utils import AnonymousFile
+import gi
+from loguru import logger
 
 # These were generated using:
 #  `python -m -i pywayland.scanner -i wayland.xml hyprland-toplevel-export-v1.xml -o protocols`
@@ -16,11 +16,10 @@ from protocols.hyprland_toplevel_export_v1.hyprland_toplevel_export_manager_v1 i
 from protocols.wayland.wl_buffer import WlBufferProxy
 from protocols.wayland.wl_shm import WlShm, WlShmProxy
 from protocols.wayland.wl_shm_pool import WlShmPoolProxy
+from pywayland.client.display import Display
+from pywayland.utils import AnonymousFile
 
 from fabric.core.service import Service, Signal
-
-
-import gi
 
 gi.require_version("Gdk", "3.0")
 
@@ -33,34 +32,38 @@ class ClientOutput(Service):
 
     def __init__(self):
         super().__init__()
-        self.roundtrip_needed = True
-        self.shm: WlShmProxy
-        self.hyprland_toplevel_export_manager: HyprlandToplevelExportManagerV1Proxy
+        self.shm: WlShmProxy | None = None
+        self.hyprland_toplevel_export_manager: (
+            HyprlandToplevelExportManagerV1Proxy | None
+        ) = None
+
+        self.display = Display()
+        self.display.connect()
+        registry = self.display.get_registry()  # type: ignore
+        registry.dispatcher["global"] = self.registry_global_handler
+        self.display.dispatch(block=True)
 
     def grab_frame_for_address(self, hyprland_address: str):
-        with Display() as display:
-            self.roundtrip_needed = True
-            registry = display.get_registry()  # type: ignore
-            registry.dispatcher["global"] = self.registry_global_handler
-            display.dispatch()
-            display.roundtrip()
-            self._grab_frame(hyprland_address)
-            while self.roundtrip_needed:
-                display.roundtrip()
+        # Only grab frame once display is ready
+        if self.shm and self.hyprland_toplevel_export_manager:
+            return self._grab_frame(hyprland_address)
+        self.grab_frame_for_address(hyprland_address)
 
     def shutdown(self) -> None:
-        self.roundtrip_needed = False
+        pass
 
     def registry_global_handler(self, registry, id_, interface, version):
         if interface == "hyprland_toplevel_export_manager_v1":
             self.hyprland_toplevel_export_manager = registry.bind(
                 id_, HyprlandToplevelExportManagerV1, version
             )
+            logger.info("[PyWayland] grabbed hyprland_toplevel_export_manager_v1")
         elif interface == "wl_shm":
             self.shm = registry.bind(id_, WlShm, version)
+            logger.info("[PyWayland] grabbed wl_shm")
 
     def _grab_frame(self, hyprland_address: str):
-        # print("begin grab frame...")
+        print("begin grab frame...")
         frame: HyprlandToplevelExportFrameV1Proxy = (
             self.hyprland_toplevel_export_manager.capture_toplevel(
                 0, int(hyprland_address, 16)
@@ -71,10 +74,13 @@ class ClientOutput(Service):
         frame.dispatcher["buffer_done"] = self.on_buffer_done
         frame.dispatcher["ready"] = self.on_buffer_ready
         frame.dispatcher["failed"] = self.on_buffer_failed
+        self.display.roundtrip()
+        # To get the on_buffer_ready
+        self.display.dispatch(block=True)
         # frame.dispatcher["damage"] = lambda *_: print(_)
 
     def create_buffer_for_toplevel(self, frame, fmt, width, height, stride):
-        # print("creating buffer...")
+        print("creating buffer...")
         self.width = width
         self.height = height
         self.rowstride = stride
@@ -91,10 +97,12 @@ class ClientOutput(Service):
         return 0
 
     def on_buffer_done(self, frame: HyprlandToplevelExportFrameV1Proxy):
+        print("copying buffer...")
         buff: WlBufferProxy = frame.user_data[1]
         frame.copy(buff, 0)
 
     def on_buffer_ready(self, frame, tv_sec_hi: int, tv_sec_lo: int, tv_nsec: int):
+        print("on_buffer_ready")
         buff: WlBufferProxy = frame.user_data[1]
         shm_data: mmap.mmap = frame.user_data[2]
 
