@@ -21,29 +21,26 @@ from protocols.wayland.wl_shm_pool import WlShmPoolProxy
 
 class ClientOutput:
     def __init__(self, client_addresses: List[str]):
+        self.roundtrip_needed = True
         self.client_addresses = client_addresses
         self.shm: WlShmProxy
         self.buff: WlBufferProxy | None = None
         self.display: Display
         self.hyprland_toplevel_export_manager: HyprlandToplevelExportManagerV1Proxy
 
-        self.display = Display()
-        self.display.connect()
+        with Display() as self.display:
+            registry = self.display.get_registry()  # type: ignore
 
-        registry = self.display.get_registry()  # type: ignore
-        registry.dispatcher["global"] = self.registry_global_handler
+            registry.dispatcher["global"] = self.registry_global_handler
+            self.display.dispatch()
+            self.display.roundtrip()
+            self.grab_frame(0)
+            while self.roundtrip_needed:
+                self.display.roundtrip()
 
-        self.display.dispatch(block=True)
-
-        self.grab_frame(0)
-
-        while self.display.dispatch(block=True):
-            pass
 
     def shutdown(self) -> None:
-        self.display.dispatch()
-        self.display.roundtrip()
-        self.display.disconnect()
+        self.roundtrip_needed = False
 
     def registry_global_handler(self, registry, id_, interface, version):
         if interface == "hyprland_toplevel_export_manager_v1":
@@ -69,9 +66,7 @@ class ClientOutput:
         frame.dispatcher["failed"] = self.on_buffer_failed
         # frame.dispatcher["damage"] = lambda *_: print(_)
 
-    def create_buffer_for_toplevel(
-        self, _toplevel_export_frame, fmt, width, height, stride
-    ) -> int:
+    def create_buffer_for_toplevel(self, frame, fmt, width, height, stride):
         self.width = width
         self.height = height
         self.rowstride = stride
@@ -91,10 +86,10 @@ class ClientOutput:
         frame.copy(self.buff, 0)
 
     def on_buffer_ready(self, frame, tv_sec_hi: int, tv_sec_lo: int, tv_nsec: int):
+        # CAIRO_FORMAT_RGB24 is xrgb
         cario_pixbuf = cairo.ImageSurface(
             cairo.FORMAT_RGB24, self.width, self.height
         ).create_for_data(
-            # CAIRO_FORMAT_RGB24 is xrgb
             self.shm_data,
             cairo.FORMAT_RGB24,
             self.width,
@@ -119,4 +114,4 @@ class ClientOutput:
         pass
 
 
-ClientOutput(["279647d0", "279b1760"])
+ClientOutput(["2d61aaa0", "2d58aeb0"])
