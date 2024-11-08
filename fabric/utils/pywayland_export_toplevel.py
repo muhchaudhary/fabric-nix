@@ -1,8 +1,10 @@
 import mmap
+import struct
 
 import cairo
 import gi
 from loguru import logger
+
 
 # These were generated using:
 #  `python -m -i pywayland.scanner -i wayland.xml hyprland-toplevel-export-v1.xml -o protocols`
@@ -45,12 +47,11 @@ class ClientOutput(Service):
 
     def grab_frame_for_address(self, hyprland_address: str):
         # Only grab frame once display is ready
+        logger.info(f"Grabbing Frame: {hyprland_address}")
         if self.shm and self.hyprland_toplevel_export_manager:
             return self._grab_frame(hyprland_address)
+        print("UH OH")
         self.grab_frame_for_address(hyprland_address)
-
-    def shutdown(self) -> None:
-        pass
 
     def registry_global_handler(self, registry, id_, interface, version):
         if interface == "hyprland_toplevel_export_manager_v1":
@@ -63,7 +64,6 @@ class ClientOutput(Service):
             logger.info("[PyWayland] grabbed wl_shm")
 
     def _grab_frame(self, hyprland_address: str):
-        print("begin grab frame...")
         frame: HyprlandToplevelExportFrameV1Proxy = (
             self.hyprland_toplevel_export_manager.capture_toplevel(
                 0, int(hyprland_address, 16)
@@ -75,12 +75,9 @@ class ClientOutput(Service):
         frame.dispatcher["ready"] = self.on_buffer_ready
         frame.dispatcher["failed"] = self.on_buffer_failed
         self.display.roundtrip()
-        # To get the on_buffer_ready
-        self.display.dispatch(block=True)
         # frame.dispatcher["damage"] = lambda *_: print(_)
 
     def create_buffer_for_toplevel(self, frame, fmt, width, height, stride):
-        print("creating buffer...")
         self.width = width
         self.height = height
         self.rowstride = stride
@@ -97,37 +94,39 @@ class ClientOutput(Service):
         return 0
 
     def on_buffer_done(self, frame: HyprlandToplevelExportFrameV1Proxy):
-        print("copying buffer...")
         buff: WlBufferProxy = frame.user_data[1]
         frame.copy(buff, 0)
+        self.display.roundtrip()
+        # To get to on_buffer_ready
+        self.display.dispatch(block=True)
 
     def on_buffer_ready(self, frame, tv_sec_hi: int, tv_sec_lo: int, tv_nsec: int):
-        print("on_buffer_ready")
         buff: WlBufferProxy = frame.user_data[1]
         shm_data: mmap.mmap = frame.user_data[2]
 
         # CAIRO_FORMAT_RGB24 is xrgb
-        pixbuf: GdkPixbuf.Pixbuf = Gdk.pixbuf_get_from_surface(
-            cairo.ImageSurface.create_for_data(
-                shm_data,  # type: ignore
-                cairo.FORMAT_RGB24,
-                self.width,
-                self.height,
-                self.rowstride,
-            ),
-            0,
-            0,
+        with cairo.ImageSurface.create_for_data(
+            shm_data,  # type: ignore
+            cairo.FORMAT_RGB24,
             self.width,
             self.height,
-        )
-
+            self.rowstride,
+        ) as surface:
+            pixbuf: GdkPixbuf.Pixbuf = Gdk.pixbuf_get_from_surface(
+                surface,
+                0,
+                0,
+                self.width,
+                self.height,
+            )
         buff.destroy()
-        shm_data.close()
+        # shm_data.close()
         self.emit("frame-ready", frame.user_data[0], pixbuf)
-        self.shutdown()
         frame.destroy()
 
     def on_buffer_failed(self, frame: HyprlandToplevelExportFrameV1Proxy):
-        print("ERROR: failed copy buffer")
-        frame.user_data[1].destroy()
+        logger.error(f"[PyWayland] failed to copy buffer for {frame.user_data[0]}")
+        print(frame.user_data)
+        frame.user_data[1].destroy() if len(frame.user_data) > 1 else None
         frame.destroy()
+        self.display.flush()

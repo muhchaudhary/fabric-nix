@@ -3,6 +3,8 @@ import json
 import cairo
 import gi
 from utils.icon_resolver import IconResolver
+
+from widgets.rounded_image import CustomImage
 from widgets.popup_window_v2 import PopupWindow
 
 from fabric.hyprland.service import Hyprland
@@ -13,9 +15,10 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from loguru import logger
 from utils.pywayland_export_toplevel import ClientOutput
+from fabric.widgets.overlay import Overlay
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk, GdkPixbuf
+from gi.repository import Gdk, Gtk, GdkPixbuf, GLib
 
 icon_resolver = IconResolver()
 connection = Hyprland()
@@ -52,6 +55,8 @@ class HyprlandWindowButton(Button):
         size,
     ):
         self.address = address
+        self.app_id = app_id
+        self.title = title
         self.window: PopupWindow = window
         super().__init__(
             name="overview-client-box",
@@ -78,8 +83,20 @@ class HyprlandWindowButton(Button):
             actions=Gdk.DragAction.COPY,
         )
 
-    def update_imge(self, ptr):
-        self.set_image(ptr)
+    def update_imge(self, image):
+        self.set_image(
+            Overlay(
+                child=image,
+                overlays=Image(
+                    name="overview-icon",
+                    pixbuf=icon_resolver.get_icon_pixbuf(self.app_id, 36),
+                    h_align="center",
+                    v_align="end",
+                    tooltip_text=self.title,
+                ),
+            )
+        )
+        # self.set_image(image)
 
     def on_button_click(self, *_):
         connection.send_command(f"/dispatch focuswindow address:{self.address}")
@@ -125,31 +142,31 @@ class WorkspaceEventBox(EventBox):
 
 class Overview(PopupWindow):
     def __init__(self):
-        # self.client_output = ClientOutput()
+        self.client_output = ClientOutput()
         self.overview_box = Box(name="overview-window")
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
-        self.update()
 
         connection.connect("event::openwindow", self.do_update)
         connection.connect("event::closewindow", self.do_update)
         connection.connect("event::movewindow", self.do_update)
 
-        # self.client_output.connect(
-        #     "frame-ready",
-        #     lambda _, address, pbuf: self.clients[address].update_imge(
-        #         Image(
-        #             pixbuf=GdkPixbuf.Pixbuf.scale_simple(
-        #                 pbuf,
-        #                 pbuf.get_width() * SCALE,
-        #                 pbuf.get_height() * SCALE,
-        #                 2,
-        #             )
-        #         )
-        #     )
-        #     if address in self.clients
-        #     else print(f"dont have {address}, {list(self.clients.keys())}"),
-        # )
+        self.client_output.connect(
+            "frame-ready",
+            lambda _, address, pbuf: self.clients[address].update_imge(
+                CustomImage(
+                    name="overview-frame",
+                    pixbuf=GdkPixbuf.Pixbuf.scale_simple(
+                        pbuf,
+                        pbuf.get_width() * SCALE,
+                        pbuf.get_height() * SCALE,
+                        2,
+                    ),
+                )
+            )
+            if address in self.clients
+            else print(f"dont have {address}, {list(self.clients.keys())}"),
+        )
 
         super().__init__(
             anchor="center",
@@ -197,8 +214,6 @@ class Overview(PopupWindow):
                     abs(client["at"][0] - monitors[client["monitor"]][0]) * SCALE,
                     abs(client["at"][1] - monitors[client["monitor"]][1]) * SCALE,
                 )
-
-                # self.client_output.grab_frame_for_address(client["address"])
         total_workspaces = (
             range(1, max(self.workspace_boxes.keys()) + 2)
             if len(self.workspace_boxes) != 0
@@ -223,10 +238,15 @@ class Overview(PopupWindow):
                 )
             )
 
+        for client in self.clients.keys():
+            # self.client_output.grab_frame_for_address(client)
+            GLib.timeout_add(300, self.client_output.grab_frame_for_address, client)
+
     def do_update(self, *_):
-        logger.info(f"[Overview] Updating for :{_[1].name}")
-        self.update()
+        if self.popup_visible:
+            logger.info(f"[Overview] Updating for :{_[1].name}")
+            self.update()
 
     def toggle_popup(self, monitor: bool | None = None):
-        self.update()
+        self.update() if not self.popup_visible else None
         return super().toggle_popup(monitor=False)

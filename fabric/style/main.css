@@ -173,7 +173,6 @@ scale {
   color: var(--red);
 }
 
-
 #prayer-info {
   min-width: 140px;
 }
@@ -368,7 +367,6 @@ scale {
 #osd-icon image {
   color: white;
 }
-
 
 /* --------------------------------- QUICK SETTINGS BUTTONS --------------------------------- */
 #quicksettings-togglebutton.active button image,
@@ -620,18 +618,15 @@ scale {
   margin-right: 0px;
 }
 
-
 #notification-seperator {
   min-height: 3px;
   background-color: alpha(white, 0.4);
-
 }
 
 #notification-action-buttons button {
   background-color: alpha(#393939, 0.4);
   padding: 7px;
   margin: 0px 2px 0px 2px;
-
 }
 
 #notification-title button {
@@ -684,6 +679,26 @@ scale {
   background-color: alpha(white, 0.1);
   border-radius: 20px;
 }
+
+#overview-icon {
+  border-style: none;
+  margin: 5px;
+  background-color: alpha(black, 0.4);
+  border-color: black;
+  border-radius: 15px;
+  border-width: 2px;
+  border-style: solid;
+  padding: 5px;
+}
+
+#overview-frame {
+  background-color: alpha(black, 0.8);
+  border-width: 2px;
+  border-radius: 5px;
+  border-style: solid;
+  border-color: var(--accent);
+}
+
 
 #overview-client-box:hover {
   background-color: alpha(white, 0.2);
