@@ -11,9 +11,11 @@ from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
+from loguru import logger
+from utils.pywayland_export_toplevel import ClientOutput
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, Gtk, GdkPixbuf
 
 icon_resolver = IconResolver()
 connection = Hyprland()
@@ -76,6 +78,9 @@ class HyprlandWindowButton(Button):
             actions=Gdk.DragAction.COPY,
         )
 
+    def update_imge(self, ptr):
+        self.set_image(ptr)
+
     def on_button_click(self, *_):
         connection.send_command(f"/dispatch focuswindow address:{self.address}")
         self.window.toggle_popup()
@@ -120,6 +125,7 @@ class WorkspaceEventBox(EventBox):
 
 class Overview(PopupWindow):
     def __init__(self):
+        # self.client_output = ClientOutput()
         self.overview_box = Box(name="overview-window")
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
@@ -128,6 +134,22 @@ class Overview(PopupWindow):
         connection.connect("event::openwindow", self.do_update)
         connection.connect("event::closewindow", self.do_update)
         connection.connect("event::movewindow", self.do_update)
+
+        # self.client_output.connect(
+        #     "frame-ready",
+        #     lambda _, address, pbuf: self.clients[address].update_imge(
+        #         Image(
+        #             pixbuf=GdkPixbuf.Pixbuf.scale_simple(
+        #                 pbuf,
+        #                 pbuf.get_width() * SCALE,
+        #                 pbuf.get_height() * SCALE,
+        #                 2,
+        #             )
+        #         )
+        #     )
+        #     if address in self.clients
+        #     else print(f"dont have {address}, {list(self.clients.keys())}"),
+        # )
 
         super().__init__(
             anchor="center",
@@ -175,6 +197,8 @@ class Overview(PopupWindow):
                     abs(client["at"][0] - monitors[client["monitor"]][0]) * SCALE,
                     abs(client["at"][1] - monitors[client["monitor"]][1]) * SCALE,
                 )
+
+                # self.client_output.grab_frame_for_address(client["address"])
         total_workspaces = (
             range(1, max(self.workspace_boxes.keys()) + 2)
             if len(self.workspace_boxes) != 0
@@ -200,7 +224,7 @@ class Overview(PopupWindow):
             )
 
     def do_update(self, *_):
-        print("Updating for :", _[1].name)
+        logger.info(f"[Overview] Updating for :{_[1].name}")
         self.update()
 
     def toggle_popup(self, monitor: bool | None = None):
