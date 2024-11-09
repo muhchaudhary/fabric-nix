@@ -23,15 +23,16 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1717935434,
-        "narHash": "sha256-+IOL+uBVgV3y/g2+Ht/Qe92bQLwH2wQTrPNX2pF31DI=",
+        "lastModified": 1731158828,
+        "narHash": "sha256-gZxdLvSGejji7bCRgbaVjrXiBKAXqH82tdEnoL8x90Q=",
         "owner": "Fabric-Development",
         "repo": "glace",
-        "rev": "9c49b157f45c36573b9a0a035b64df756050b17e",
+        "rev": "bb4793956dc1a7df161d8dfc0d562847780d2f66",
         "type": "github"
       },
       "original": {
         "owner": "Fabric-Development",
+        "ref": "hyprland",
         "repo": "glace",
         "type": "github"
       }

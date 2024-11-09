@@ -77,9 +77,11 @@ class ScreenRecorder(Service):
                 "-h",
                 f"STRING:image-path:{file_path}",
                 "Screenshot Saved",
-                f"Saved Screenshot at {file_path}"
+                f"Saved Screenshot at {file_path}",
             ]
-        ) if file_path else ["Screenshot Sent to Clipboard"]
+            if file_path
+            else ["Screenshot Sent to Clipboard"]
+        )
 
         proc: Gio.Subprocess = Gio.Subprocess.new(cmd, Gio.SubprocessFlags.STDOUT_PIPE)
 

@@ -5,7 +5,7 @@
     gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
     astal.url = "github:aylur/astal";
     fabric-libgray.url = "github:Fabric-Development/gray";
-    fabric-libglace.url = "github:Fabric-Development/glace";
+    fabric-libglace.url = "github:Fabric-Development/glace/hyprland";
   };
 
   outputs = {
@@ -66,6 +66,7 @@
           python3Packages.pam
           python3Packages.thefuzz
           python3Packages.pywayland
+          python3Packages.setuptools
 
           ruff # Formatter
           vala-language-server # for vala code completions

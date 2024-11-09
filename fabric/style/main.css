@@ -676,7 +676,7 @@ scale {
 
 #overview-workspace-bg,
 #overview-client-box {
-  background-color: alpha(white, 0.1);
+  background-color: alpha(var(--accent), 0.5);
   border-radius: 20px;
 }
 
@@ -692,20 +692,16 @@ scale {
 }
 
 #overview-frame {
-  background-color: alpha(black, 0.8);
-  border-width: 2px;
-  border-radius: 5px;
-  border-style: solid;
-  border-color: var(--accent);
+  border-radius: 20px;
 }
 
 
 #overview-client-box:hover {
-  background-color: alpha(white, 0.2);
+  background-color: alpha(var(--accent), 0.7);
 }
 
 #overview-client-box:active {
-  background-color: alpha(white, 0.4);
+  background-color: alpha(var(--accent), 1);
 }
 
 #overview-workspace-bg {

@@ -24,7 +24,6 @@ icon_resolver = IconResolver()
 connection = Hyprland()
 SCALE = 0.15
 
-
 # Credit to Aylur for the drag and drop code
 TARGET = [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)]
 
@@ -54,6 +53,7 @@ class HyprlandWindowButton(Button):
         app_id: str,
         size,
     ):
+        self.size = size
         self.address = address
         self.app_id = app_id
         self.title = title
@@ -96,7 +96,6 @@ class HyprlandWindowButton(Button):
                 ),
             )
         )
-        # self.set_image(image)
 
     def on_button_click(self, *_):
         connection.send_command(f"/dispatch focuswindow address:{self.address}")
@@ -131,6 +130,7 @@ class WorkspaceEventBox(EventBox):
             Gdk.DragAction.COPY,
         )
         if fixed:
+            # TODO: is this needed??
             fixed.put(
                 # FIXME: Don't hardcode this value, it should be dynamic to the monitor, use HyprctlWithMonitors
                 Box(size=(int(1920 * SCALE), int(1080 * SCALE))),
@@ -158,8 +158,8 @@ class Overview(PopupWindow):
                     name="overview-frame",
                     pixbuf=GdkPixbuf.Pixbuf.scale_simple(
                         pbuf,
-                        pbuf.get_width() * SCALE,
-                        pbuf.get_height() * SCALE,
+                        self.clients[address].size[0] - 7,
+                        self.clients[address].size[1] - 7,
                         2,
                     ),
                 )
@@ -175,7 +175,7 @@ class Overview(PopupWindow):
             child=self.overview_box,
         )
 
-    def update(self):
+    def update(self, signal_update=False):
         for client in self.clients.values():
             client.destroy()
         self.clients.clear()
@@ -239,13 +239,14 @@ class Overview(PopupWindow):
             )
 
         for client in self.clients.keys():
-            # self.client_output.grab_frame_for_address(client)
-            GLib.timeout_add(300, self.client_output.grab_frame_for_address, client)
+            GLib.timeout_add(
+                300, self.client_output.grab_frame_for_address, client
+            ) if signal_update else self.client_output.grab_frame_for_address(client)
 
     def do_update(self, *_):
         if self.popup_visible:
             logger.info(f"[Overview] Updating for :{_[1].name}")
-            self.update()
+            self.update(signal_update=True)
 
     def toggle_popup(self, monitor: bool | None = None):
         self.update() if not self.popup_visible else None

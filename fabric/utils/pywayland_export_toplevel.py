@@ -1,10 +1,9 @@
+from io import BytesIO
 import mmap
-import struct
 
 import cairo
 import gi
 from loguru import logger
-
 
 # These were generated using:
 #  `python -m -i pywayland.scanner -i wayland.xml hyprland-toplevel-export-v1.xml -o protocols`
@@ -24,7 +23,7 @@ from pywayland.utils import AnonymousFile
 from fabric.core.service import Service, Signal
 
 gi.require_version("Gdk", "3.0")
-
+gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import Gdk, GdkPixbuf
 
 
