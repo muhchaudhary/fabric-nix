@@ -22,7 +22,7 @@ from gi.repository import Gdk, Gtk, GdkPixbuf, GLib
 
 icon_resolver = IconResolver()
 connection = Hyprland()
-SCALE = 0.15
+SCALE = 0.2
 
 # Credit to Aylur for the drag and drop code
 TARGET = [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)]
@@ -106,14 +106,18 @@ class WorkspaceEventBox(EventBox):
     def __init__(self, workspace_id: int, fixed: Gtk.Fixed | None = None):
         self.fixed = fixed
         super().__init__(
+            h_expand=True,
+            v_expand=True,
             name="overview-workspace-bg",
             child=fixed
             if fixed
             # TODO this is lazy, do it right later lol
             else Image(
+                h_expand=True,
+                v_expand=True,
                 pixbuf=Gtk.IconTheme()
                 .get_default()
-                .load_icon("list-add", 36, Gtk.IconLookupFlags.FORCE_SIZE)
+                .load_icon("list-add", 36, Gtk.IconLookupFlags.FORCE_SIZE),
             ),
             on_drag_data_received=lambda _w,
             _c,
@@ -224,8 +228,6 @@ class Overview(PopupWindow):
                 Box(
                     name="overview-workspace-box",
                     orientation="vertical",
-                    h_align="end",
-                    v_align="end",
                     children=[
                         WorkspaceEventBox(
                             w_id,

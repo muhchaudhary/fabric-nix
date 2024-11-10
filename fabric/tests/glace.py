@@ -8,7 +8,7 @@ from utils.icon_resolver import IconResolver
 
 gi.require_version("Glace", "0.1")
 gi.require_version("Gtk", "3.0")
-from gi.repository import Glace, Gtk, Gdk
+from gi.repository import Glace, Gtk
 
 
 class OpenAppsBar(Box):
@@ -59,7 +59,7 @@ class OpenAppsBar(Box):
 
         def capture_callback(pbuf, user_data):
             tooltip_image.set_from_pixbuf(
-                pbuf.scale_simple(pbuf.get_width() * 0.15, pbuf.get_height() * 0.15, 0)
+                pbuf.scale_simple(pbuf.get_width() * 0.15, pbuf.get_height() * 0.15, 2)
             )
             tooltip_image.set_style(
                 f"padding-left:{x - (pbuf.get_width() * 0.15) // 2}px; padding-top: 10px;"
