@@ -1,5 +1,4 @@
 import gi
-from gi.repository import GdkPixbuf
 from loguru import logger
 from widgets.rounded_image import CustomImage
 
@@ -18,12 +17,20 @@ from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
 
+from fabric.widgets.overlay import Overlay
+from fabric.widgets.circularprogressbar import CircularProgressBar
+
+gi.require_version("GdkPixbuf", "2.0")
+from gi.repository import GdkPixbuf
+
 # TODO: make a notification center
 # TODO: group notifications by type
 
 
 class ActionButton(Button):
-    def __init__(self, action: NotificationAction, action_number: int, total_actions: int):
+    def __init__(
+        self, action: NotificationAction, action_number: int, total_actions: int
+    ):
         self.action = action
         super().__init__(
             label=action.label,
@@ -37,7 +44,6 @@ class ActionButton(Button):
         else:
             self.add_style_class("middle-action")
 
-
     def on_clicked(self, *_):
         self.action.invoke()
         self.action.parent.close("dismissed-by-user")
@@ -45,6 +51,13 @@ class ActionButton(Button):
 
 class NotificationBox(Box):
     def __init__(self, notification: Notification):
+        self.progress_timeout = CircularProgressBar(
+            name="notification-title-circular-progress-bar",
+            size=35,
+            min_value=0,
+            max_value=1,
+            radius_color=True,
+        )
         super().__init__(
             name="notification-box",
             orientation="v",
@@ -72,10 +85,20 @@ class NotificationBox(Box):
                             style="font-weight: 900;",
                         ),
                     ],
-                    end_children=Button(
-                        image=Image(icon_name="window-close-symbolic"),
-                        on_clicked=lambda *_: notification.close("dismissed-by-user"),
-                    ),
+                    end_children=[
+                        Overlay(
+                            child=self.progress_timeout,
+                            overlays=Button(
+                                name="notification-title-button",
+                                image=Image(
+                                    icon_name="window-close-symbolic", icon_size=15
+                                ),
+                                on_clicked=lambda *_: notification.close(
+                                    "dismissed-by-user"
+                                ),
+                            ),
+                        ),
+                    ],
                 ),
                 Box(
                     name="notification-content",
@@ -86,7 +109,9 @@ class NotificationBox(Box):
                             children=CustomImage(
                                 pixbuf=notification.image_pixbuf.scale_simple(
                                     75, 75, GdkPixbuf.InterpType.BILINEAR
-                                ) if notification.image_pixbuf else None
+                                )
+                                if notification.image_pixbuf
+                                else None
                             ),
                         ),
                         Box(
@@ -115,7 +140,9 @@ class NotificationBox(Box):
                         ),
                     ],
                 ),
-                Box(name="notification-seperator", h_expand=True) if notification.actions else Box(),
+                Box(name="notification-seperator", h_expand=True)
+                if notification.actions
+                else Box(),
                 Box(
                     name="notification-action-buttons",
                     children=[
@@ -126,34 +153,44 @@ class NotificationBox(Box):
                 ),
             ],
         )
-        print((notification.body[:50] + (notification.body[50:] and "...")))
 
 
 class NotificationRevealer(Revealer):
     def __init__(self, notification: Notification, **kwargs):
         self.popup_timeout = 5000
+        self.not_box = NotificationBox(notification)
+        self.notification = notification
+        self.not_box.progress_timeout.max_value = self.popup_timeout
         super().__init__(
-            child=Box(
-                style="margin: 1px 0px 1px 1px;", children=NotificationBox(notification)
-            ),
+            child=Box(style="margin: 1px 0px 1px 1px;", children=self.not_box),
             transition_duration=500,
             transition_type="crossfade",
         )
-        invoke_repeater(
-            self.popup_timeout,
-            lambda *_: [
-                self.set_reveal_child(False),
-                notification.close("expired"),
-                False,
-            ][2],
-            initial_call=False,
-        )
+
+        self.animate_popup_timeout()
         self.connect(
             "notify::child-revealed",
             lambda *args: self.destroy() if not self.get_child_revealed() else None,
         )
 
         notification.connect("closed", self.on_resolved)
+
+    def animate_popup_timeout(self):
+        time = self.popup_timeout
+
+        def do_animate():
+            nonlocal time
+            self.not_box.progress_timeout.value = time
+            if not self.child_revealed:
+                return False
+            if time <= 0:
+                self.set_reveal_child(False)
+                self.notification.close("expired")
+                return False
+            time -= 10
+            return True
+
+        invoke_repeater(10, do_animate)
 
     def on_resolved(self, notification, closed_reason: NotificationCloseReason):
         logger.info(
