@@ -117,7 +117,7 @@ class WorkspaceEventBox(EventBox):
                 v_expand=True,
                 pixbuf=Gtk.IconTheme()
                 .get_default()
-                .load_icon("list-add", 36, Gtk.IconLookupFlags.FORCE_SIZE),
+                .load_icon("list-add", 64, Gtk.IconLookupFlags.FORCE_SIZE),
             ),
             on_drag_data_received=lambda _w,
             _c,
@@ -241,9 +241,19 @@ class Overview(PopupWindow):
             )
 
         for client in self.clients.keys():
+            # GLib.timeout_add(
+            #     300,
+            #     lambda *_: [
+            #         connection.send_command(f"/dispatch movecursor 0 0"),
+            #         False,
+            #     ][1],
+            # )
             GLib.timeout_add(
                 300, self.client_output.grab_frame_for_address, client
             ) if signal_update else self.client_output.grab_frame_for_address(client)
+
+            # v = connection.send_command(f"/dispatch movecursor 0 0")
+            # print(v.reply.decode())
 
     def do_update(self, *_):
         if self.popup_visible:

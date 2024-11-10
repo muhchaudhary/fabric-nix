@@ -24,7 +24,7 @@ from fabric.core.service import Service, Signal
 
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf
+from gi.repository import Gdk, GdkPixbuf, GLib
 
 
 class ClientOutput(Service):
@@ -49,8 +49,9 @@ class ClientOutput(Service):
         logger.info(f"Grabbing Frame: {hyprland_address}")
         if self.shm and self.hyprland_toplevel_export_manager:
             return self._grab_frame(hyprland_address)
-        print("UH OH")
-        self.grab_frame_for_address(hyprland_address)
+        logger.error(
+            "[PyWayland] Could not grab frame. Is hyprland-toplevel-export supported?"
+        )
 
     def registry_global_handler(self, registry, id_, interface, version):
         if interface == "hyprland_toplevel_export_manager_v1":
@@ -104,23 +105,27 @@ class ClientOutput(Service):
         shm_data: mmap.mmap = frame.user_data[2]
 
         # CAIRO_FORMAT_RGB24 is xrgb
-        with cairo.ImageSurface.create_for_data(
-            shm_data,  # type: ignore
-            cairo.FORMAT_RGB24,
-            self.width,
-            self.height,
-            self.rowstride,
-        ) as surface:
-            pixbuf: GdkPixbuf.Pixbuf = Gdk.pixbuf_get_from_surface(
-                surface,
-                0,
-                0,
+        try:
+            with cairo.ImageSurface.create_for_data(
+                shm_data,  # type: ignore
+                cairo.FORMAT_RGB24,
                 self.width,
                 self.height,
-            )
+                self.rowstride,
+            ) as surface:
+                pixbuf: GdkPixbuf.Pixbuf = Gdk.pixbuf_get_from_surface(
+                    surface,
+                    0,
+                    0,
+                    self.width,
+                    self.height,
+                )
+            self.emit("frame-ready", frame.user_data[0], pixbuf)
+        except Exception as e:
+            logger.error(e)
+            shm_data.close()
+
         buff.destroy()
-        # shm_data.close()
-        self.emit("frame-ready", frame.user_data[0], pixbuf)
         frame.destroy()
 
     def on_buffer_failed(self, frame: HyprlandToplevelExportFrameV1Proxy):

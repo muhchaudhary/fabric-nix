@@ -1,10 +1,10 @@
 import gi
-from fabric.widgets.box import Box
-from fabric.widgets.image import Image
-from fabric.widgets.button import Button
-from fabric.widgets.wayland import WaylandWindow as Window
-
 from utils.icon_resolver import IconResolver
+
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
+from fabric.widgets.wayland import WaylandWindow as Window
 
 gi.require_version("Glace", "0.1")
 gi.require_version("Gtk", "3.0")
