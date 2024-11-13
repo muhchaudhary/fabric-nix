@@ -66,19 +66,7 @@ class NotificationBox(Box):
                     name="notification-title",
                     spacing=0,
                     start_children=[
-                        Image(
-                            name="notification-icon",
-                            image_file=notification.app_icon[7:],
-                            size=24,
-                        )
-                        if "file://" in notification.app_icon
-                        else Image(
-                            name="notification-icon",
-                            icon_name=notification.app_icon
-                            if notification.app_icon
-                            else "dialog-information-symbolic",
-                            icon_size=24,
-                        ),
+                        self.get_icon(notification.app_icon),
                         Label(
                             notification.app_name,
                             h_align="start",
@@ -154,6 +142,28 @@ class NotificationBox(Box):
             ],
         )
 
+    def get_icon(self, app_icon) -> Image:
+        # Pass file URI
+        if "file://" in app_icon:
+            return Image(
+                name="notification-icon",
+                image_file=app_icon[7:],
+                size=24,
+            )
+        # Pass file
+        elif "/" == app_icon[0]:
+            return Image(
+                name="notification-icon",
+                image_file=app_icon,
+                size=24,
+            )
+        # Pass g_app_icon
+        return Image(
+            name="notification-icon",
+            icon_name=app_icon if app_icon else "dialog-information-symbolic",
+            size=24,
+        )
+
 
 class NotificationRevealer(Revealer):
     def __init__(self, notification: Notification, **kwargs):
@@ -196,6 +206,7 @@ class NotificationRevealer(Revealer):
         logger.info(
             f"Notification {notification.id} resolved with reason: {closed_reason}"
         )
+        self.transition_type = "slide-up"
         self.set_reveal_child(False)
 
 
