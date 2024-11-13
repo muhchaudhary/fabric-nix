@@ -155,22 +155,24 @@ class Overview(PopupWindow):
         connection.connect("event::closewindow", self.do_update)
         connection.connect("event::movewindow", self.do_update)
 
-        self.client_output.connect(
-            "frame-ready",
-            lambda _, address, pbuf: self.clients[address].update_imge(
-                CustomImage(
-                    name="overview-frame",
-                    pixbuf=GdkPixbuf.Pixbuf.scale_simple(
-                        pbuf,
-                        self.clients[address].size[0] - 7,
-                        self.clients[address].size[1] - 7,
-                        2,
-                    ),
+        def update_pixbuf(_, address, pbuf):
+            (
+                self.clients[address].update_imge(
+                    CustomImage(
+                        name="overview-frame",
+                        pixbuf=GdkPixbuf.Pixbuf.scale_simple(
+                            pbuf,
+                            self.clients[address].size[0] - 7,
+                            self.clients[address].size[1] - 7,
+                            2,
+                        ),  # type: ignore
+                    )
                 )
+                if address in self.clients
+                else print(f"dont have {address}, {list(self.clients.keys())}"),
             )
-            if address in self.clients
-            else print(f"dont have {address}, {list(self.clients.keys())}"),
-        )
+
+        self.client_output.connect("frame-ready", update_pixbuf)
 
         super().__init__(
             anchor="center",
@@ -240,7 +242,7 @@ class Overview(PopupWindow):
                 )
             )
 
-        for client in self.clients.keys():
+        for client_addr in self.clients.keys():
             # GLib.timeout_add(
             #     300,
             #     lambda *_: [
@@ -249,8 +251,10 @@ class Overview(PopupWindow):
             #     ][1],
             # )
             GLib.timeout_add(
-                300, self.client_output.grab_frame_for_address, client
-            ) if signal_update else self.client_output.grab_frame_for_address(client)
+                300, self.client_output.grab_frame_for_address, client_addr
+            ) if signal_update else self.client_output.grab_frame_for_address(
+                client_addr
+            )
 
             # v = connection.send_command(f"/dispatch movecursor 0 0")
             # print(v.reply.decode())
