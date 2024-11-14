@@ -1,93 +1,49 @@
 {
+  description = "My Fabric Bar Test V1";
+
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
-    systems.url = "github:nix-systems/default";
-    gtk-session-lock.url = "github:Cu3PO42/gtk-session-lock";
-    astal.url = "github:aylur/astal";
+    nixpkgs.url = "github:NixOS/nixpkgs/24.05";
+    unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    utils.url = "github:numtide/flake-utils";
+    fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:Fabric-Development/glace/hyprland";
   };
 
   outputs = {
-    systems,
+    self,
     nixpkgs,
+    unstable,
+    utils,
+    fabric,
     ...
-  } @ inputs: let
-    eachSystem = f:
-      nixpkgs.lib.genAttrs (import systems) (
-        system:
-          f (import nixpkgs {
-            inherit system;
-            overlays = [
-              (final: _: let
-                gtk-session-lock = inputs.gtk-session-lock.packages.${system}.default;
-              in {
-                inherit gtk-session-lock;
-              })
-              (final: _: let
-                astal-notifd = inputs.astal.packages.${system}.notifd;
-              in {
-                inherit astal-notifd;
-              })
-              (final: _: let
-                fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
-              in {
-                inherit fabric-libgray;
-              })
-              (final: _: let
-                fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
-              in {
-                inherit fabric-libglace;
-              })
-            ];
-          })
-      );
-  in {
-    devShells = eachSystem (pkgs: let
-      fabric = pkgs.python3Packages.callPackage ./nix/fabric.nix {};
-      gir-cvc = pkgs.callPackage ./nix/cvc/gir-cvc.nix {};
-      rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};
-    in {
-      default = pkgs.mkShell {
-        buildInputs = with pkgs; [
-          # Custom Packages
-          fabric
-          astal-notifd
-          fabric-libgray
-          fabric-libglace
+  } @ inputs:
+    utils.lib.eachDefaultSystem (
+      system: let
+        overlays = [
+          (final: prev: {basedpyright = unstable.legacyPackages.${system}.basedpyright;})
+          (final: prev: {fabric-libgray = inputs.fabric-libgray.packages.${system}.default;})
+          (final: prev: {fabric-libglace = inputs.fabric-libglace.packages.${system}.default;})
+          (final: prev: {rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};})
+          (final: prev: {pywayland-custom = pkgs.python3Packages.callPackage ./nix/pywayland.nix {};})
 
-          rlottie-python
-
-          # add aditional python packages here
-          python3Packages.psutil
-          python3Packages.colorthief
-          python3Packages.requests
-          python3Packages.lxml
-          python3Packages.pam
-          python3Packages.thefuzz
-          python3Packages.pywayland
-          python3Packages.setuptools
-
-          ruff # Formatter
-          vala-language-server # for vala code completions
+          fabric.overlays.${system}.default
         ];
-        nativeBuildInputs = with pkgs; [
-          rlottie # for animated images
-          vala # Vala compiler
-          gobject-introspection
-          gir-cvc
-          sox
-          pkg-config
 
-          # non python aditional packages
-          gtk-session-lock # For gtk lock screen
-          playerctl # For mpirs
-          gnome-bluetooth # For bluetooth
-          networkmanager # For network
-          libgweather # For weather
-          libgudev # For uevent monitoring
-        ];
-      };
-    });
-  };
+        pkgs = import nixpkgs {
+          system = system;
+          overlays = overlays;
+        };
+      in {
+        formatter = pkgs.nixfmt-rfc-style;
+        devShells.default = pkgs.callPackage ./shell.nix {inherit pkgs;};
+        packages.default = pkgs.callPackage ./derivation.nix {
+          inherit (pkgs) lib python3Packages;
+        };
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/fabric-config";
+        };
+      }
+    );
 }
