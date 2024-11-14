@@ -483,16 +483,25 @@ class PlayerBox(Box):
 
     def set_image(self, *args):
         url = self.player.arturl
+
         if url is None:
             return
-        self.cover_path = (
+
+        new_cover_path = (
             MEDIA_CACHE
             + "/"
             + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)  # type: ignore
-        )
+        ) if "file://" != url[0:7] else url[7:]
+
+        if new_cover_path == self.cover_path:
+            return
+
+        self.cover_path = new_cover_path
+
         if os.path.exists(self.cover_path):
             self.update_image()
             return
+
         Gio.File.new_for_uri(uri=url).copy_async(  # type: ignore
             destination=Gio.File.new_for_path(self.cover_path),
             flags=Gio.FileCopyFlags.OVERWRITE,

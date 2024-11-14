@@ -3,23 +3,13 @@ from typing import Literal
 
 import cairo
 import gi
-from rlottie_python.rlottie_wrapper import LottieAnimation
-
-import fabric
-from fabric.utils import set_stylesheet_from_string
+from rlottie_python.rlottie_wrapper import LottieAnimation, LottieAnimationProperty
 
 
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.overlay import Overlay
-from fabric.widgets.wayland import Window as WaylandWindow
 from fabric.widgets.widget import Widget
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import GLib, Gtk
-
-# anim = LottieAnimation.from_file("/home/muhammad/Downloads/battery.json")
-# anim2 = LottieAnimation.from_file("/home/muhammad/Downloads/bolt.json")
 
 
 # anim.lottie_animation_property_override(

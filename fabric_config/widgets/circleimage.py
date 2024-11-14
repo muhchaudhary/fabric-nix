@@ -11,6 +11,7 @@ from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 
 # TODO: Fix edge cases
 
+
 class CircleImage(Gtk.DrawingArea, Widget):
     @Property(int, "read-write")
     def angle(self) -> int:  # type: ignore
@@ -45,17 +46,17 @@ class CircleImage(Gtk.DrawingArea, Widget):
         Gtk.DrawingArea.__init__(self)
         Widget.__init__(
             self,
-            name,
-            visible,
-            all_visible,
-            style,
-            tooltip_text,
-            tooltip_markup,
-            h_align,
-            v_align,
-            h_expand,
-            v_expand,
-            size,
+            name=name,
+            visible=visible,
+            all_visible=all_visible,
+            style=style,
+            tooltip_text=tooltip_text,
+            tooltip_markup=tooltip_markup,
+            h_align=h_align,
+            v_align=v_align,
+            h_expand=h_expand,
+            v_expand=v_expand,
+            size=size,
             **kwargs,
         )
         self._image_file = image_file
