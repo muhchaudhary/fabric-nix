@@ -26,6 +26,33 @@ python3Packages.buildPythonApplication {
     gtk3
     gobject-introspection
     cairo
+    (python3.withPackages (
+      ps:
+        with ps; [
+          # setuptools
+          # wheel
+          # build
+          # python-fabric
+
+          # Additional Packages
+          psutil
+          colorthief
+          requests
+          lxml
+          pam
+          thefuzz
+          pywayland-custom
+          setuptools
+        ]
+    ))
+
+    # Additional packages
+    fabric-libgray
+    fabric-libglace
+    rlottie-python
+    networkmanager
+    playerctl
+    librsvg
     # fabric-libgray
     # fabricLibglace
   ];
