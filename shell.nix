@@ -41,5 +41,10 @@ pkgs.mkShell {
     rlottie-python
     networkmanager
     playerctl
+    librsvg
   ];
+
+  shellHook = ''
+    export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
+  '';
 }

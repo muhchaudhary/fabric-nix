@@ -30,7 +30,7 @@ python3Packages.buildPythonApplication {
     # fabricLibglace
   ];
   buildInputs = [
-    fabric-libglace
+    # fabric-libglace
     # libdbusmenu-gtk3
     # gtk-layer-shell
     # gnome.gnome-bluetooth

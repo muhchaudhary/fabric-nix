@@ -66,17 +66,16 @@ class LottieAnimationWidget(Gtk.DrawingArea, Widget):
         )
         Widget.__init__(
             self,
-            name,
-            visible,
-            all_visible,
-            style,
-            tooltip_text,
-            tooltip_markup,
-            h_align,
-            v_align,
-            h_expand,
-            v_expand,
-            None,
+            name=name,
+            visible=visible,
+            all_visible=all_visible,
+            style=style,
+            tooltip_text=tooltip_text,
+            tooltip_markup=tooltip_markup,
+            h_align=h_align,
+            v_align=v_align,
+            h_expand=h_expand,
+            v_expand=v_expand,
         )
         # TODO: switch to just giving it a json/tgs file
 

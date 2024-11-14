@@ -4,7 +4,6 @@ import psutil
 from fabric.core.fabricator import Fabricator
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.overlay import Overlay
@@ -54,7 +53,6 @@ class BatteryIndicator(Box):
             ),
         )
 
-        self.battery_icon = Image(name="battery-icon")
         self.current_class = ""
         self.battery_percent = Label(name="battery-label")
 
@@ -111,7 +109,6 @@ class BatteryIndicator(Box):
                 else min(int(percent * 1.5), self.battery_animation.curr_frame),
                 end_frame=int(percent * 1.5),
             )
-        self.battery_icon.set_pixel_size(28)
 
         if self.is_charging != charging:
             self.is_charging = charging
@@ -123,22 +120,18 @@ class BatteryIndicator(Box):
         if charging:
             if self.current_class != "charging":
                 self.current_class = "charging"
-                self.battery_icon.style_classes = [self.current_class]
                 self.battery_percent.style_classes = [self.current_class]
         elif 30 < int(round(percent)) < 50:
             if self.current_class != "low":
                 self.current_class = "low"
-                self.battery_icon.style_classes = [self.current_class]
                 self.battery_percent.style_classes = [self.current_class]
 
         elif int(round(percent)) <= 30:
             if self.current_class != "critical":
                 self.current_class = "critical"
-                self.battery_icon.style_classes = [self.current_class]
                 self.battery_percent.style_classes = [self.current_class]
         elif self.current_class != "":
             self.current_class = ""
-            self.battery_icon.style_classes = []
             self.battery_percent.style_classes = []
 
     def poll_batt(self):

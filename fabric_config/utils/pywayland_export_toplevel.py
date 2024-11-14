@@ -29,7 +29,7 @@ from fabric.core.service import Service, Signal
 
 gi.require_version("Gdk", "3.0")
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import Gdk, GdkPixbuf, GLib
+from gi.repository import Gdk, GdkPixbuf
 
 
 class ClientOutput(Service):

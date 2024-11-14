@@ -64,7 +64,6 @@ class OpenAppsBar(Box):
             tooltip_image.set_style(
                 f"padding-left:{x - (pbuf.get_width() * 0.15) // 2}px; padding-top: 10px;"
             )
-            print(x + pbuf.get_width() * 0.15)
             popover.show() if button.is_hovered() else None
 
         self._manager.capture_client(
