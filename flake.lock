@@ -6,11 +6,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1731273105,
-        "narHash": "sha256-eBOtU3hgUJuff51SbVgmbL7g4ofVt+pY84BHFB5DlRY=",
+        "lastModified": 1731600189,
+        "narHash": "sha256-qZssbHtQtUuKAhUsjg62njdtKV84RhxYQFa1UKKguNo=",
         "owner": "Fabric-Development",
         "repo": "fabric",
-        "rev": "9da7f87e3c6a8d6b58da6fac22e2d9f3ab209c51",
+        "rev": "eb5023ab3b4f42804360d8ab6b6bf815d8c2c082",
         "type": "github"
       },
       "original": {
@@ -162,11 +162,11 @@
     },
     "unstable": {
       "locked": {
-        "lastModified": 1731139594,
-        "narHash": "sha256-IigrKK3vYRpUu+HEjPL/phrfh7Ox881er1UEsZvw9Q4=",
+        "lastModified": 1731319897,
+        "narHash": "sha256-PbABj4tnbWFMfBp6OcUK5iGy1QY+/Z96ZcLpooIbuEI=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "76612b17c0ce71689921ca12d9ffdc9c23ce40b2",
+        "rev": "dc460ec76cbff0e66e269457d7b728432263166c",
         "type": "github"
       },
       "original": {
