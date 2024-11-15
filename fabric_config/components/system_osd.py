@@ -1,18 +1,19 @@
 import os
 from typing import Literal
 
-import fabric_config.config as config
-from gi.repository import GLib
-
-
-from fabric.widgets.widget import Widget
-from fabric.widgets.image import Image
-from fabric.widgets.shapes import Corner
+import gi
 from fabric.widgets.box import Box
+from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
+from fabric.widgets.shapes import Corner
 from fabric.widgets.wayland import WaylandWindow
-from gi.repository import GLib
+from fabric.widgets.widget import Widget
+
+import fabric_config.config as config
 from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
+
+# gi.require_version("GLib", "2.0")
+from gi.repository import GLib
 
 # TODO: use progressbar or custom cairo widget so that I can update the accent color with css
 accent = "#82C480"
@@ -103,9 +104,11 @@ class PopupWindow(WaylandWindow):
 
         if not self.visible:
             self.revealer.show()
+
         if self.popup_running:
             self.currtimeout = 0
             return
+
         self.visible = True
         self.revealer.set_reveal_child(self.visible)
         self.popup_running = True

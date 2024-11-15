@@ -68,7 +68,7 @@ class NotificationBox(Box):
                     start_children=[
                         self.get_icon(notification.app_icon),
                         Label(
-                            notification.app_name,
+                            str(notification.app_name),
                             h_align="start",
                             style="font-weight: 900;",
                         ),
@@ -143,26 +143,25 @@ class NotificationBox(Box):
         )
 
     def get_icon(self, app_icon) -> Image:
-        # Pass file URI
-        if "file://" in app_icon:
-            return Image(
-                name="notification-icon",
-                image_file=app_icon[7:],
-                size=24,
-            )
-        # Pass file
-        elif "/" == app_icon[0]:
-            return Image(
-                name="notification-icon",
-                image_file=app_icon,
-                size=24,
-            )
-        # Pass g_app_icon
-        return Image(
-            name="notification-icon",
-            icon_name=app_icon if app_icon else "dialog-information-symbolic",
-            size=24,
-        )
+        match app_icon:
+            case str(x) if "file://" in x:
+                return Image(
+                    name="notification-icon",
+                    image_file=app_icon[7:],
+                    size=24,
+                )
+            case str(x) if len(x) > 0 and "/" == x[0]:
+                return Image(
+                    name="notification-icon",
+                    image_file=app_icon,
+                    size=24,
+                )
+            case _:
+                return Image(
+                    name="notification-icon",
+                    icon_name=app_icon if app_icon else "dialog-information-symbolic",
+                    size=24,
+                )
 
 
 class NotificationRevealer(Revealer):
