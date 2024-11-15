@@ -1,5 +1,6 @@
 {
   lib,
+  pkgs,
   python3Packages,
   gtk3,
   gtk-layer-shell,
@@ -10,8 +11,11 @@
   gnome,
   cinnamon,
   wrapGAppsHook3,
+  # Custom Packages
   fabric-libgray,
   fabric-libglace,
+  pywayland-custom,
+  rlottie-python,
   ...
 }:
 python3Packages.buildPythonApplication {
@@ -26,46 +30,35 @@ python3Packages.buildPythonApplication {
     gtk3
     gobject-introspection
     cairo
-    (python3.withPackages (
-      ps:
-        with ps; [
-          # setuptools
-          # wheel
-          # build
-          # python-fabric
-
-          # Additional Packages
-          psutil
-          colorthief
-          requests
-          lxml
-          pam
-          thefuzz
-          pywayland-custom
-          setuptools
-        ]
-    ))
-
+  ];
+  buildInputs = with pkgs; [
     # Additional packages
     fabric-libgray
     fabric-libglace
-    rlottie-python
     networkmanager
     playerctl
     librsvg
-    # fabric-libgray
-    # fabricLibglace
-  ];
-  buildInputs = [
-    # fabric-libglace
-    # libdbusmenu-gtk3
-    # gtk-layer-shell
-    # gnome.gnome-bluetooth
-    # cinnamon.cinnamon-desktop
-    # gdk-pixbuf
+    libdbusmenu-gtk3
+    gtk-layer-shell
+    gnome.gnome-bluetooth
+    cinnamon.cinnamon-desktop
+    gdk-pixbuf
   ];
 
-  dependencies = with python3Packages; [python-fabric];
+  dependencies = with python3Packages; [
+    python-fabric
+
+    psutil
+    colorthief
+    requests
+    lxml
+    pam
+    thefuzz
+    pywayland-custom
+
+    rlottie-python
+  ];
+
   doCheck = false;
   dontWrapGApps = true;
 
