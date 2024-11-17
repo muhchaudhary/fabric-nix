@@ -1,0 +1,734 @@
+@import "desktop_widget.css";
+@import "player-dark.css";
+
+:vars {
+  --accent: #009cd4;
+
+  --bg_h: #1d2021;
+  --bg: #1e1e1e;
+  --bg_s: #32302f;
+  --bg1: #3c3836;
+  --bg2: #504945;
+  --bg3: #665c54;
+  --bg4: #7c6f64;
+
+  --fg: #e2e2e0;
+  --fg1: #ebdbb2;
+  --fg2: #d5c4a1;
+  --fg3: #bdae93;
+  --fg4: #a89984;
+
+  --red: #fb4934;
+  --green: #4bbb26;
+  --yellow: #ffe600;
+  --blue: #83a598;
+  --purple: #d3869b;
+  --aqua: #8ec07c;
+  --gray: #928374;
+  --orange: #fe8019;
+
+  --red-dim: #cc2412;
+  --green-dim: #98971a;
+  --yellow-dim: #d79921;
+  --blue-dim: #458588;
+  --purple-dim: #b16286;
+  --aqua-dim: #689d6a;
+  --gray-dim: #a89984;
+  --orange-dim: #d65d0e;
+
+  --placeholder_text_color: rgb(255, 255, 255);
+}
+
+* {
+  all: unset;
+  font-family: "roboto";
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--fg);
+}
+
+#test-icons {
+  color: green;
+}
+
+tooltip {
+  padding: 10px;
+  border-radius: 10px;
+  background-color: var(--bg_h);
+}
+
+tooltip label {
+  font-family: "roboto mono";
+}
+
+scale {
+  margin-top: 10px;
+  margin-bottom: 10px;
+}
+
+/* SYSTEM BAR */
+#system-bar {
+  background-color: alpha(white, 0.01);
+}
+
+#system-bar-corner {
+  margin-bottom: 15px;
+}
+
+#system-bar-corner * {
+  background-color: alpha(black, 0.9);
+}
+
+#system-bar-group {
+  padding: 0px 10px 0px 10px;
+  background-color: alpha(black, 0.9);
+  border-bottom-right-radius: 15px;
+  border-bottom-left-radius: 15px;
+  /* border-bottom-width: 5px;
+  border-bottom-style: solid;
+  border-bottom-color: var(--accent); */
+}
+
+/*  */
+
+#system-tray>button,
+#panel-button-active,
+#date-time,
+#panel-button {
+  margin: 0px 2px 0px 2px;
+  padding: 0px 5px 0px 5px;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 10px;
+  border-color: transparent;
+}
+
+#date-time:hover,
+#system-tray>button:hover,
+#panel-button:hover {
+  background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
+  border-color: alpha(var(--fg), 0.1);
+}
+
+#panel-button label {
+  font-weight: 700;
+}
+
+#date-time label {
+  font-weight: 900;
+  /* color: var(--orange); */
+}
+
+#panel-button.activated {
+  background-color: alpha(white, 0.15);
+  border-style: solid;
+  border-color: transparent;
+  border-bottom-style: solid;
+  border-bottom-color: alpha(white, 0.5);
+}
+
+#date-time:active,
+#date-time:active label,
+#system-tray>button:active,
+#panel-button-active,
+#panel-button-active image,
+#panel-button:active label,
+#panel-button:active image,
+#panel-button:active>*>*>label,
+#panel-button:active>*>label,
+#panel-button-active>box>label,
+#panel-button:active {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+#quicksettings-box {
+  background-color: alpha(var(--bg1), 0.7);
+  border-radius: 20px;
+}
+
+#quicksettings-slider slider:hover {
+  background-color: mix(var(--accent), white, 0.6);
+}
+
+#quicksettings-box>box>button {
+  margin: 10px -10px 10px 5px;
+}
+
+
+#battery-icon {
+  min-height: 200px;
+}
+#battery-label {
+  margin: 0px 5px -2px 2px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+#battery-label.charging {
+  color: var(--green);
+}
+
+#battery-label.low {
+  color: var(--yellow);
+}
+
+#battery-label.critical {
+  color: var(--red);
+}
+
+#prayer-info {
+  min-width: 140px;
+}
+
+#prayer-info>*>*>*>* {
+  font-size: 16px;
+}
+
+#workspaces>button {
+  border-radius: 100%;
+  min-width: 10px;
+  min-height: 8px;
+  margin: 13px 2px 13px 2px;
+  transition-property: border-radius;
+  transition: min-width 0.25s cubic-bezier(0.075, 0.82, 0.165, 1);
+  background-color: var(--fg);
+}
+
+#workspaces {
+  margin: 0px 5px 0px 5px;
+}
+
+#player-stack-button {
+  border-radius: 5px;
+  min-width: 30px;
+  min-height: 10px;
+  margin: 10px 1px 10px 1px;
+  background-color: var(--fg);
+}
+
+#player-stack-button:hover {
+  background-color: #646464;
+}
+
+#player-stack-button.active,
+#workspaces>button.active {
+  border-radius: 5px;
+  min-width: 30px;
+  margin: 10px 1px 10px 1px;
+  background-color: var(--accent);
+}
+
+#player-stack-button.empty,
+#workspaces>button.empty {
+  min-width: 9px;
+  margin: 14px 2px 14px 2px;
+  background-color: var(--fg4);
+}
+
+#workspaces>button.urgent {
+  background-color: var(--red-dim);
+}
+
+#workspaces>button:hover {
+  background-color: var(--bg4);
+}
+
+#prayer-info,
+#quicksettings {
+  background-color: alpha(var(--bg_h), 0.9);
+  border-radius: 20px;
+  border-style: solid;
+  /* border-width: 5px; */
+  /* border-color: alpha(var(--bg_h), 0.9); */
+  margin: 5px;
+  padding: 15px;
+}
+
+#system-tray-menu>menuitem menu>menuitem:hover,
+#system-tray-menu>menuitem:hover,
+#submenu-button:hover {
+  background-color: alpha(var(--bg4), 0.8);
+  border-color: alpha(var(--fg), 0.1);
+}
+
+#submenu-button:active {
+  background-color: var(--accent);
+}
+
+#submenu-button:active>* {
+  color: var(--bg);
+}
+
+#submenu-title {
+  border-style: solid;
+  border-bottom-width: 2px;
+  border-color: var(--bg3);
+  margin-bottom: 5px;
+}
+
+#submenu-label {
+  margin-left: 5px;
+}
+
+#submenu-title-label {
+  font-size: 17px;
+}
+
+#submenu-item {
+  margin: 5px;
+}
+
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
+  border-width: 1px;
+  border-style: double;
+  border-color: var(--fg4);
+  margin: 5px 0px 5px 0px;
+}
+
+#system-tray-menu>menuitem menu>menuitem:disabled,
+#system-tray-menu>menuitem:disabled {
+  background-color: var(--bg_h);
+}
+
+#submenu-button {
+  background-color: var(--bg2);
+  padding: 8px;
+  border-radius: 10px;
+}
+
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
+  background-color: var(--bg2);
+  padding: 5px;
+  border-radius: 10px;
+}
+
+#system-tray-menu>menuitem menu,
+#system-tray-menu,
+#submenu {
+  /* min-width: 450px; */
+  background-color: alpha(var(--bg), 1);
+  border-radius: 20px;
+  border-width: 5px;
+  border-color: alpha(var(--accent), 1);
+  padding: 10px;
+}
+
+#system-tray,
+#panel-icon {
+  margin-left: 2px;
+  font-size: 25px;
+  margin-right: 2px;
+}
+
+#panel-text {
+  margin-top: 2px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+/* OSD */
+#osd-corner {
+  padding-left: 45px;
+}
+
+#osd-corner * {
+  background-color: alpha(black, 0.9);
+}
+
+#osd-progress-bar *.filled {
+  background-color: white;
+  box-shadow: 0px 0px 2px 1px white;
+}
+
+#osd-progress-bar * {
+  border-radius: 30px;
+  background-color: #202020;
+  transition-property: background-color, box-shadow;
+  transition-duration: 0.25s;
+  transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
+  /* transition: background-color 0.3s cubic-bezier(.42,0,.58,1); */
+}
+
+#osd-progress-bar {
+  margin: 10px 5px 10px 5px;
+  border-radius: 30px;
+}
+
+#on-screen-display {
+  border-left-width: 5px;
+  border-color: var(--accent);
+  border-style: solid;
+  min-height: 300px;
+  background-color: alpha(black, 0.9);
+  padding: 20px;
+  border-top-left-radius: 50px;
+  border-bottom-left-radius: 50px;
+}
+
+#osd-icon image {
+  color: white;
+}
+
+/* --------------------------------- QUICK SETTINGS BUTTONS --------------------------------- */
+#quicksettings-togglebutton.active button image,
+#quicksettings-togglebutton.active button label,
+#quicksettings-togglebutton.active button {
+  background-color: var(--accent);
+  color: var(--bg);
+}
+
+#quicksettings-togglebutton.active button:hover image,
+#quicksettings-togglebutton.active button:hover label,
+#quicksettings-togglebutton.active button:hover {
+  background-color: mix(var(--accent), white, 0.2);
+}
+
+#quicksettings-togglebutton.active button:active image,
+#quicksettings-togglebutton.active button:active label,
+#quicksettings-togglebutton.active button:active {
+  background-color: mix(var(--accent), white, 0.5);
+}
+
+#quicksettings-togglebutton button image,
+#quicksettings-togglebutton button label,
+#quicksettings-togglebutton button {
+  background-color: var(--bg1);
+  color: var(--fg);
+}
+
+#quicksettings-togglebutton button:hover image,
+#quicksettings-togglebutton button:hover label,
+#quicksettings-togglebutton button:hover {
+  background-color: var(--bg2);
+}
+
+#quicksettings-togglebutton button:active image,
+#quicksettings-togglebutton button:active label,
+#quicksettings-togglebutton button:active {
+  background-color: var(--bg3);
+}
+
+#quicksettings-toggle-action {
+  border-radius: 10px 0px 0px 10px;
+  min-width: 200px;
+  min-height: 35px;
+}
+
+#quicksettings-toggle-revealer {
+  border-radius: 0px 10px 10px 0px;
+  padding: 5px;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+
+/* --------------------------------- QUICK SETTINGS SLIDERS --------------------------------- */
+#quicksettings-slider {
+  margin-left: 10px;
+  margin-right: 20px;
+}
+
+#quicksettings-slider trough {
+  margin-top: 5px;
+  margin-bottom: 5px;
+  padding-right: 12.5px;
+  min-height: 25px;
+  background-color: alpha(var(--bg3), 0.7);
+  border-radius: 20px;
+}
+
+#quicksettings-slider trough highlight:disabled {
+  background-color: alpha(var(--gray-dim), 0.7);
+}
+
+#quicksettings-slider slider:disabled {
+  background-color: alpha(var(--gray-dim), 1);
+}
+
+#quicksettings-slider trough:hover {
+  background-color: alpha(var(--bg4), 0.7);
+}
+
+#quicksettings-slider trough highlight {
+  border-radius: 20px 0px 0px 20px;
+  background-color: var(--accent);
+  margin-right: -12.5px;
+}
+
+#quicksettings-slider slider {
+  border-radius: 100%;
+  min-width: 25px;
+  min-height: 25px;
+  box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+  margin-left: 25px;
+  background-color: mix(var(--accent), white, 0.3);
+  transition: min-width 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+  transition: min-height 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+}
+
+#quicksettings-slider slider:hover {
+  background-color: mix(var(--accent), white, 0.6);
+  min-height: 30px;
+  min-width: 30px;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+
+/* ---------------------------------------- APP MENU ---------------------------------------- */
+#appmenu {
+  background-color: alpha(black, 0.9);
+  padding: 20px;
+  border-top-right-radius: 50px;
+  border-bottom-right-radius: 50px;
+  border-right-width: 5px;
+  border-color: var(--accent);
+  border-style: solid;
+  min-height: 600px;
+  min-width: 350px;
+  transition: min-height 10s cubic-bezier(0.42, 0, 0.58, 1);
+}
+
+#appmenu-corner * {
+  background-color: alpha(black, 0.9);
+}
+
+#appmenu-entry,
+#appmenu-button label {
+  font-family: "league spartan";
+}
+
+#appmenu-entry {
+  background-color: alpha(white, 0.3);
+  font-size: 16px;
+  font-weight: 500;
+  padding: 8px 0px 8px 0px;
+  color: #ffffff;
+  caret-color: white;
+  border-radius: 50px;
+  transition: min-width 0.5s cubic-bezier(0.33, 1.29, 1, 1.15);
+}
+
+#appmenu-entry.active {
+  min-width: 250px;
+}
+
+#appmenu-entry image {
+  color: #000000;
+  margin-right: 5px;
+}
+
+#appmenu-entry selection {
+  background-color: #2c2c2c;
+  color: #e8e8e8;
+}
+
+#appmenu-scroll slider {
+  border-width: 2px;
+  border-color: white;
+  border-radius: 20px;
+  border-style: solid;
+}
+
+@keyframes app-slot-shine {
+  50% {
+    background-color: alpha(white, 0.4);
+    padding: 10px 5px 10px 5px;
+  }
+
+  100% {
+    background-color: unset;
+  }
+}
+
+#appmenu-button.shine {
+  animation: app-slot-shine;
+}
+
+#appmenu-button {
+  /* background-color: red; */
+  margin: 5px;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+#appmenu-app-name {
+  color: white;
+}
+
+#appmenu-app-desc {
+  font-style: italic;
+  color: #bababa;
+}
+
+/* #appmenu-button:hover label, */
+#appmenu-button:hover {
+  background-color: alpha(#ffffff, 0.25);
+}
+
+#clockbox {
+  margin-top: 100px;
+  border-radius: 30px;
+  padding: 10px;
+  background-color: alpha(black, 0.4);
+}
+
+#appmenu-button:focus image,
+#appmenu-button:focus label {
+  color: black;
+}
+
+#appmenu-button:focus {
+  background-color: alpha(#ffffff, 0.8);
+}
+
+#appmenu-button:active label,
+#appmenu-button:active image {
+  color: black;
+}
+
+#appmenu-button:active {
+  background-color: alpha(#ffffff, 1);
+}
+
+#appmenu-button label {
+  font-weight: bold;
+  font-size: 16px;
+}
+
+/* ------------------------------------------------------------------------------------------ */
+
+/* -------------------------------------- Notifications ------------------------------------- */
+
+#notification-box {
+  background-color: alpha(#000000, 0.9);
+  border-top-left-radius: 20px;
+  border-bottom-left-radius: 20px;
+  min-width: 400px;
+}
+
+#notification-action-buttons,
+#notification-box box label {
+  color: white;
+}
+
+#notification-action-buttons button.start-action {
+  border-radius: 0px 0px 0px 20px;
+  margin-left: 0px;
+}
+
+#notification-action-buttons button.end-action {
+  margin-right: 0px;
+}
+
+#notification-seperator {
+  min-height: 3px;
+  background-color: alpha(white, 0.4);
+}
+
+#notification-action-buttons button {
+  background-color: alpha(#393939, 0.4);
+  padding: 7px;
+  margin: 0px 2px 0px 2px;
+}
+
+#notification-title-button {
+  border-radius: 100%;
+}
+
+#notification-title-button:hover {
+  background-color: alpha(#404040, 0.4);
+}
+
+
+#notification-title-button:active {
+  background-color: alpha(#dadada, 0.4);
+}
+
+#notification-title-circular-progress-bar {
+  border: solid 0px var(--accent);
+  color: transparent;
+
+}
+
+#notification-action-buttons button:hover {
+  background-color: #404040;
+}
+
+#notification-action-buttons button:active label,
+#notification-action-buttons button:active {
+  background-color: #dadada;
+  color: #2c2c2c;
+}
+
+#notification-image image {
+  border-radius: 10px;
+}
+
+#notification-icon {
+  margin-right: 5px;
+}
+
+#notification-title {
+  margin: 10px 0px 0px 20px;
+}
+
+#notification-content {
+  margin: 5px 15px 15px 15px;
+}
+
+/* ------------------------------------------Overview---------------------------------------- */
+
+#overview-window {
+  background-color: alpha(black, 0.9);
+  border-radius: 50px;
+  padding: 10px;
+}
+
+
+#overview-icon {
+  border-style: none;
+  margin: 5px;
+  background-color: alpha(black, 0.4);
+  border-color: black;
+  border-radius: 15px;
+  border-width: 2px;
+  border-style: solid;
+  padding: 5px;
+}
+
+#overview-client-box,
+#overview-workspace-bg,
+#overview-frame {
+  border-radius: 10px;
+}
+
+#overview-client-box {
+  background-color: alpha(var(--accent), 1);
+}
+
+#overview-client-box:hover {
+  background-color: alpha(var(--accent), 0.7);
+}
+
+#overview-client-box:active {
+  background-color: alpha(var(--accent), 1);
+}
+
+#overview-workspace-bg {
+  background-color: #2a2a2a;
+}
+
+#overview-workspace-box {
+  padding: 15px;
+}
+
+#overview-workspace-box label {
+  margin-top: 15px;
+  font-size: 23px;
+  font-weight: bold;
+  font-family: league spartan;
+}
+
+/* ------------------------------------------------------------------------------------------ */
