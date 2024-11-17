@@ -1,3 +1,5 @@
+import math
+import random
 import gi
 from loguru import logger
 from fabric_config.widgets.rounded_image import CustomImage
@@ -20,11 +22,57 @@ from fabric.widgets.wayland import WaylandWindow
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.circularprogressbar import CircularProgressBar
 
+from gi.repository import Gtk
+import cairo
+from fabric_config.widgets.rotate_image import RotatableImage
+
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import GdkPixbuf
+gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
+from gi.repository import GdkPixbuf, Gtk, Gdk
+
 
 # TODO: make a notification center
 # TODO: group notifications by type
+
+
+# Once again, This function is heavily inspired by Aylurs config for drag and drop :)
+def createSurfaceFromWidget(widget: Gtk.Widget):
+    alloc = widget.get_allocation()
+    surface = cairo.ImageSurface(
+        cairo.Format.ARGB32,
+        alloc.width,
+        alloc.height,
+    )
+    cr = cairo.Context(surface)
+    cr.set_source_rgba(255, 255, 255, 0)
+    cr.rectangle(0, 0, alloc.width, alloc.height)
+    cr.fill()
+    widget.draw(cr)
+    return surface
+
+
+class AnimationWindow(WaylandWindow):
+    def __init__(self):
+        self.fixed = Gtk.Fixed()
+        super().__init__(
+            anchor="top left bottom right",
+            layer="top",
+            child=Box(
+                h_expand=True,
+                v_expand=True,
+                children=self.fixed,
+            ),
+            exclusivity="none",
+            keyboard_mode="none",
+            pass_through=True,
+            visible=True,
+            all_visible=True,
+        )
+
+
+# FIXME: I will make a global animations only window which will be used to call NON INTERACTABLE animations
+animate_window = AnimationWindow()
 
 
 class ActionButton(Button):
@@ -205,8 +253,66 @@ class NotificationRevealer(Revealer):
         logger.info(
             f"Notification {notification.id} resolved with reason: {closed_reason}"
         )
+
+        # Save current Surface
+        self.realize()
+        alloc = self.get_allocation()
+        last_frame = RotatableImage(
+            pixbuf=Gdk.pixbuf_get_from_surface(
+                createSurfaceFromWidget(self),
+                0,
+                0,
+                alloc.width,
+                alloc.height,
+            )
+        )
+
+        animate_window.fixed.put(
+            last_frame,  # Only works since its mapped to the top left...
+            animate_window.get_allocated_width() - alloc.width,
+            alloc.y,
+        )
+        animate_window.pass_through = True
+        self.animate_move(
+            last_frame,
+            animate_window.get_allocated_width() - alloc.width,
+            alloc.y,
+            animate_window.get_allocated_width(),
+            animate_window.get_allocated_height(),
+        )
+
         self.transition_type = "slide-up"
         self.set_reveal_child(False)
+
+
+    # FIXME: This is just for demonstrations purposes, use the property animator snppit instead
+    # FIXME: This inculdes the random function I am using to show animations
+    def animate_move(self, widget: RotatableImage, x: int, y: int, bound_x, bound_y):
+        start_x = x
+        start_y = y
+        print(x, y)
+        y_func = lambda rx: (start_y + 1 / 9000 * (rx - start_x) ** 2)
+        angle = 0
+
+        def do_animate():
+            nonlocal x
+            nonlocal angle
+            nonlocal y
+            alloc = widget.get_allocation()
+            widget.set_angle(angle)
+            x -= 10
+            angle += 1
+            angle = angle % 360
+            y = y_func(x)
+            if 0 <= (x + alloc.width) <= bound_x and 0 <= y <= bound_y:
+                animate_window.fixed.move(
+                    widget, x + 10 * math.sin(1 / 4 * x), y + 10 * math.sin(1 / 4 * x)
+                )
+                return True
+            widget.destroy()
+            return False
+
+        invoke_repeater(10, do_animate)
 
 
 class NotificationPopup(WaylandWindow):
