@@ -71,7 +71,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
         )
         self.connect("draw", self.on_draw)
 
-    def on_draw(self, wdiget: "CircleImage", ctx: cairo.Context):
+    def on_draw(self, widget: "CircleImage", ctx: cairo.Context):
         if self._image:
             ctx.save()
             ctx.arc(self.size / 2, self.size / 2, self.size / 2, 0, 2 * math.pi)
@@ -83,7 +83,7 @@ class CircleImage(Gtk.DrawingArea, Widget):
                 + self._image.get_height() // 2,
                 -self.size * 0.5,
             )
-            Gdk.cairo_set_source_pixbuf(ctx, self._image, 0, 0) if self._image else None
+            Gdk.cairo_set_source_pixbuf(ctx, self._image, 0, 0)
             ctx.clip()
             ctx.paint()
             ctx.restore()

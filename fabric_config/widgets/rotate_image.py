@@ -12,7 +12,7 @@ class RotatableImage(Image):
         self.og_width = self.get_pixbuf().get_width()
         self.og_height = self.get_pixbuf().get_height()
 
-    def set_angle(self, angle: int):
+    def set_angle(self, angle: float):
         self._angle = angle
         angle_rad = self._angle * math.pi / 180
         width = self.og_width

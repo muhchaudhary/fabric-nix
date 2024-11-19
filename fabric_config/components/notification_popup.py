@@ -1,5 +1,4 @@
 import math
-import random
 import gi
 from loguru import logger
 from fabric_config.widgets.rounded_image import CustomImage
@@ -282,35 +281,59 @@ class NotificationRevealer(Revealer):
         )
 
         self.transition_type = "slide-up"
+        self.transition_duration = 500
         self.set_reveal_child(False)
-
 
     # FIXME: This is just for demonstrations purposes, use the property animator snppit instead
     # FIXME: This inculdes the random function I am using to show animations
-    def animate_move(self, widget: RotatableImage, x: int, y: int, bound_x, bound_y):
-        start_x = x
-        start_y = y
-        print(x, y)
-        y_func = lambda rx: (start_y + 1 / 9000 * (rx - start_x) ** 2)
+    def animate_move(
+        self, widget: RotatableImage, x: float, y: float, bound_x, bound_y
+    ):
+        frame_time = 10  # milliseconds per frame
+        frame_time_s = frame_time / 1000  # convert to seconds for physics calculations
+
+        # Initial position
+        x = x
+        y = y
+
+        # Physics properties
+        vx = -1000  # Velocity in x-direction (pixels per second)
+        vy = 500  # Velocity in y-direction (pixels per second)
+        ax = -5000  # Acceleration in x-direction (no acceleration here)
+        ay = 1000  # Gravity-like acceleration (pixels per second^2)
+
         angle = 0
 
         def do_animate():
-            nonlocal x
-            nonlocal angle
-            nonlocal y
-            alloc = widget.get_allocation()
-            widget.set_angle(angle)
-            x -= 10
-            angle += 1
+            nonlocal x, y, vx, vy, angle
+
+            vx += ax * frame_time_s
+            vy += ay * frame_time_s
+
+            x += vx * frame_time_s
+            y += vy * frame_time_s
+
+            angle -= 5 * frame_time / 20
             angle = angle % 360
-            y = y_func(x)
-            if 0 <= (x + alloc.width) <= bound_x and 0 <= y <= bound_y:
+            widget.set_angle(angle)
+
+            if (
+                0 <= x + widget.get_allocated_width() / 2 <= bound_x
+                and 0 <= y <= bound_y
+            ):
                 animate_window.fixed.move(
-                    widget, x + 10 * math.sin(1 / 4 * x), y + 10 * math.sin(1 / 4 * x)
+                    widget,
+                    x,
+                    y - widget.get_allocated_height() / 2,
                 )
-                return True
-            widget.destroy()
-            return False
+                # Check boundaries
+                return True  # Continue animation
+            else:
+                widget.destroy()  # End animation
+                return False
+            return True
+
+        invoke_repeater(frame_time, do_animate)
 
         invoke_repeater(10, do_animate)
 
