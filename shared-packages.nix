@@ -1,6 +1,7 @@
 # shared-packages.nix
 {pkgs}: {
   sharedPackages = with pkgs; [
+    # gengir
     fabric-libgray
     fabric-libglace
     networkmanager
