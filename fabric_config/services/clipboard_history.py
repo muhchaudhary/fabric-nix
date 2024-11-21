@@ -1,54 +1,60 @@
-import mimetypes
 import os
 import re
+import threading
 from typing import Callable
 
 import gi
+import magic
 from fabric import Fabricator, Property, Service, Signal
-
 from loguru import logger
 
 gi.require_version("GdkPixbuf", "2.0")
-gi.require_version("Rsvg", "2.0")
-from gi.repository import GdkPixbuf, Gio, GLib, Rsvg
+from gi.repository import GdkPixbuf, Gio, GLib
+
+SUPPORTED_MIME_TYPES = [
+    mime_type for fmt in GdkPixbuf.Pixbuf.get_formats() for mime_type in fmt.mime_types
+]
+SUPPORTED_FILE_EXTENSIONS = [
+    file_extension
+    for fmt in GdkPixbuf.Pixbuf.get_formats()
+    for file_extension in fmt.extensions
+]
+
+# TODO: Assign a fixed number of image loading threads
+# TODO: make these cancelable
 
 
-SUPPORTED_FORMATS = [fmt.name for fmt in GdkPixbuf.Pixbuf.get_formats()]
-
-
-def get_file_pixbuf_async(file_path: str, callback: Callable):
-    def on_file_read(stream: Gio.InputStream, task: Gio.Task):
+def get_pixbuf_for_data_threaded(data: bytes, callback: Callable):
+    def thread_function():
         try:
-            input_stream = stream.read_finish(task)
-            GdkPixbuf.Pixbuf.new_from_stream_async(input_stream, None, callback)
-            input_stream.close_async(GLib.PRIORITY_DEFAULT, None, None)
+            loader = GdkPixbuf.PixbufLoader()
+            loader.write(data)
+            loader.close()
+            pixbuf = loader.get_pixbuf()
+            GLib.idle_add(callback, (True, pixbuf))
         except Exception as _:
-            logger.error(
-                f"[CLIPBOARD] Failed to create input stream for file: {file_path}"
-            )
+            logger.error("[CLIPBOARD] Failed make get loader for data")
+            GLib.idle_add(callback, (False, None))
+        finally:
+            GLib.idle_add(thread.join)
 
-    file: Gio.File = Gio.File.new_for_path(file_path)
-    file.read_async(GLib.PRIORITY_DEFAULT, None, on_file_read)
+    thread = threading.Thread(target=thread_function)
+    thread.start()
 
 
-# Don't need this, sending a gif to GdkPixbuf will return a static image anyways
-def get_file_pixbuf_animation_async(
-    file_path: str, callback: Callable, user_data: any = None
-):
-    def on_file_read(stream: Gio.InputStream, task: Gio.Task, user_data):
+def get_pixbuf_for_file_threaded(file_path: str, callback: Callable):
+    def thread_function():
         try:
-            input_stream = stream.read_finish(task)
-            GdkPixbuf.PixbufAnimation.new_from_stream_async(
-                input_stream, None, callback, user_data
-            )
-            input_stream.close_async(GLib.PRIORITY_DEFAULT, None, None)
-        except Exception as e:
-            logger.error(
-                f"[CLIPBOARD] Failed to read pixbuf animation from {file_path}"
-            )
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)
+            GLib.idle_add(callback, (True, pixbuf))
+        except Exception as _:
+            logger.error(f"[CLIPBOARD] Failed make pixbuf for file: {file_path}")
+            GLib.idle_add(callback, (False, None))
+        finally:
+            GLib.idle_add(thread.join)
 
-    file: Gio.File = Gio.File.new_for_path(file_path)
-    file.read_async(GLib.PRIORITY_DEFAULT, None, on_file_read, user_data)
+    thread = threading.Thread(target=thread_function)
+    thread.start()
 
 
 class ClipboardHistory(Service):
@@ -59,8 +65,9 @@ class ClipboardHistory(Service):
     @Signal
     def clipboard_data_ready(self, cliphist_id: str) -> str: ...
 
-    def __init__(self, length_cutoff: int = 5000):
+    def __init__(self, length_cutoff: int = 5000, file_max_size: int = 5000000):
         self._length_cutoff = length_cutoff
+        self._file_max_size = file_max_size
         self._clipboard_history = {}
         self._decoded_clipboard_history = {}
         super().__init__()
@@ -80,7 +87,6 @@ class ClipboardHistory(Service):
                     for x in stdout.split("\n")[:-1]
                     for key, value in [x.split("\t", 1)]
                 }
-                print(self._clipboard_history)
                 self.notify("clipboard-history")
             except Exception as _:
                 logger.error("[CLIPBOARD] Failed to read from `cliphist list`")
@@ -121,29 +127,21 @@ class ClipboardHistory(Service):
             try:
                 _, stdout, stderr = proc.communicate_finish(task)
                 decoded_str: str = stdout.get_data().decode("utf8")
+
                 file_uri = (
                     f"file://{decoded_str}"
                     if not decoded_str.startswith("file://")
                     else decoded_str
                 )
+
                 if os.path.exists(file_uri[7:]):
+                    self.cliphist_delete(
+                        cliphist_id
+                    )  # We're going to end up with copies otherwise
                     proc = Gio.Subprocess.new(
-                        [
-                            "bash",
-                            "-c",
-                            f"echo -n '{file_uri}' | wl-copy --type text/uri-list",
-                            # f" wl-copy < { stdout.get_data().decode('utf8') }",
-                        ],
+                        ["wl-copy", "--type", "text/uri-list", file_uri],
                         Gio.SubprocessFlags.STDIN_PIPE
                         | Gio.SubprocessFlags.STDERR_PIPE,
-                    )
-                    print(
-                        [
-                            "bash",
-                            "-c",
-                            f"echo -n file://{stdout.get_data().decode('utf8')} | wl-copy --type text/uri-list",
-                            # f" wl-copy < { stdout.get_data().decode('utf8') }",
-                        ]
                     )
                     proc.wait_async(None, wl_wait_callback)
                 else:
@@ -182,29 +180,6 @@ class ClipboardHistory(Service):
                 f"[CLIPBOARD] Failed to delete item with cliphist id: {cliphist_id}"
             )
 
-    def parse_data_svg(self, cliphist_id: str):
-        def callback(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                _, stdout, stderr = proc.communicate_finish(task)
-                self._decoded_clipboard_history[cliphist_id] = (
-                    Rsvg.Handle.new_from_data(stdout.get_data()).get_pixbuf()
-                )
-
-                # We can use GdkPixbuf.PixbufLoader as well but I like Rsvg
-                #   no real benifit (that I can think of) to using a PixbbufLoader
-                # loader = GdkPixbuf.PixbufLoader()
-                # loader.write(stdout.get_data())
-                # loader.close()
-                # self._decoded_clipboard_history[cliphist_id] = loader.get_pixbuf()
-                self.emit("clipboard-data-ready", cliphist_id)
-            except Exception as e:
-                logger.error(
-                    f"[CLIPBOARD] Failed read svg data with cliphist id: {cliphist_id}",
-                    e,
-                )
-
-        self.cliphist_decode(cliphist_id, callback)
-
     def parse_data_binary(self, cliphist_id: str):
         preview = self._clipboard_history[cliphist_id]
         info = preview.split()
@@ -224,11 +199,11 @@ class ClipboardHistory(Service):
                 )
 
         process: Gio.Subprocess = Gio.Subprocess.new(
-            ["cliphist", "decode", str(cliphist_id)],
+            ["cliphist", "decode", cliphist_id],
             Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
         )  # type: ignore
 
-        if data_type in SUPPORTED_FORMATS:
+        if data_type in SUPPORTED_FILE_EXTENSIONS:
             GdkPixbuf.Pixbuf.new_from_stream_async(
                 process.get_stdout_pipe(), None, callback
             )
@@ -271,76 +246,81 @@ class ClipboardHistory(Service):
 
             except Exception as _:
                 logger.error(
-                    f"[CLIPBOARD] Failed to decode html image from cliphist id: {cliphist_id}"
+                    f"[CLIPBOARD] Failed to decode html image for cliphist id: {cliphist_id}"
                 )
 
         self.cliphist_decode(cliphist_id, decode_callback)
 
     def parse_string(self, cliphist_id: str):
-        file_path = ""
+        decoded_string = ""
 
-        def on_pixbuf_ready(loader, result):
-            nonlocal file_path
+        def on_pixbuf_ready(results):
+            nonlocal decoded_string
             try:
-                self._decoded_clipboard_history[cliphist_id] = (
-                    GdkPixbuf.Pixbuf.new_from_stream_finish(result)
-                )
+                _, pbuf = results
+                self._decoded_clipboard_history[cliphist_id] = pbuf
                 self.emit("clipboard-data-ready", cliphist_id)
             except Exception as _:
-                logger.error(f"[CLIPBOARD] Failed to read pixbuf for file: {file_path}")
+                self._decoded_clipboard_history[cliphist_id] = decoded_string
+                self.emit("clipboard-data-ready", cliphist_id)
+                logger.error(f"[CLIPBOARD] Failed to read pixbuf for: {decoded_string}")
 
         def callback(proc: Gio.Subprocess, task: Gio.Task):
-            nonlocal file_path
+            nonlocal decoded_string
             try:
                 _, stdout, stderr = proc.communicate_finish(task)
                 decoded_string = str(stdout.get_data().decode("utf-8"))
                 if decoded_string.startswith("file://"):
                     decoded_string = decoded_string[7:]
 
-                if not os.path.exists(decoded_string):
+                # TODO: find alternative for magic
+                stdout_contents_detect = magic.detect_from_content(stdout.get_data())
+                if (
+                    stdout_contents_detect.mime_type in SUPPORTED_MIME_TYPES
+                    or "xbm image" in stdout_contents_detect.name
+                ):
+                    get_pixbuf_for_data_threaded(stdout.get_data(), on_pixbuf_ready)
+                    return
+
+                elif not os.path.exists(decoded_string):
                     self._decoded_clipboard_history[cliphist_id] = decoded_string[
                         : self._length_cutoff
                     ]
                     self.emit("clipboard-data-ready", cliphist_id)
                     return
 
-                elif decoded_string.startswith("/* XPM */"):
-                    try:
-                        loader = GdkPixbuf.PixbufLoader()
-                        loader.write(stdout.get_data())
-                        loader.close()
-                        self._decoded_clipboard_history[cliphist_id] = (
-                            loader.get_pixbuf()
-                        )
-                        self.emit("clipboard-data-ready", cliphist_id)
-                    except Exception as e:
-                        self._decoded_clipboard_history[cliphist_id] = decoded_string
-                        self.emit("clipboard-data-ready", cliphist_id)
+                f = Gio.file_new_for_path(decoded_string)
+                info = f.query_info(
+                    "thumbnail::*,standard::size,standard::content-type",
+                    Gio.FileQueryInfoFlags.NONE,
+                    None,
+                )  # type: ignore
+
+                if info.get_attribute_boolean("thumbnail::is-valid-large"):
+                    get_pixbuf_for_file_threaded(
+                        info.get_attribute_as_string("thumbnail::path-large"),
+                        on_pixbuf_ready,
+                    )
+                    return
+                elif info.get_attribute_boolean("thumbnail::is-valid"):
+                    get_pixbuf_for_file_threaded(
+                        info.get_attribute_as_string("thumbnail::path"), on_pixbuf_ready
+                    )
+                    return
+                # 5MB limit
+                if info.get_size() > self._file_max_size:
                     return
 
                 # FIXME: python 3.13 introduced a new function guess_file_type, use that
-                file_type = mimetypes.guess_type(decoded_string)[0]
-                if not file_type:
+                # FIXME: using magic, you can detect xbm files but idc, one less depend
+                # detected_filename = magic.detect_from_filename(decoded_string)
+                file_type = info.get_content_type()
+                if file_type in SUPPORTED_MIME_TYPES:
+                    get_pixbuf_for_file_threaded(decoded_string, on_pixbuf_ready)
+                else:
                     self._decoded_clipboard_history[cliphist_id] = decoded_string
                     self.emit("clipboard-data-ready", cliphist_id)
-                    return
-                file_path = decoded_string
-                match file_type:
-                    case file_type if any(
-                        fmt in file_type for fmt in SUPPORTED_FORMATS
-                    ) or file_type in ["image/x-xpixmap", "image/x-xbitmap"]:
-                        get_file_pixbuf_async(decoded_string, on_pixbuf_ready)
 
-                    # We can do this, but we can do it async instead here
-                    # case "image/svg+xml":
-                    #     self._decoded_clipboard_history[cliphist_id] = (
-                    #         Rsvg.Handle.new_from_file(decoded_string).get_pixbuf()
-                    #     )
-                    #     self.emit("clipboard-data-ready", cliphist_id)
-
-                    case _:
-                        self._decoded_clipboard_history[cliphist_id] = decoded_string
-                        self.emit("clipboard-data-ready", cliphist_id)
             except Exception as e:
                 print(e)
 
@@ -353,13 +333,8 @@ class ClipboardHistory(Service):
 
             if pattern.match(preview):
                 self.parse_data_binary(cliphist_id)
-
-            elif preview.startswith("<?xml") or preview.startswith("<svg"):
-                self.parse_data_svg(cliphist_id)
-
             elif preview.startswith("<meta"):
                 self.parse_html_tag(cliphist_id)
-
             else:
                 self.parse_string(cliphist_id)
 

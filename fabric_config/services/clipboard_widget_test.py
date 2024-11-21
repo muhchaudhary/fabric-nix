@@ -29,7 +29,7 @@ class ClipboardHistoryItem(Box):
         preview = self.clipboard_client.clipboard_history[clipboard_id]
         self.clipboard_child = Box(
             size=(64, 64),
-            children=Label(markup=preview)
+            children=Label(label=preview)
             if isinstance(preview, str)
             else Image(pixbuf=preview)
             if isinstance(preview, GdkPixbuf.Pixbuf)
@@ -85,5 +85,5 @@ class ClipboardHistoryBox(Box):
 
 app = Application()
 chb = ClipboardHistoryBox()
-WaylandWindow(layer="overlay", anchor="bottom left", child=chb)
+WaylandWindow(layer="overlay", anchor="top left", child=chb)
 app.run()
