@@ -1,8 +1,9 @@
 import math
-import gi
-from loguru import logger
-from fabric_config.widgets.rounded_image import CustomImage
+import time
 
+import cairo
+import gi
+from fabric import Signal
 from fabric.notifications.service import (
     Notification,
     NotificationAction,
@@ -13,23 +14,22 @@ from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
-
-from fabric.widgets.overlay import Overlay
-from fabric.widgets.circularprogressbar import CircularProgressBar
-
 from gi.repository import Gtk
-import cairo
-from fabric_config.widgets.rotate_image import RotatableImage
+from loguru import logger
+
+from fabric_config.snippits.animator import Animator
+from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import GdkPixbuf, Gtk, Gdk
-
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 # TODO: make a notification center
 # TODO: group notifications by type
@@ -53,14 +53,19 @@ def createSurfaceFromWidget(widget: Gtk.Widget):
 
 class AnimationWindow(WaylandWindow):
     def __init__(self):
+        self.draw_surfaces = []
+        self.drawing_area = Gtk.DrawingArea()
         self.fixed = Gtk.Fixed()
+        self.last_update_time = time.time()
+
         super().__init__(
             anchor="top left bottom right",
             layer="top",
             child=Box(
                 h_expand=True,
                 v_expand=True,
-                children=self.fixed,
+                # children=self.fixed,
+                children=self.drawing_area,
             ),
             exclusivity="none",
             keyboard_mode="none",
@@ -68,6 +73,47 @@ class AnimationWindow(WaylandWindow):
             visible=True,
             all_visible=True,
         )
+        self.drawing_area.set_size_request(
+            self.get_allocated_width(), self.get_allocated_height()
+        )
+        self.drawing_area.connect("draw", self.on_draw)
+
+    def move_surface(self, surface: cairo.Surface, x, y, angle, global_rotate=False):
+        for i in range(len(self.draw_surfaces)):
+            if self.draw_surfaces[i][0] == surface:
+                self.draw_surfaces[i] = (surface, x, y, angle, global_rotate)
+                self.drawing_area.queue_draw()
+
+    def add_surface(self, surface: cairo.Surface, x, y, angle, global_rotate=False):
+        self.drawing_area.set_size_request(
+            self.get_allocated_width(), self.get_allocated_height()
+        )
+        self.draw_surfaces.append((surface, x, y, angle, global_rotate))
+        self.drawing_area.queue_draw()
+
+    def destroy_surface(self, surface: cairo.Surface):
+        for i in range(len(self.draw_surfaces)):
+            if self.draw_surfaces[i][0] == surface:
+                del self.draw_surfaces[i]
+                self.drawing_area.queue_draw()
+                return
+
+    def on_draw(self, _, cr: cairo.Context):
+        for surface, x, y, angle, global_rotate in self.draw_surfaces:
+            width = surface.get_width()
+            height = surface.get_height()
+            cr.save()
+            if global_rotate:
+                cr.rotate(angle * math.pi / 180)
+                cr.set_source_surface(surface, x, y)
+            else:
+                cr.translate(x, y)
+                cr.translate(width / 2, height / 2)
+                cr.rotate(angle * math.pi / 180)
+                cr.set_source_surface(surface, -width / 2, -height / 2)
+            cr.paint()
+
+            cr.restore()
 
 
 # FIXME: I will make a global animations only window which will be used to call NON INTERACTABLE animations
@@ -212,21 +258,28 @@ class NotificationBox(Box):
 
 
 class NotificationRevealer(Revealer):
+    @Signal
+    def animation_done(self, is_done: bool) -> bool: ...
+
     def __init__(self, notification: Notification, **kwargs):
         self.popup_timeout = 5000
         self.not_box = NotificationBox(notification)
         self.notification = notification
         self.not_box.progress_timeout.max_value = self.popup_timeout
+
         super().__init__(
             child=Box(style="margin: 1px 0px 1px 1px;", children=self.not_box),
-            transition_duration=500,
+            transition_duration=0,
             transition_type="crossfade",
         )
 
-        self.animate_popup_timeout()
         self.connect(
             "notify::child-revealed",
             lambda *args: self.destroy() if not self.get_child_revealed() else None,
+        )
+        self.connect(
+            "animation-done",
+            lambda *_: [self.set_reveal_child(True), self.animate_popup_timeout()],
         )
 
         notification.connect("closed", self.on_resolved)
@@ -240,7 +293,6 @@ class NotificationRevealer(Revealer):
             if not self.child_revealed:
                 return False
             if time <= 0:
-                self.set_reveal_child(False)
                 self.notification.close("expired")
                 return False
             time -= 10
@@ -253,89 +305,103 @@ class NotificationRevealer(Revealer):
             f"Notification {notification.id} resolved with reason: {closed_reason}"
         )
 
-        # Save current Surface
-        self.realize()
         alloc = self.get_allocation()
-        last_frame = RotatableImage(
-            pixbuf=Gdk.pixbuf_get_from_surface(
-                createSurfaceFromWidget(self),
-                0,
-                0,
-                alloc.width,
-                alloc.height,
-            )
-        )
 
-        animate_window.fixed.put(
-            last_frame,  # Only works since its mapped to the top left...
-            animate_window.get_allocated_width() - alloc.width,
-            alloc.y,
+        x = animate_window.get_allocated_width() - alloc.width
+        y = alloc.y
+        surface = self.offscreen_surface
+        bound_x = animate_window.get_allocated_width()
+        bound_y = animate_window.get_allocated_height()
+
+        def do_animate_animator(p: Animator, *_):
+            nonlocal x, y
+
+            angle = -p.value % 360
+            x -= p.value
+            y += p.value / 2
+
+            if 0 <= x + surface.get_width() / 2 <= bound_x and 0 <= y <= bound_y:
+                animate_window.move_surface(surface, x, y, angle)
+            else:
+                animate_window.destroy_surface(self.offscreen_surface)
+
+        anim = Animator(
+            bezier_curve=(0, 0, 1, 1),
+            duration=10,
+            min_value=0,
+            max_value=360 * 5,
+            tick_widget=animate_window.drawing_area,
+            notify_value=do_animate_animator,
+            on_finished=lambda *_: animate_window.destroy_surface(surface),
         )
-        animate_window.pass_through = True
-        self.animate_move(
-            last_frame,
-            animate_window.get_allocated_width() - alloc.width,
-            alloc.y,
-            animate_window.get_allocated_width(),
-            animate_window.get_allocated_height(),
-        )
+        anim.play()
 
         self.transition_type = "slide-up"
         self.transition_duration = 500
         self.set_reveal_child(False)
 
-    # FIXME: This is just for demonstrations purposes, use the property animator snppit instead
-    # FIXME: This inculdes the random function I am using to show animations
-    def animate_move(
-        self, widget: RotatableImage, x: float, y: float, bound_x, bound_y
-    ):
-        frame_time = 10  # milliseconds per frame
-        frame_time_s = frame_time / 1000  # convert to seconds for physics calculations
+    def grab_offscreen(self, box_allocation: Gdk.Rectangle):
+        offscreen = Gtk.OffscreenWindow()
+        offscreen.get_style_context().add_class(Gtk.STYLE_CLASS_DND)
+        frame = Gtk.Frame()
 
-        # Initial position
-        x = x
-        y = y
+        nb = NotificationBox(self.notification)
+        frame.add(nb)
+        frame.show_all()
 
-        # Physics properties
-        vx = -1000  # Velocity in x-direction (pixels per second)
-        vy = 500  # Velocity in y-direction (pixels per second)
-        ax = -5000  # Acceleration in x-direction (no acceleration here)
-        ay = 1000  # Gravity-like acceleration (pixels per second^2)
+        offscreen.add(frame)
+        offscreen.show()
+        alloc = frame.get_allocation()
+        frame.draw(cairo.Context(offscreen.get_surface()))
+        self.offscreen_surface = offscreen.get_surface()
 
-        angle = 0
+        animate_window.add_surface(
+            self.offscreen_surface,
+            animate_window.get_allocated_width() + 1,
+            (alloc.y + box_allocation.height),
+            0,
+        )
+        animate_window.pass_through = True
+        anim_alloc = animate_window.get_allocation()
 
-        def do_animate():
-            nonlocal x, y, vx, vy, angle
+        def do_animate_animator(p: Animator, *_):
+            animate_window.move_surface(
+                self.offscreen_surface,
+                anim_alloc.width - p.value + 1,
+                (alloc.y + box_allocation.height) + 2,
+                (p.value / 30) % 360
+                if p.value < p.max_value // 2
+                else ((p.max_value - p.value) / 30) % 360,
+                True,
+            )
 
-            vx += ax * frame_time_s
-            vy += ay * frame_time_s
+        def on_anim_finished(*_):
+            # Hide surface
+            animate_window.move_surface(
+                self.offscreen_surface,
+                animate_window.get_allocated_width(),
+                animate_window.get_allocated_height(),
+                0,
+            )
+            self.emit("animation-done", True)
+            # last_frame.destroy()
 
-            x += vx * frame_time_s
-            y += vy * frame_time_s
+        anim = Animator(
+            bezier_curve=(0.42, 0, 0.58, 1),
+            duration=1,
+            min_value=0,
+            max_value=alloc.width,
+            tick_widget=animate_window.drawing_area,
+            notify_value=do_animate_animator,
+        )
+        anim.play()
+        anim.connect("finished", on_anim_finished)
 
-            angle -= 5 * frame_time / 20
-            angle = angle % 360
-            widget.set_angle(angle)
+        offscreen.remove(frame)
+        frame.destroy()
+        offscreen.destroy()
 
-            if (
-                0 <= x + widget.get_allocated_width() / 2 <= bound_x
-                and 0 <= y <= bound_y
-            ):
-                animate_window.fixed.move(
-                    widget,
-                    x,
-                    y - widget.get_allocated_height() / 2,
-                )
-                # Check boundaries
-                return True  # Continue animation
-            else:
-                widget.destroy()  # End animation
-                return False
-            return True
-
-        invoke_repeater(frame_time, do_animate)
-
-        invoke_repeater(10, do_animate)
+        # self.emit("animation_done", True)
 
 
 class NotificationPopup(WaylandWindow):
@@ -364,4 +430,5 @@ class NotificationPopup(WaylandWindow):
     def on_new_notification(self, fabric_notif, id):
         new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
         self.notifications.add(new_box)
-        new_box.set_reveal_child(True)
+        new_box.grab_offscreen(self.notifications.get_allocation())
+        # new_box.set_reveal_child(True)
