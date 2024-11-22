@@ -17,6 +17,7 @@
       lxml
       pam
       thefuzz
+      magic
     ]
     ++ [
       # custom python packages
