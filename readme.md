@@ -1,8 +1,6 @@
 # What is this?
 This is my repo for getting fabric to work in nixOS, hassle free. You can find the derrivation for fabric in the nix folder.
 
-I also have my personal config for fabric located in the `fabric` folder. If you want to start fresh, you can clone the `fresh-env` branch
-
 # How to set up
 
 * The provided flake.nix will create a development shell with all the dependincies you need to use fabric. **ADD INFO ON WHY WE NEED THIS HERE**
