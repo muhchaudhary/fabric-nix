@@ -1,5 +1,6 @@
 @import "./components/quicksettings/slider.css";
 @import "./components/quicksettings/button.css";
+@import "./components/quicksettings/player-dark.css";
 
 #quicksettings-box {
     background-color: alpha(var(--bg1), 0.7);
