@@ -1,3 +1,14 @@
+#osd {
+    border-left-width: 5px;
+    border-color: var(--accent);
+    border-style: solid;
+    min-height: 300px;
+    background-color: alpha(black, 0.9);
+    padding: 20px;
+    border-top-left-radius: 50px;
+    border-bottom-left-radius: 50px;
+}
+
 #osd-corner {
     padding-left: 45px;
 }
@@ -6,9 +17,13 @@
     background-color: alpha(black, 0.9);
 }
 
-#osd-progress-bar *.filled {
-    background-color: white;
-    box-shadow: 0px 0px 2px 1px white;
+#osd-icon image {
+    color: white;
+}
+
+#osd-progress-bar {
+    margin: 10px 5px 10px 5px;
+    border-radius: 30px;
 }
 
 #osd-progress-bar * {
@@ -20,22 +35,7 @@
     /* transition: background-color 0.3s cubic-bezier(.42,0,.58,1); */
 }
 
-#osd-progress-bar {
-    margin: 10px 5px 10px 5px;
-    border-radius: 30px;
-}
-
-#on-screen-display {
-    border-left-width: 5px;
-    border-color: var(--accent);
-    border-style: solid;
-    min-height: 300px;
-    background-color: alpha(black, 0.9);
-    padding: 20px;
-    border-top-left-radius: 50px;
-    border-bottom-left-radius: 50px;
-}
-
-#osd-icon image {
-    color: white;
+#osd-progress-bar *.filled {
+    background-color: white;
+    box-shadow: 0px 0px 2px 1px white;
 }

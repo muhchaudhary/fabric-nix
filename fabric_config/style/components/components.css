@@ -2,7 +2,7 @@
 @import "./components/quicksettings/quicksettings.css";
 
 @import "./components/appmenu.css";
-@import "./components/desktop_widget.css";
+@import "./components/desktop-widget.css";
 @import "./components/notifications.css";
 @import "./components/osd.css";
 @import "./components/overview.css";
