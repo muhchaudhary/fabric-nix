@@ -191,7 +191,7 @@ class SystemOSD(PopupWindow):
                         ),
                     ),
                     Box(
-                        name="on-screen-display",
+                        name="osd",
                         orientation="v",
                         spacing=10,
                         h_align="end",
