@@ -24,9 +24,11 @@
           (final: prev: {basedpyright = unstable.legacyPackages.${system}.basedpyright;})
           (final: prev: {fabric-libgray = inputs.fabric-libgray.packages.${system}.default;})
           (final: prev: {fabric-libglace = inputs.fabric-libglace.packages.${system}.default;})
-          # (final: prev: {gengir = pkgs.callPackage ./nix/gengir.nix {};})
+
+          (final: prev: {gengir = pkgs.python3Packages.callPackage ./nix/gengir.nix {};})
           (final: prev: {rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};})
           (final: prev: {pywayland-custom = pkgs.python3Packages.callPackage ./nix/pywayland.nix {};})
+          (final: prev: {run-widget = fabric.packages.${system}.run-widget;})
 
           fabric.overlays.${system}.default
         ];

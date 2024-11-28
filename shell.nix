@@ -16,7 +16,7 @@ in
       gdk-pixbuf
       gnome.gnome-bluetooth
       cinnamon.cinnamon-desktop
-
+      run-widget
       shared.sharedPackages # Additonal packages
 
       (python3.withPackages (
@@ -27,12 +27,16 @@ in
               wheel
               build
               python-fabric
+              pyopengl
             ]
             ++ shared.sharedPythonPackages
       ))
     ];
 
     shellHook = ''
+      # ${pkgs.python3.interpreter} ./nix/tt.py
+      # cp -a "$(dirname "$(which python)")"/../${pkgs.python3.sitePackages}/gi-stubs/repository/. "/home/$USERNAME/.local/lib/python3.11/site-packages/gi/repository/"
+      # chmod -R ugo+rw "/home/$USERNAME/.local/lib/python3.11/site-packages/gi/repository/"
       export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
     '';
   }

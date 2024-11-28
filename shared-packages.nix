@@ -17,11 +17,13 @@
       lxml
       pam
       thefuzz
+      numpy
       magic
     ]
     ++ [
       # custom python packages
       pkgs.rlottie-python
+      pkgs.gengir
       pkgs.pywayland-custom
     ];
 }
