@@ -317,8 +317,8 @@ class NotificationRevealer(Revealer):
             nonlocal x, y
 
             angle = -p.value % 360
-            x -= p.value
-            y += p.value / 2
+            x -= p.value / 4
+            y += p.value / 6
 
             if 0 <= x + surface.get_width() / 2 <= bound_x and 0 <= y <= bound_y:
                 animate_window.move_surface(surface, x, y, angle)
@@ -327,9 +327,9 @@ class NotificationRevealer(Revealer):
 
         anim = Animator(
             bezier_curve=(0, 0, 1, 1),
-            duration=10,
+            duration=5,
             min_value=0,
-            max_value=360 * 5,
+            max_value=(360 * 5),
             tick_widget=animate_window.drawing_area,
             notify_value=do_animate_animator,
             on_finished=lambda *_: animate_window.destroy_surface(surface),

@@ -24,14 +24,10 @@ class BatteryIndicator(Box):
             self.set_visible(False)
             return
 
-        self.is_charging = None
-        self.curr_percent = None
+        self.is_charging = False
+        self.curr_percent = 0
         self.battery_button = Button(name="panel-button")
-        self.battery_body = BatteryBodyWidget(
-            percentage=0,
-            size=(50, 25),
-            style="margin: 5px; background-color: green; border: solid white 2px; border-radius: 3px;",
-        )
+        self.battery_body = BatteryBodyWidget(name="battery-cairo-icon", percentage=0)
 
         self.current_class = ""
         self.battery_percent = Label(name="battery-label")
@@ -66,44 +62,26 @@ class BatteryIndicator(Box):
         percent = value.percent
         secsleft = value.secsleft
         charging = value.power_plugged
-        self.battery_percent.set_label(str(int(round(percent))) + "%")
+
+        if int(percent) != self.curr_percent or self.is_charging != charging:
+            self.update_battery_class(int(percent), charging)
+
+        if int(percent) != self.curr_percent:
+            self.curr_percent = int(percent)
+            self.battery_body.percentage = int(self.curr_percent)
+            self.battery_percent.set_label(str(round(self.curr_percent)) + "%")
 
         self.battery_button.set_tooltip_text(
-            str(int(round(percent)))
+            str(round(self.curr_percent))
             + "% "
             + str(datetime.timedelta(seconds=secsleft))
             + " left",
         ) if not charging else self.battery_button.set_tooltip_text(
-            str(int(round(percent))) + "% " + "Charging",
+            str(round(self.curr_percent)) + "% " + "Charging",
         )
 
-        if int(percent) != self.curr_percent:
-            self.curr_percent = int(percent)
-            self.battery_body.percentage = self.curr_percent
-
-        if self.is_charging != charging:
-            self.is_charging = charging
-            if self.is_charging:
-                self.battery_body.is_charging = True
-            else:
-                self.battery_body.is_charging = False
-
-        if charging:
-            if self.current_class != "charging":
-                self.current_class = "charging"
-                self.battery_percent.style_classes = [self.current_class]
-        elif 30 < int(round(percent)) < 50:
-            if self.current_class != "low":
-                self.current_class = "low"
-                self.battery_percent.style_classes = [self.current_class]
-
-        elif int(round(percent)) <= 30:
-            if self.current_class != "critical":
-                self.current_class = "critical"
-                self.battery_percent.style_classes = [self.current_class]
-        elif self.current_class != "":
-            self.current_class = ""
-            self.battery_percent.style_classes = []
+        self.is_charging = charging
+        self.battery_body.is_charging = charging
 
     def poll_batt(self):
         battery = psutil.sensors_battery()
@@ -113,6 +91,29 @@ class BatteryIndicator(Box):
         self.battery_percent_revealer.set_reveal_child(
             not self.battery_percent_revealer.get_child_revealed(),
         )
+
+    def update_battery_class(self, percent, is_charging):
+        if is_charging:
+            self.current_class = "charging"
+            self.battery_percent.style_classes = [self.current_class]
+            self.battery_body.style_classes = [self.current_class]
+            return
+
+        match percent:
+            case num if 30 < num <= 50:
+                self.current_class = "low"
+                self.battery_percent.style_classes = [self.current_class]
+                self.battery_body.style_classes = [self.current_class]
+
+            case num if num <= 30:
+                self.current_class = "critical"
+                self.battery_percent.style_classes = [self.current_class]
+                self.battery_body.style_classes = [self.current_class]
+
+            case _:
+                self.current_class = ""
+                self.battery_percent.style_classes = []
+                self.battery_body.style_classes = []
 
 
 class BatteryBodyWidget(Gtk.DrawingArea, Widget):
@@ -130,9 +131,9 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
         return self._is_charging
 
     @is_charging.setter
-    def is_charging(self, value: bool) -> bool:
+    def is_charging(self, value: bool):
         if self._is_charging != value:
-            self._play_bolt_animation = True
+            self.run_bolt_animation(not value)
             self.queue_draw()
         self._is_charging = value
 
@@ -179,29 +180,36 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
         )
         self._percent = percentage
         self._is_charging = False
-        self._play_bolt_animation = False
-        self._anim_is_running = False
+        self._draw_bolt = False
         self._scale = 0.25
         self.connect("draw", self.on_draw)
+        style_context = self.get_style_context()
+        self.set_size_request(
+            style_context.get_property("min-width", Gtk.StateFlags.NORMAL),
+            style_context.get_property("min-height", Gtk.StateFlags.NORMAL),
+        )
 
-    def run_bolt_animation(self):
+    def run_bolt_animation(self, reverse: bool = False):
         def on_new_value(p, *_):
             self._scale = p.value
             self.queue_draw()
-            print("Playing....", p.value)
 
         def on_anim_finished(*_):
-            self._anim_is_running = False
+            self._draw_bolt = not reverse
+
+        min_value = 0.0
+        max_value = 0.25
 
         anim = Animator(
-            bezier_curve=(0, 0.77, 0.35, 1.67),
-            duration=0.5,
-            min_value=0.1,
-            max_value=0.25,
+            bezier_curve=(0, 0.77, 0.35, 1.67) if not reverse else (0, 0, 0.58, 1),
+            duration=1,
+            min_value=min_value if not reverse else max_value,
+            max_value=max_value if not reverse else min_value,
             tick_widget=self,
             notify_value=on_new_value,
             on_finished=on_anim_finished,
         )
+        self._draw_bolt = True
         anim.play()
 
     def draw_lightning_bolt(self, cr: cairo.Context, x, y, width, height):
@@ -211,21 +219,37 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
         center_y = y + height / 2
         cr.save()
         cr.translate(
-            center_x - (self.bolt_svg.get_dimensions().width * self._scale) / 2 + 1,
+            center_x - (self.bolt_svg.get_dimensions().width * self._scale) / 2,
             center_y - (self.bolt_svg.get_dimensions().height * self._scale) / 2,
         )
         cr.scale(self._scale, self._scale)
         self.bolt_svg.render_cairo(cr)
         cr.restore()
 
-        # cr.move_to(center_x, center_y + bolt_height / 2) # Top
-        # cr.line_to(center_x, center_y + bolt_height * 0.1) # Top-center
-        # cr.line_to(center_x - bolt_width * 0.3, center_y + bolt_height * 0.1) # Mid-right
-        # cr.line_to(center_x, center_y - bolt_height / 2) # Bottom
-        # cr.line_to(center_x, center_y - bolt_height * 0.1) # Bottom-center
-        # cr.line_to(center_x + bolt_width * 0.3, center_y - bolt_height * 0.1)  # Mid-left
-        # cr.line_to(center_x, center_y + bolt_height / 2) # Top
-        # cr.fill()
+    def do_draw_battery_percent(
+        self, cr: cairo.Context, x, y, width, height, color: Gdk.RGBA
+    ):
+        center_x = x + width / 2
+        center_y = y + height / 2
+
+        cr.save()
+
+        cr.set_font_size(height * 0.9)
+        cr.select_font_face("roboto", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        extent = cr.text_extents(f"{int(self.percentage)}")
+        cr.move_to(center_x - extent.width / 2, center_y + extent.height / 2)
+
+        cr.text_path(f"{int(self.percentage)}")
+
+        Gdk.cairo_set_source_rgba(cr, color)
+
+        cr.fill_preserve()
+        cr.set_source_rgb(0, 0, 0)
+        cr.set_line_width(0.1)
+        cr.stroke()
+        cr.restore()
+
+        pass
 
     def do_render_rectangle(self, cr: cairo.Context, width, height, radius: int = 0):
         cr.move_to(radius, 0)
@@ -241,16 +265,21 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
 
     def on_draw(self, widget, cr: cairo.Context):
         style_context = self.get_style_context()
-        width = widget.get_allocated_width()
-        height = widget.get_allocated_height()
+
+        width = style_context.get_property("min-width", Gtk.StateFlags.NORMAL)
+        height = style_context.get_property("min-height", Gtk.StateFlags.NORMAL)
+        self.set_size_request(width, height)
 
         margin = style_context.get_margin(Gtk.StateFlags.NORMAL)
-        background_color = style_context.get_background_color(Gtk.StateFlags.NORMAL)
+        color: Gdk.RGBA = style_context.get_color(Gtk.StateFlags.NORMAL)
+        background_color = style_context.get_property(
+            "background-color", Gtk.StateFlags.NORMAL
+        )
         border = style_context.get_border(Gtk.StateFlags.BACKDROP)
         border_color = style_context.get_border_color(Gtk.StateFlags.NORMAL)
-        border_radius = style_context.get_property(
+        border_radius: int = style_context.get_property(
             "border-radius", Gtk.StateFlags.NORMAL
-        )
+        )  # type: ignore
 
         fill_offset = 3
         terminal_width = 2
@@ -295,23 +324,25 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
 
         # Fill battery level
         cr.save()
-        fill_width = (self.percentage / 100) * body_width
+        fill_width = (self.percentage / 100) * (body_width - border_width - fill_offset)
         Gdk.cairo_set_source_rgba(cr, background_color)
+        # Gdk.cairo_set_source_rgba(cr, color)
         cr.translate(
             margin + (border_width + fill_offset) / 2,
             margin + (border_width + fill_offset) / 2,
         )
         self.do_render_rectangle(
             cr,
-            fill_width - border_width - fill_offset,
+            fill_width,
             body_height - border_width - fill_offset,
-            border_radius - border_width,
+            max(border_radius - border_width, 0),
         )
         cr.fill()
         cr.restore()
 
-        if self._play_bolt_animation:
-            self.run_bolt_animation()
-            self._play_bolt_animation = False
-        elif self.is_charging:
+        if self._draw_bolt:
             self.draw_lightning_bolt(cr, margin, margin, body_width, body_height)
+        else:
+            self.do_draw_battery_percent(
+                cr, margin, margin, body_width, body_height, color
+            )

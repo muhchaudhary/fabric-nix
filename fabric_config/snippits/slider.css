@@ -1,0 +1,49 @@
+#quicksettings-slider {
+    margin-left: 10px;
+    margin-right: 20px;
+  }
+  
+  #quicksettings-slider trough {
+    margin-top: 5px;
+    margin-bottom: 5px;
+    padding-right: 12.5px;
+    min-height: 25px;
+    background-color: alpha(var(--bg3), 0.7);
+    border-radius: 20px;
+  }
+  
+  #quicksettings-slider trough highlight:disabled {
+    background-color: alpha(var(--gray-dim), 0.7);
+  }
+  
+  #quicksettings-slider slider:disabled {
+    background-color: alpha(var(--gray-dim), 1);
+  }
+  
+  #quicksettings-slider trough:hover {
+    background-color: alpha(var(--bg4), 0.7);
+  }
+  
+  #quicksettings-slider trough highlight {
+    border-radius: 20px 0px 0px 20px;
+    background-color: var(--accent);
+    margin-right: -12.5px;
+  }
+  
+  #quicksettings-slider slider {
+    border-radius: 100%;
+    min-width: 25px;
+    min-height: 25px;
+    box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+    margin-left: 25px;
+    background-color: mix(var(--accent), white, 0.3);
+    transition: min-width 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+    transition: min-height 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+  }
+  
+  #quicksettings-slider slider:hover {
+    background-color: mix(var(--accent), white, 0.6);
+    min-height: 30px;
+    min-width: 30px;
+  }
+  

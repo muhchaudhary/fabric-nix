@@ -44,7 +44,7 @@ class StatusBarSeperated(WaylandWindow):
         self.workspaces = Workspaces(
             name="workspaces",
             spacing=2,
-            buttons=[WorkspaceButtonNoLabel(i + 1) for i in range(7)],
+            buttons=[WorkspaceButtonNoLabel(i) for i in range(1,7)],
             buttons_factory=None,
         )
 

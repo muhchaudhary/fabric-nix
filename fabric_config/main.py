@@ -28,7 +28,7 @@ nc = NotificationPopup()
 appMenu = AppMenu()
 
 file = monitor_file(get_relative_path("style/main.css"))
-file.connect("changed", lambda *args: apply_style(app))
+_ = file.connect("changed", lambda *_: apply_style(app))
 
 app = Application(
     "fabric-bar",
@@ -40,8 +40,8 @@ app = Application(
     overview,
 )
 apply_style(app)
-def main():
 
+def main():
     app.run()
 
 

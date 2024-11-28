@@ -14,7 +14,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 
-from fabric.utils.helpers import (
+from fabric.utils import (
     DesktopApp,
     get_desktop_applications,
     exec_shell_command_async,

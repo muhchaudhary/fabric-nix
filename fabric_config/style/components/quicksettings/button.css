@@ -1,0 +1,48 @@
+#quicksettings-togglebutton.active button image,
+#quicksettings-togglebutton.active button label,
+#quicksettings-togglebutton.active button {
+    background-color: var(--accent);
+    color: var(--bg);
+}
+
+#quicksettings-togglebutton.active button:hover image,
+#quicksettings-togglebutton.active button:hover label,
+#quicksettings-togglebutton.active button:hover {
+    background-color: mix(var(--accent), white, 0.2);
+}
+
+#quicksettings-togglebutton.active button:active image,
+#quicksettings-togglebutton.active button:active label,
+#quicksettings-togglebutton.active button:active {
+    background-color: mix(var(--accent), white, 0.5);
+}
+
+#quicksettings-togglebutton button image,
+#quicksettings-togglebutton button label,
+#quicksettings-togglebutton button {
+    background-color: var(--bg1);
+    color: var(--fg);
+}
+
+#quicksettings-togglebutton button:hover image,
+#quicksettings-togglebutton button:hover label,
+#quicksettings-togglebutton button:hover {
+    background-color: var(--bg2);
+}
+
+#quicksettings-togglebutton button:active image,
+#quicksettings-togglebutton button:active label,
+#quicksettings-togglebutton button:active {
+    background-color: var(--bg3);
+}
+
+#quicksettings-toggle-action {
+    border-radius: 10px 0px 0px 10px;
+    min-width: 200px;
+    min-height: 35px;
+}
+
+#quicksettings-toggle-revealer {
+    border-radius: 0px 10px 10px 0px;
+    padding: 5px;
+}

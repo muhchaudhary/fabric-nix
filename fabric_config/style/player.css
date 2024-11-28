@@ -1,5 +1,5 @@
 #inner-player-box {
-    background-color: #ffffff;
+    background-color: var(--red);
     border-radius: 20px;
 }
 

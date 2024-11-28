@@ -1,0 +1,119 @@
+#appmenu {
+    background-color: alpha(black, 0.9);
+    padding: 20px;
+    border-top-right-radius: 50px;
+    border-bottom-right-radius: 50px;
+    border-right-width: 5px;
+    border-color: var(--accent);
+    border-style: solid;
+    min-height: 600px;
+    min-width: 350px;
+    transition: min-height 10s cubic-bezier(0.42, 0, 0.58, 1);
+}
+
+#appmenu-corner * {
+    background-color: alpha(black, 0.9);
+}
+
+#appmenu-entry,
+#appmenu-button label {
+    font-family: "league spartan";
+}
+
+#appmenu-entry {
+    background-color: alpha(white, 0.3);
+    font-size: 16px;
+    font-weight: 500;
+    padding: 8px 0px 8px 0px;
+    color: #ffffff;
+    caret-color: white;
+    border-radius: 50px;
+    transition: min-width 0.5s cubic-bezier(0.33, 1.29, 1, 1.15);
+}
+
+#appmenu-entry.active {
+    min-width: 250px;
+}
+
+#appmenu-entry image {
+    color: #000000;
+    margin-right: 5px;
+}
+
+#appmenu-entry selection {
+    background-color: #2c2c2c;
+    color: #e8e8e8;
+}
+
+#appmenu-scroll slider {
+    border-width: 2px;
+    border-color: white;
+    border-radius: 20px;
+    border-style: solid;
+}
+
+@keyframes app-slot-shine {
+    50% {
+        background-color: alpha(white, 0.4);
+        padding: 10px 5px 10px 5px;
+    }
+
+    100% {
+        background-color: unset;
+    }
+}
+
+#appmenu-button.shine {
+    animation: app-slot-shine;
+}
+
+#appmenu-button {
+    /* background-color: red; */
+    margin: 5px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+#appmenu-app-name {
+    color: white;
+}
+
+#appmenu-app-desc {
+    font-style: italic;
+    color: #bababa;
+}
+
+/* #appmenu-button:hover label, */
+#appmenu-button:hover {
+    background-color: alpha(#ffffff, 0.25);
+}
+
+#clockbox {
+    margin-top: 100px;
+    border-radius: 30px;
+    padding: 10px;
+    background-color: alpha(black, 0.4);
+}
+
+#appmenu-button:focus image,
+#appmenu-button:focus label {
+    color: black;
+}
+
+#appmenu-button:focus {
+    background-color: alpha(#ffffff, 0.8);
+}
+
+#appmenu-button:active label,
+#appmenu-button:active image {
+    color: black;
+}
+
+#appmenu-button:active {
+    background-color: alpha(#ffffff, 1);
+}
+
+#appmenu-button label {
+    font-weight: bold;
+    font-size: 16px;
+}

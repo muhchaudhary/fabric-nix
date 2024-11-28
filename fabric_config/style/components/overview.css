@@ -1,0 +1,51 @@
+#overview-window {
+    background-color: alpha(black, 0.9);
+    border-radius: 50px;
+    padding: 10px;
+  }
+  
+  
+  #overview-icon {
+    border-style: none;
+    margin: 5px;
+    background-color: alpha(black, 0.4);
+    border-color: black;
+    border-radius: 15px;
+    border-width: 2px;
+    border-style: solid;
+    padding: 5px;
+  }
+  
+  #overview-client-box,
+  #overview-workspace-bg,
+  #overview-frame {
+    border-radius: 10px;
+  }
+  
+  #overview-client-box {
+    background-color: alpha(var(--accent), 1);
+  }
+  
+  #overview-client-box:hover {
+    background-color: alpha(var(--accent), 0.7);
+  }
+  
+  #overview-client-box:active {
+    background-color: alpha(var(--accent), 1);
+  }
+  
+  #overview-workspace-bg {
+    background-color: #2a2a2a;
+  }
+  
+  #overview-workspace-box {
+    padding: 15px;
+  }
+  
+  #overview-workspace-box label {
+    margin-top: 15px;
+    font-size: 23px;
+    font-weight: bold;
+    font-family: league spartan;
+  }
+  

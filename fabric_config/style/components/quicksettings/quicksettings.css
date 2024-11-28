@@ -1,0 +1,11 @@
+@import "./components/quicksettings/slider.css";
+@import "./components/quicksettings/button.css";
+
+#quicksettings-box {
+    background-color: alpha(var(--bg1), 0.7);
+    border-radius: 20px;
+}
+
+#quicksettings-box>box>button {
+    margin: 10px -10px 10px 5px;
+}
