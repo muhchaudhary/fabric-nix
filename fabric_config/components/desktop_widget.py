@@ -2,7 +2,6 @@
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
-from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow
 
 

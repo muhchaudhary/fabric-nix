@@ -1,13 +1,10 @@
 #inner-player-box {
-    background-color: alpha(@bg_s, 0.7);
+    background-color: alpha(var(--bg_s), 0.7);
     border-radius: 20px;
 }
 
 #seek-bar {
-    border-width: 1px;
     border-radius: 10px;
-    border-style: double;
-    border-color: @fg;
     margin-top: 10px;
     margin-bottom: 5px;
 }
@@ -15,7 +12,7 @@
 #seek-bar trough {
     border-radius: 100px;
     min-height: 8px;
-    background-color: @bg;
+    background-color: rgb(94, 94, 94);
 }
 
 #seek-bar trough highlight {
@@ -24,7 +21,7 @@
 
 
 #seek-bar trough:hover {
-    background-color: @bg2;
+    background-color: var(--bg2);
 }
 
 #player-box {
@@ -34,11 +31,7 @@
 #player-title {
     font-family: "roboto";
     font-weight: 700;
-    color: @fg1;
-    text-shadow: -1px -1px 0 @bg3,
-        1px -1px 0 @bg3,
-        -1px 1px 0 @bg3,
-        1px 1px 0 @bg3;
+    color: var(--fg);
     font-size: 18px;
 }
 
@@ -46,11 +39,7 @@
     font-family: "roboto";
     font-weight: 600;
     font-size: 13px;
-    color: @fg3;
-    text-shadow: -1px -1px 0 @bg3,
-        1px -1px 0 @bg3,
-        -1px 1px 0 @bg3,
-        1px 1px 0 @bg3;
+    color: rgb(175, 175, 175);
 }
 
 #button-box {

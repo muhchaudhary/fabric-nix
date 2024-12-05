@@ -20,7 +20,6 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
-from gi.repository import Gtk
 from loguru import logger
 
 from fabric_config.snippits.animator import Animator
@@ -29,26 +28,10 @@ from fabric_config.widgets.rounded_image import CustomImage
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, Gtk
 
 # TODO: make a notification center
 # TODO: group notifications by type
-
-
-# Once again, This function is heavily inspired by Aylurs config for drag and drop :)
-def createSurfaceFromWidget(widget: Gtk.Widget):
-    alloc = widget.get_allocation()
-    surface = cairo.ImageSurface(
-        cairo.Format.ARGB32,
-        alloc.width,
-        alloc.height,
-    )
-    cr = cairo.Context(surface)
-    cr.set_source_rgba(255, 255, 255, 0)
-    cr.rectangle(0, 0, alloc.width, alloc.height)
-    cr.fill()
-    widget.draw(cr)
-    return surface
 
 
 class AnimationWindow(WaylandWindow):
@@ -144,6 +127,7 @@ class ActionButton(Button):
 
 class NotificationBox(Box):
     def __init__(self, notification: Notification):
+        print(notification.timeout)
         self.progress_timeout = CircularProgressBar(
             name="notification-title-circular-progress-bar",
             size=35,
@@ -199,7 +183,7 @@ class NotificationBox(Box):
                             orientation="v",
                             children=[
                                 Label(
-                                    markup=(
+                                    label=(
                                         notification.summary[:30]
                                         + (notification.summary[30:] and "...")
                                     ),
@@ -209,7 +193,7 @@ class NotificationBox(Box):
                                     style="font-weight: 900",
                                 ),
                                 Label(
-                                    markup=(
+                                    label=(
                                         notification.body[:120]
                                         + (notification.body[120:] and "...")
                                     ),
@@ -237,7 +221,7 @@ class NotificationBox(Box):
 
     def get_icon(self, app_icon) -> Image:
         match app_icon:
-            case str(x) if "file://" in x:
+            case str(x) if x.startswith("file://"):
                 return Image(
                     name="notification-icon",
                     image_file=app_icon[7:],
@@ -416,7 +400,7 @@ class NotificationPopup(WaylandWindow):
         )
         self._server.connect("notification-added", self.on_new_notification)
         # self._server.connect("notification-removed", self.on_notification_removed)
-        # self._server.connect("notification-closed", self.on_notification_closed)
+        self._server.connect("notification-closed", self.on_notification_closed)
 
         super().__init__(
             anchor="top right",
@@ -426,6 +410,8 @@ class NotificationPopup(WaylandWindow):
             visible=True,
             exclusive=False,
         )
+    def on_notification_closed(self, fabric_notif, id, reason):
+        print(self._server.notifications)
 
     def on_new_notification(self, fabric_notif, id):
         new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))

@@ -16,8 +16,14 @@ in
       gdk-pixbuf
       gnome.gnome-bluetooth
       cinnamon.cinnamon-desktop
-      run-widget
-      shared.sharedPackages # Additonal packages
+
+      # Addional packages
+
+      fabric-libgray
+      fabric-libglace
+      networkmanager
+      playerctl
+      librsvg
 
       (python3.withPackages (
         ps:
@@ -27,7 +33,6 @@ in
               wheel
               build
               python-fabric
-              pyopengl
             ]
             ++ shared.sharedPythonPackages
       ))

@@ -1,3 +1,4 @@
+import imp
 from fabric_config.components.overview import Overview
 from fabric import Application
 from fabric.utils import get_relative_path, monitor_file
@@ -12,12 +13,17 @@ from fabric_config.components import (
     SystemOSD,
 )
 
+from fabric_config.components.bar.bar import ScreenCorners
+
 
 def apply_style(app: Application):
     logger.info("[Main] CSS applied")
     return app.set_stylesheet_from_file(get_relative_path("style/main.css"))
 
+
 sc = config.sc
+
+screen_corners = ScreenCorners()
 
 logger.disable("fabric.hyprland.widgets")
 bar = StatusBarSeperated()
@@ -40,6 +46,7 @@ app = Application(
     overview,
 )
 apply_style(app)
+
 
 def main():
     app.run()

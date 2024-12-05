@@ -1,5 +1,13 @@
 from typing import Literal
 
+from fabric.hyprland.widgets import ActiveWindow, WorkspaceButton, Workspaces
+from fabric.utils import FormattedString
+from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.datetime import DateTime
+from fabric.widgets.shapes import Corner
+from fabric.widgets.wayland import WaylandWindow
+
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
     OpenAppsBar,
@@ -8,14 +16,6 @@ from fabric_config.components.bar.widgets import (
     SystemTrayRevealer,
 )
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
-
-from fabric.hyprland.widgets import ActiveWindow, WorkspaceButton, Workspaces
-from fabric.utils import FormattedString
-from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.datetime import DateTime
-from fabric.widgets.shapes import Corner
-from fabric.widgets.wayland import WaylandWindow
 
 
 class WorkspaceButtonNoLabel(WorkspaceButton):
@@ -29,6 +29,7 @@ class WorkspaceButtonNoLabel(WorkspaceButton):
 class StatusBarCorner(Box):
     def __init__(self, corner: Literal["top-right", "top-left"]):
         super().__init__(
+            style="margin-bottom: 15px;",
             name="system-bar-corner",
             children=Corner(
                 orientation=corner,
@@ -44,7 +45,7 @@ class StatusBarSeperated(WaylandWindow):
         self.workspaces = Workspaces(
             name="workspaces",
             spacing=2,
-            buttons=[WorkspaceButtonNoLabel(i) for i in range(1,7)],
+            buttons=[WorkspaceButtonNoLabel(i) for i in range(1, 7)],
             buttons_factory=None,
         )
 
@@ -67,18 +68,20 @@ class StatusBarSeperated(WaylandWindow):
                     self.battery,
                     self.date_time,
                 ],
+                style_classes="right",
             ),
-            StatusBarCorner("top-left"),
+            # StatusBarCorner("top-left"),
         ]
 
         self.bar_content.start_children = [
-            StatusBarCorner("top-right"),
+            # StatusBarCorner("top-right"),
             Box(
                 name="system-bar-group",
                 children=[
                     self.prayer_times,
                     self.open_apps_bar,
                 ],
+                style_classes="left",
             ),
             StatusBarCorner("top-left"),
         ]
@@ -89,6 +92,7 @@ class StatusBarSeperated(WaylandWindow):
                 children=[
                     self.workspaces,
                 ],
+                style_classes="center",
             ),
             StatusBarCorner("top-left"),
         ]
@@ -162,3 +166,64 @@ class StatusBar(WaylandWindow):
         )
 
         self.show_all()
+
+
+class ScreenCorners(WaylandWindow):
+    def __init__(self):
+        super().__init__(
+            layer="top",
+            anchor="top left bottom right",
+            pass_through=True,
+            child=Box(
+                orientation="vertical",
+                children=[
+                    Box(
+                        children=[
+                            self.make_corner("top-left"),
+                            Box(h_expand=True),
+                            self.make_corner("top-right"),
+                        ]
+                    ),
+                    Box(v_expand=True),
+                    Box(
+                        children=[
+                            self.make_corner("bottom-left"),
+                            Box(h_expand=True),
+                            self.make_corner("bottom-right"),
+                        ]
+                    ),
+                ],
+            ),
+        )
+
+    def make_corner(self, orientation) -> Box:
+        return Box(
+            h_expand=False,
+            v_expand=False,
+            name="system-bar-corner",
+            children=Corner(
+                orientation=orientation,  # type: ignore
+                size=15,
+            ),
+        )
+
+
+# Uses up a lot more memory
+# class ScreenCorner(WaylandWindow):
+#     def __init__(
+#         self,
+#         orientation: Literal["top left", "top right", "bottom left", "bottom right"],
+#     ):
+#         print(orientation.replace(" ", "-"))
+#         super().__init__(
+#             layer="top",
+#             anchor=orientation,
+#             # pass_through=True,
+#             child=Box(
+#                 name="system-bar-corner",
+#                 children=Corner(
+#                     orientation=orientation.replace(" ", "-"),  # type: ignore
+#                     size=15,
+#                 ),
+#             ),
+#         )

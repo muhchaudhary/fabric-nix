@@ -1,14 +1,5 @@
 # shared-packages.nix
 {pkgs}: {
-  sharedPackages = with pkgs; [
-    # gengir
-    fabric-libgray
-    fabric-libglace
-    networkmanager
-    playerctl
-    librsvg
-  ];
-
   sharedPythonPackages = with pkgs.python3Packages;
     [
       psutil

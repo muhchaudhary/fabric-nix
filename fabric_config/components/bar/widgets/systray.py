@@ -25,20 +25,16 @@ class SystemTrayWidget(Box):
         item = self.watcher.get_item_for_identifier(identifier)
         item_button = self.do_bake_item_button(item)
         item.connect("removed", lambda *args: item_button.destroy())
+        item.connect(
+            "icon-changed",
+            lambda icon_item: self.do_update_item_button(icon_item, item_button),
+        )
         item_button.show_all()
         self.add(item_button)
 
-    def do_bake_item_button(self, item: Gray.Item) -> Button:
-        button = Button()
-
-        # context menu handler
-        button.connect(
-            "button-press-event",
-            lambda button, event: self.on_button_click(button, item, event),
-        )
-
-        # get pixel map of item's icon
+    def do_update_item_button(self, item: Gray.Item, item_button: Button):
         pixmap = Gray.get_pixmap_for_pixmaps(item.get_icon_pixmaps(), 24)
+
 
         # convert the pixmap to a pixbuf
         pixbuf: GdkPixbuf.Pixbuf = (
@@ -53,17 +49,22 @@ class SystemTrayWidget(Box):
             )
         )
 
-        # resize/scale the pixbuf
-        pixbuf.scale_simple(
-            self.pixel_size, self.pixel_size, GdkPixbuf.InterpType.HYPER
-        )
+        item_button.set_image(Image(pixbuf=pixbuf, pixel_size=self.pixel_size))
 
-        image = Image(pixbuf=pixbuf, pixel_size=self.pixel_size)
-        button.set_image(image)
+    def do_bake_item_button(self, item: Gray.Item) -> Button:
+        button = Button()
+        # context menu handler
+        button.connect(
+            "button-press-event",
+            lambda button, event: self.on_button_click(button, item, event),
+        )
+        self.do_update_item_button(item, button)
 
         return button
 
     def on_button_click(self, button, item: Gray.Item, event):
+        # for prop in item.list_properties():
+        #     print(f"{prop.__doc__}: {item.get_property(prop.__doc__)}")
         match event.button:
             case 1:
                 try:

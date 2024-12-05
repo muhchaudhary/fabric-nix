@@ -6,8 +6,16 @@
     unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
     fabric.url = "github:Fabric-Development/fabric";
-    fabric-libgray.url = "github:Fabric-Development/gray";
-    fabric-libglace.url = "github:Fabric-Development/glace/hyprland";
+
+    fabric-libgray = {
+      url = "github:Fabric-Development/gray";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    fabric-libglace = {
+      url = "github:Fabric-Development/glace";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -21,9 +29,9 @@
     utils.lib.eachDefaultSystem (
       system: let
         overlays = [
+          (final: prev: {fabric-libglace = inputs.fabric-libglace.packages.${system}.default;})
           (final: prev: {basedpyright = unstable.legacyPackages.${system}.basedpyright;})
           (final: prev: {fabric-libgray = inputs.fabric-libgray.packages.${system}.default;})
-          (final: prev: {fabric-libglace = inputs.fabric-libglace.packages.${system}.default;})
 
           (final: prev: {gengir = pkgs.python3Packages.callPackage ./nix/gengir.nix {};})
           (final: prev: {rlottie-python = pkgs.python3Packages.callPackage ./nix/rolttie-python.nix {};})
@@ -39,14 +47,16 @@
         };
       in {
         formatter = pkgs.nixfmt-rfc-style;
-        devShells.default = pkgs.callPackage ./shell.nix {inherit pkgs;};
-        packages.default = pkgs.callPackage ./derivation.nix {
-          inherit (pkgs) lib python3Packages;
+        devShells.default = pkgs.callPackage ./shell.nix {
+          inherit pkgs;
         };
-        apps.default = {
-          type = "app";
-          program = "${self.packages.${system}.default}/bin/fabric-config";
-        };
+        # packages.default = pkgs.callPackage ./derivation.nix {
+        #   inherit (pkgs) lib python3Packages;
+        # };
+        # apps.default = {
+        #   type = "app";
+        #   program = "${self.packages.${system}.default}/bin/fabric-config";
+        # };
       }
     );
 }

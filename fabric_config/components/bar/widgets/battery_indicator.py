@@ -83,7 +83,7 @@ class BatteryIndicator(Box):
         self.is_charging = charging
         self.battery_body.is_charging = charging
 
-    def poll_batt(self):
+    def poll_batt(self, _):
         battery = psutil.sensors_battery()
         return battery if battery else None
 
@@ -202,7 +202,7 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
 
         anim = Animator(
             bezier_curve=(0, 0.77, 0.35, 1.67) if not reverse else (0, 0, 0.58, 1),
-            duration=1,
+            duration=0.2,
             min_value=min_value if not reverse else max_value,
             max_value=max_value if not reverse else min_value,
             tick_widget=self,

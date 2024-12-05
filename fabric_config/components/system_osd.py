@@ -1,7 +1,6 @@
 import os
 from typing import Literal
 
-import gi
 from fabric.widgets.box import Box
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
@@ -63,7 +62,7 @@ class PopupWindow(WaylandWindow):
             keyboard_mode=keyboard_mode,
             **kwargs,
         )
-        self.set_can_focus = False
+        self.set_can_focus(False)
 
         self.revealer.connect(
             "notify::child-revealed",

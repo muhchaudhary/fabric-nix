@@ -1,24 +1,23 @@
 import json
 import os
 
-from gi.repository import GLib
-from loguru import logger
-from thefuzz import fuzz, process
-from fabric_config.widgets.popup_window_v2 import PopupWindow
-
+from fabric.utils import (
+    DesktopApp,
+    exec_shell_command_async,
+    get_desktop_applications,
+)
 from fabric.widgets.box import Box
-from fabric.widgets.shapes import Corner
 from fabric.widgets.button import Button
 from fabric.widgets.entry import Entry
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
+from fabric.widgets.shapes import Corner
+from gi.repository import GLib
+from loguru import logger
+from thefuzz import fuzz, process
 
-from fabric.utils import (
-    DesktopApp,
-    get_desktop_applications,
-    exec_shell_command_async,
-)
+from fabric_config.widgets.popup_window_v2 import PopupWindow
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 APP_CACHE = CACHE_DIR + "/app_launcher"
@@ -98,7 +97,7 @@ class ApplicationButtonV2(Button):
             if self.app_info.name in data:
                 data.remove(self.app_info.name)
             data.insert(0, self.app_info.name)
-            data.pop() if len(data) >= 8 else None
+            data.pop() if len(data) >= 9 else None
             json.dump(data, f)
             f.close()
 
@@ -124,7 +123,7 @@ class AppMenu(PopupWindow):
             h_align="center",
         )
 
-        self.search_app_entry.props.xalign = 0.5
+        self.search_app_entry.set_property("xalign", 0.5)
 
         # Scrolled Window
         self.scrolled_window = ScrolledWindow(
@@ -228,7 +227,7 @@ class AppMenu(PopupWindow):
         ) if "active" not in self.search_app_entry.style_classes else None
         for child in self.buttons_box.children:
             self.reset_button(child)
-        lister = process.extract(
+        lister = process.extract( #type: ignore
             entry.get_text(),
             self.application_buttons.keys(),
             scorer=fuzz.partial_ratio,

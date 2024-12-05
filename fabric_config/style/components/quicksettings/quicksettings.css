@@ -3,10 +3,20 @@
 @import "./components/quicksettings/player-dark.css";
 
 #quicksettings-box {
-    background-color: alpha(var(--bg1), 0.7);
+    background-color: alpha(#292929, 0.7);
     border-radius: 20px;
 }
 
 #quicksettings-box>box>button {
     margin: 10px -10px 10px 5px;
+}
+
+#quicksettings {
+    background-color: alpha(black, 0.9);
+    border-radius: 20px;
+    border-style: solid;
+    /* border-width: 5px; */
+    /* border-color: alpha(white, 0.9); */
+    margin: 5px;
+    padding: 15px;
 }

@@ -1,56 +1,58 @@
 #battery-icon {
-    min-height: 200px;
-  }
-  
-  #battery-label {
-    margin: 0px 5px -2px 2px;
-    font-size: 15px;
-    font-weight: 900;
-  }
-  
-  #battery-cairo-icon {
-    min-width: 55px;
-    min-height: 27px;
-    margin: 5px;
-    color: var(--aqua-dim);
-    background-color: alpha(var(--aqua-dim), 0.4);
-    border: solid var(--aqua-dim) 2px;
-    border-radius: 4px;
-    transition: min-width 0.5s cubic-bezier(0, 0, 1, 1);
-  }
-  
-  #battery-cairo-icon.charging {
-    min-width: 60px;
-    color: var(--green);
-    border-color: var(--green);
-    background-color: var(--green);
-  }
-  
-  #battery-label.charging {
-    color: var(--green);
-    border-color: var(--green);
-  }
-  
-  #battery-cairo-icon.low {
-    color: var(--yellow);
-    border-color: var(--yellow);
-    background-color: alpha(var(--yellow), 0.4);
-  }
-  
-  #battery-label.low {
-    color: var(--yellow);
-    border-color: var(--yellow);
-  }
-  
-  #battery-cairo-icon.critical {
-    color: var(--red);
-    border-color: var(--red);
-    background-color: alpha(var(--red), 0.4);
-  
-  }
-  
-  #battery-label.critical {
-    color: var(--red);
-    border-color: var(--red);
-  }
-  
+  min-height: 200px;
+}
+
+#battery-label {
+  margin: 0px 5px -2px 2px;
+  font-size: 15px;
+  font-weight: 900;
+}
+
+#battery-cairo-icon {
+  min-width: 55px;
+  min-height: 27px;
+  margin: 5px;
+  color: white;
+  background-color: alpha(#ffffff, 0.35);
+  border: solid var(--fg) 2px;
+  border-radius: 4px;
+  transition-property: min-width, border-color, background-color, color;
+  transition-duration: 0.25s;
+  transition-timing-function: cubic-bezier(0, 0, 1, 1);
+
+}
+
+#battery-cairo-icon.charging {
+  min-width: 60px;
+  color: var(--green);
+  border-color: var(--green);
+  background-color: var(--green);
+}
+
+#battery-label.charging {
+  color: var(--green);
+  border-color: var(--green);
+}
+
+#battery-cairo-icon.low {
+  color: var(--yellow);
+  border-color: var(--yellow);
+  background-color: alpha(var(--yellow), 0.4);
+}
+
+#battery-label.low {
+  color: var(--yellow);
+  border-color: var(--yellow);
+}
+
+#battery-cairo-icon.critical {
+  color: var(--red);
+  border-color: var(--red);
+  background-color: alpha(var(--red), 0.4);
+
+}
+
+#battery-label.critical {
+  color: var(--red);
+  border-color: var(--red);
+}

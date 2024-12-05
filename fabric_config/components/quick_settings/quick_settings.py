@@ -1,6 +1,9 @@
+from fabric.widgets.wayland import WaylandWindow
 import fabric_config.config as config
 
-from fabric_config.components.quick_settings.widgets.quick_settings_submenu import QuickSubToggle
+from fabric_config.components.quick_settings.widgets.quick_settings_submenu import (
+    QuickSubToggle,
+)
 
 from fabric_config.components.quick_settings.widgets.submenus import (
     BluetoothSubMenu,
@@ -8,7 +11,10 @@ from fabric_config.components.quick_settings.widgets.submenus import (
     WifiSubMenu,
     WifiToggle,
 )
-from fabric_config.components.quick_settings.widgets.sliders import AudioSlider, BrightnessSlider
+from fabric_config.components.quick_settings.widgets.sliders import (
+    AudioSlider,
+    BrightnessSlider,
+)
 
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
