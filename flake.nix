@@ -2,18 +2,19 @@
   description = "My Fabric Bar Test V1";
 
   inputs = {
-    nixpkgs.url = "github:NixOS/nixpkgs/24.05";
-    unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
-    fabric.url = "github:Fabric-Development/fabric";
 
+    fabric = {
+      url = "github:muhchaudhary/fabric";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
     fabric-libgray = {
       url = "github:Fabric-Development/gray";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
     fabric-libglace = {
-      url = "github:Fabric-Development/glace";
+      url = "github:muhchaudhary/glace";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -21,7 +22,6 @@
   outputs = {
     self,
     nixpkgs,
-    unstable,
     utils,
     fabric,
     ...
@@ -30,7 +30,7 @@
       system: let
         overlays = [
           (final: prev: {fabric-libglace = inputs.fabric-libglace.packages.${system}.default;})
-          (final: prev: {basedpyright = unstable.legacyPackages.${system}.basedpyright;})
+          (final: prev: {basedpyright = nixpkgs.legacyPackages.${system}.basedpyright;})
           (final: prev: {fabric-libgray = inputs.fabric-libgray.packages.${system}.default;})
 
           (final: prev: {gengir = pkgs.python3Packages.callPackage ./nix/gengir.nix {};})

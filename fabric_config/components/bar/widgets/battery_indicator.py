@@ -9,8 +9,8 @@ from fabric.core.fabricator import Fabricator
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.label import Label
-from fabric.widgets.revealer import Revealer
+# from fabric.widgets.label import Label
+# from fabric.widgets.revealer import Revealer
 from fabric.widgets.widget import Widget
 from gi.repository import Gdk, Gtk, Rsvg
 
@@ -30,12 +30,12 @@ class BatteryIndicator(Box):
         self.battery_body = BatteryBodyWidget(name="battery-cairo-icon", percentage=0)
 
         self.current_class = ""
-        self.battery_percent = Label(name="battery-label")
+        # self.battery_percent = Label(name="battery-label")
 
-        self.battery_percent_revealer = Revealer(
-            child=self.battery_percent,
-            transition_type="slide-left",
-        )
+        # self.battery_percent_revealer = Revealer(
+        #     child=self.battery_percent,
+        #     transition_type="slide-left",
+        # )
 
         self.battery = Fabricator(
             poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
@@ -43,18 +43,18 @@ class BatteryIndicator(Box):
         self.battery_button.add(
             Box(
                 children=[
-                    self.battery_percent_revealer,
+                    # self.battery_percent_revealer,
                     self.battery_body,
                 ]
             )
         )
 
-        self.battery_button.connect(
-            "clicked",
-            lambda *args: self.battery_percent_revealer.set_reveal_child(
-                not self.battery_percent_revealer.get_child_revealed(),
-            ),
-        )
+        # self.battery_button.connect(
+        #     "clicked",
+        #     lambda *args: self.battery_percent_revealer.set_reveal_child(
+        #         not self.battery_percent_revealer.get_child_revealed(),
+        #     ),
+        # )
 
         self.add(self.battery_button)
 
@@ -69,7 +69,7 @@ class BatteryIndicator(Box):
         if int(percent) != self.curr_percent:
             self.curr_percent = int(percent)
             self.battery_body.percentage = int(self.curr_percent)
-            self.battery_percent.set_label(str(round(self.curr_percent)) + "%")
+            # self.battery_percent.set_label(str(round(self.curr_percent)) + "%")
 
         self.battery_button.set_tooltip_text(
             str(round(self.curr_percent))
@@ -87,32 +87,32 @@ class BatteryIndicator(Box):
         battery = psutil.sensors_battery()
         return battery if battery else None
 
-    def on_click(self, *args):
-        self.battery_percent_revealer.set_reveal_child(
-            not self.battery_percent_revealer.get_child_revealed(),
-        )
+    # def on_click(self, *args):
+    #     self.battery_percent_revealer.set_reveal_child(
+    #         not self.battery_percent_revealer.get_child_revealed(),
+    #     )
 
     def update_battery_class(self, percent, is_charging):
         if is_charging:
             self.current_class = "charging"
-            self.battery_percent.style_classes = [self.current_class]
+            # self.battery_percent.style_classes = [self.current_class]
             self.battery_body.style_classes = [self.current_class]
             return
 
         match percent:
             case num if 30 < num <= 50:
                 self.current_class = "low"
-                self.battery_percent.style_classes = [self.current_class]
+                # self.battery_percent.style_classes = [self.current_class]
                 self.battery_body.style_classes = [self.current_class]
 
             case num if num <= 30:
                 self.current_class = "critical"
-                self.battery_percent.style_classes = [self.current_class]
+                # self.battery_percent.style_classes = [self.current_class]
                 self.battery_body.style_classes = [self.current_class]
 
             case _:
                 self.current_class = ""
-                self.battery_percent.style_classes = []
+                # self.battery_percent.style_classes = []
                 self.battery_body.style_classes = []
 
 

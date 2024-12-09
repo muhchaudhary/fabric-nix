@@ -23,7 +23,7 @@
 }
 
 #battery-cairo-icon.charging {
-  min-width: 60px;
+  /* min-width: 60px; */
   color: var(--green);
   border-color: var(--green);
   background-color: var(--green);

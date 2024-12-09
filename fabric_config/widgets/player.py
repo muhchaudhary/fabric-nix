@@ -2,7 +2,6 @@ import math
 import os
 from typing import List
 
-import gi
 from fabric.utils import (
     get_relative_path,
     invoke_repeater,
@@ -19,12 +18,9 @@ from gi.repository import Gio, GLib, GObject
 from loguru import logger
 
 from fabric_config.services.mpris import MprisPlayer, MprisPlayerManager
-from fabric_config.utils.accent import grab_color
-from fabric_config.utils.bezier import CubicBezier
+from fabric_config.snippits.animator import Animator
+from fabric_config.utils.accent import grab_accent_color_threaded
 from fabric_config.widgets.circleimage import CircleImage
-
-gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 MEDIA_CACHE = CACHE_DIR + "/media"
@@ -35,30 +31,6 @@ if not os.path.exists(MEDIA_CACHE):
 
 
 PLAYER_ASSETS_PATH = "../assets/player/"
-
-
-class PlayerBoxHandler(Box):
-    def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
-        super().__init__(h_align="start", orientation="vertical", spacing=5, **kwargs)
-        self.mpris_manager = mpris_manager
-        self.mpris_manager.connect("player-appeared", self.on_new_player)
-        self.mpris_manager.connect("player-vanished", self.on_lost_player)
-
-        for player in self.mpris_manager.players:  # type: ignore
-            logger.info(
-                f"[PLAYER MANAGER] player found: {player.get_property('player-instance')}",
-            )
-            self.on_new_player(self.mpris_manager, player)
-
-    def on_new_player(self, mpris_manager, player):
-        logger.info(
-            f"[PLAYER MANAGER] adding new player: {player.get_property('player-instance')}",
-        )
-        super().add_children(PlayerBox(player=MprisPlayer(player)))
-
-    def on_lost_player(self, mpris_manager, player_name):
-        # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
-        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
 
 
 # TODO: implement CANCEL_ANIMATION on song skip
@@ -221,20 +193,23 @@ def easeOutElastic(t: float) -> float:
     return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
 
 
-myBezier = CubicBezier(0.65, 0, 0.35, 1)
+# myBezier = CubicBezier(0.65, 0, 0.35, 1)
 
 
 class PlayerBox(Box):
     def __init__(self, player: MprisPlayer, **kwargs):
         super().__init__(h_align="start", name="player-box", **kwargs)
+        # Setup
         self.player: MprisPlayer = player
-        self.exit = False
+        self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
+
         self.player_width = 450
         self.image_size = 160
         self.player_height = 140
-        self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
-        self.angle_direction = 1
 
+        # State
+        self.exit = False
+        self.angle_direction = 1
         self.skipped = False
 
         # Exit Logic
@@ -250,6 +225,20 @@ class PlayerBox(Box):
 
         self.player.connect("notify::arturl", self.set_image)
 
+        def do_anim(p: Animator, *_):
+            self.image_box.angle = self.angle_direction * p.value
+
+        self.art_animator = Animator(
+            bezier_curve=(0, 0, 1, 1),
+            duration=2,
+            min_value=0,
+            max_value=360,
+            tick_widget=self,
+            custom_curve=True,
+            notify_value=do_anim,
+            on_finished=lambda *_: self.update_colors(),
+        )
+
         # Track Info
         self.track_title = Label(
             label="No Title",
@@ -259,7 +248,7 @@ class PlayerBox(Box):
             ellipsization="end",
             h_align="start",
         )
-        self.track_title.set_ellipsize(3)
+        # self.track_title.set_ellipsize(3)
 
         self.track_artist = Label(
             label="No Artist",
@@ -431,12 +420,14 @@ class PlayerBox(Box):
 
     def on_player_next(self, _):
         self.angle_direction = 1
-        self.skipped = True
+        self.art_animator.pause()
+        # self.art_animator.play()
         self.player.next()
 
     def on_player_prev(self, _):
         self.angle_direction = -1
-        self.skipped = True
+        self.art_animator.pause()
+        # self.art_animator.play()
         self.player.previous()
 
     def shuffle_update(self, _, __):
@@ -465,21 +456,22 @@ class PlayerBox(Box):
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
-        self.update_colors(5)
         self.image_box.set_image_from_file(self.cover_path)
-        self.rotate_animation()
+        # self.update_colors()
+        self.art_animator.play()
 
-    def update_colors(self, n):
-        # TODO: lets fix this later (put in new thread)
+    def update_colors(self):
         colors = (255, 255, 255)
-        # try:
-        #     colors = grab_color(self.cover_path, n)
-        # except Exception:
-        #     logger.error("[PLAYER] could not grab color")
 
-        bg = f"background-color: mix(rgb{colors}, #F7EFD1, 0.5);"
-        border = f"border-color: mix(rgb{colors}, #F7EFD1, 0.5);"
-        self.seek_bar.set_style(f" trough highlight{{ {bg} {border} }}")
+        def on_accent_color(color):
+            color = f"mix(rgb{colors if not color else color}, #F7EFD1, 0.5)"
+            bg = f"background-color: {color};"
+            border = f"border-color: {color};"
+            self.seek_bar.set_style(
+                f" trough highlight{{ {bg} {border} }} slider {{ {bg} }}"
+            )
+
+        grab_accent_color_threaded(image_path=self.cover_path, callback=on_accent_color)
 
     def set_image(self, *args):
         url = self.player.arturl
@@ -488,10 +480,14 @@ class PlayerBox(Box):
             return
 
         new_cover_path = (
-            MEDIA_CACHE
-            + "/"
-            + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)  # type: ignore
-        ) if "file://" != url[0:7] else url[7:]
+            (
+                MEDIA_CACHE
+                + "/"
+                + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)  # type: ignore
+            )
+            if "file://" != url[0:7]
+            else url[7:]
+        )
 
         if new_cover_path == self.cover_path:
             return
@@ -503,36 +499,13 @@ class PlayerBox(Box):
             return
 
         Gio.File.new_for_uri(uri=url).copy_async(  # type: ignore
-            destination=Gio.File.new_for_path(self.cover_path),
-            flags=Gio.FileCopyFlags.OVERWRITE,
-            io_priority=GLib.PRIORITY_DEFAULT,
-            cancellable=None,
-            progress_callback=None,
-            callback=self.img_callback,
+            Gio.File.new_for_path(self.cover_path),
+            Gio.FileCopyFlags.OVERWRITE,
+            GLib.PRIORITY_DEFAULT,
+            None,
+            None,
+            self.img_callback,
         )
-
-    def rotate_animation(self):
-        anim_time = 0
-
-        def invoke():
-            nonlocal anim_time
-
-            if self.skipped and anim_time != 0:
-                self.skipped = False
-                return False
-            else:
-                self.skipped = False
-
-            if anim_time <= 1:
-                anim_time += 0.005
-                rot = 360 * easeOutElastic(anim_time)
-                self.image_box.angle = self.angle_direction * rot
-                return True
-            self.image_box.angle = 0
-            self.skipped = False
-            return False
-
-        invoke_repeater(16, invoke)
 
     def move_seekbar(self):
         if self.exit or not self.player.can_seek:

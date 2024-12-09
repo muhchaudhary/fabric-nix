@@ -227,7 +227,7 @@ class AppMenu(PopupWindow):
         ) if "active" not in self.search_app_entry.style_classes else None
         for child in self.buttons_box.children:
             self.reset_button(child)
-        lister = process.extract( #type: ignore
+        lister = process.extract(  # type: ignore
             entry.get_text(),
             self.application_buttons.keys(),
             scorer=fuzz.partial_ratio,

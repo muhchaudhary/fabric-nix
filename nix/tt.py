@@ -1,6 +1,5 @@
 import os
 import subprocess
-import sys
 GIR_PATHS = []
 
 
@@ -21,8 +20,6 @@ for buildinput in GIR_PATH.split(" "):
 
 
 acc = ["gengir"]
-acc.extend(["-o", f"/home/{os.environ.get('USERNAME')}/.local/lib/python3.11/site-packages/gi"])
+acc.extend(["-o", f"/home/{os.environ.get('USERNAME')}/.local/lib/python3.12/site-packages/gi"])
 acc.extend(GIR_PATHS)
 subprocess.run(acc)
-
-# print(sys.argv)

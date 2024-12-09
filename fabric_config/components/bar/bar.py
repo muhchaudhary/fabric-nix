@@ -15,6 +15,8 @@ from fabric_config.components.bar.widgets import (
     SystemTemps,
     SystemTrayRevealer,
 )
+from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
+
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
 
 
@@ -57,6 +59,8 @@ class StatusBarSeperated(WaylandWindow):
         self.system_temps = SystemTemps()
         self.system_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
 
+        self.power_menu = PowerMenuButton()
+
         self.bar_content.end_children = [
             StatusBarCorner("top-right"),
             Box(
@@ -67,6 +71,7 @@ class StatusBarSeperated(WaylandWindow):
                     self.quick_settings,
                     self.battery,
                     self.date_time,
+                    self.power_menu,
                 ],
                 style_classes="right",
             ),

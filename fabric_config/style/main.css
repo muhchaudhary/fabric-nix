@@ -217,3 +217,10 @@ scale {
   font-size: 15px;
   font-weight: 900;
 }
+
+#clockbox {
+  margin-top: 100px;
+  border-radius: 30px;
+  padding: 10px;
+  background-color: alpha(black, 0.4);
+}

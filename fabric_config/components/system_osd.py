@@ -14,11 +14,7 @@ from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 # gi.require_version("GLib", "2.0")
 from gi.repository import GLib
 
-# TODO: use progressbar or custom cairo widget so that I can update the accent color with css
-accent = "#82C480"
 
-
-# This is only for OSD, I don' want or need an inhibitor for this
 class PopupWindow(WaylandWindow):
     def __init__(
         self,
@@ -159,13 +155,7 @@ class ProgressBar(Box):
 
 class SystemOSD(PopupWindow):
     def __init__(self, **kwargs):
-        self.disp_backlight_path = "/sys/class/backlight/intel_backlight/"
-        self.kbd_backlight_path = "/sys/class/leds/tpacpi::kbd_backlight/"
-        self.max_disp_backlight = config.brightness.max_screen
-        self.max_kbd_backlight = config.brightness.max_kbd
         self.brightness = config.brightness
-        self.disp_backlight = 0
-        self.kbd_backlight = 0
         self.vol = 0
         self.progress_bar = ProgressBar(progress_ticks=20)
         self.overlay_fill_box = Box(name="osd-box")
@@ -215,32 +205,27 @@ class SystemOSD(PopupWindow):
     def update_label_audio(self, *args):
         icon_name = "-".join(str(config.audio.speaker.icon_name).split("-")[0:2])
         self.icon.set_from_icon_name(icon_name + "-symbolic", 42)
-        self.vol = config.audio.speaker.volume
-        self.progress_bar.set_progress_filled(round(self.vol) / 100)
+        self.progress_bar.set_progress_filled(round(config.audio.speaker.volume) / 100)
 
     def update_label_brightness(self):
         self.icon.set_from_icon_name("display-brightness-symbolic", 42)
-        brightness = self.brightness.screen_brightness / self.max_disp_backlight
-        self.progress_bar.set_progress_filled(brightness)
+        self.progress_bar.set_progress_filled(
+            self.brightness.screen_brightness / self.brightness.max_screen
+        )
 
     def update_label_keyboard(self, *args):
         self.icon.set_from_icon_name("keyboard-brightness-symbolic", 42)
-        brightness = (
-            int(
-                os.read(
-                    os.open(self.kbd_backlight_path + "brightness", os.O_RDONLY), 6
-                ),
-            )
-            / self.max_kbd_backlight
+        self.progress_bar.set_progress_filled(
+            self.brightness.keyboard_brightness / self.brightness.max_kbd
         )
-        self.progress_bar.set_progress_filled(brightness)
 
     def enable_popup(self, type: str):
-        if type == "sound":
-            self.update_label_audio()
-        elif type == "brightness":
-            self.update_label_brightness()
-        elif type == "kbd":
-            self.update_label_keyboard()
+        match type:
+            case "sound":
+                self.update_label_audio()
+            case "brightness":
+                self.update_label_brightness()
+            case "kbd":
+                self.update_label_keyboard()
 
         self.popup_timeout()

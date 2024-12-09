@@ -2,19 +2,21 @@
   "nodes": {
     "fabric": {
       "inputs": {
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1733365565,
-        "narHash": "sha256-2ain+hg7XpqPvzLnd6vxDeosMDrZ8Sjcr60Lxr4y2rU=",
-        "owner": "Fabric-Development",
+        "lastModified": 1733507405,
+        "narHash": "sha256-VcR7JzYsGOWLjguvWw4cUrUpJpGH1+egoUxXKgTb0HE=",
+        "owner": "muhchaudhary",
         "repo": "fabric",
-        "rev": "06563e934f3a78c730ecefe79a150e85ac71ae3b",
+        "rev": "04380b794ec487b77f210ed5a8ba9dfa2742679c",
         "type": "github"
       },
       "original": {
-        "owner": "Fabric-Development",
+        "owner": "muhchaudhary",
         "repo": "fabric",
         "type": "github"
       }
@@ -26,15 +28,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1732481875,
-        "narHash": "sha256-Uw2gSW7ktVK3ikR23G4lVbuVqNAd26ILa6qxaqKFAOI=",
-        "owner": "Fabric-Development",
+        "lastModified": 1733505283,
+        "narHash": "sha256-/Ij3l6pnfd2woiDYYztM18+9CKpem3G8Bzp/T+X7ca4=",
+        "owner": "muhchaudhary",
         "repo": "glace",
-        "rev": "b08ea663a70510225ffdfcc476c9480be8a70f48",
+        "rev": "f59957275a4679ce148a56d01d68f0d19aa4ac2f",
         "type": "github"
       },
       "original": {
-        "owner": "Fabric-Development",
+        "owner": "muhchaudhary",
         "repo": "glace",
         "type": "github"
       }
@@ -61,32 +63,16 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1717179513,
-        "narHash": "sha256-vboIEwIQojofItm2xGCdZCzW96U85l9nDW3ifMuAIdM=",
+        "lastModified": 1733392399,
+        "narHash": "sha256-kEsTJTUQfQFIJOcLYFt/RvNxIK653ZkTBIs4DG+cBns=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "63dacb46bf939521bdc93981b4cbb7ecb58427a0",
+        "rev": "d0797a04b81caeae77bcff10a9dde78bc17f5661",
         "type": "github"
       },
       "original": {
         "owner": "NixOS",
-        "ref": "24.05",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
-    "nixpkgs_2": {
-      "locked": {
-        "lastModified": 1717179513,
-        "narHash": "sha256-vboIEwIQojofItm2xGCdZCzW96U85l9nDW3ifMuAIdM=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "63dacb46bf939521bdc93981b4cbb7ecb58427a0",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "24.05",
+        "ref": "nixos-unstable",
         "repo": "nixpkgs",
         "type": "github"
       }
@@ -96,8 +82,7 @@
         "fabric": "fabric",
         "fabric-libglace": "fabric-libglace",
         "fabric-libgray": "fabric-libgray",
-        "nixpkgs": "nixpkgs_2",
-        "unstable": "unstable",
+        "nixpkgs": "nixpkgs",
         "utils": "utils_2"
       }
     },
@@ -131,32 +116,16 @@
         "type": "github"
       }
     },
-    "unstable": {
-      "locked": {
-        "lastModified": 1733212471,
-        "narHash": "sha256-M1+uCoV5igihRfcUKrr1riygbe73/dzNnzPsmaLCmpo=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "55d15ad12a74eb7d4646254e13638ad0c4128776",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "utils": {
       "inputs": {
         "systems": "systems"
       },
       "locked": {
-        "lastModified": 1710146030,
-        "narHash": "sha256-SZ5L6eA7HJ/nmkzGG7/ISclqe6oZdOZTNoesiInkXPQ=",
+        "lastModified": 1731533236,
+        "narHash": "sha256-l0KFg5HjrsfsO/JpG+r7fRrqm12kzFHyUHqHCVpMMbI=",
         "owner": "numtide",
         "repo": "flake-utils",
-        "rev": "b1d9ab70662946ef0850d488da1c9019f3a9752a",
+        "rev": "11707dc2f618dd54ca8739b309ec4fc024de578b",
         "type": "github"
       },
       "original": {

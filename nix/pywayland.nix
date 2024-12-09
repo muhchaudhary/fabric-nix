@@ -7,16 +7,17 @@
   cffi,
   pkg-config,
   wayland,
+  wayland-scanner,
   pytestCheckHook,
 }:
 buildPythonPackage rec {
   pname = "pywayland";
-  version = "0.4.17";
+  version = "0.4.18";
   format = "setuptools";
 
   src = fetchPypi {
     inherit pname version;
-    hash = "sha256-9/0ZAmOML3oVrAfzGj72iV08FgyiYBSByoKyxhojxlc=";
+    hash = "sha256-WYreAng6rQWjKPZjtRtpTFq2i9XR4JJsDaPFISxWZTM=";
   };
 
   wayland-xml = fetchurl {
@@ -34,7 +35,8 @@ buildPythonPackage rec {
     hash = "sha256-TsxFiIWOKf5oCjNSHh8ivPIgcdZtFVP+lrTd7APVkdI=";
   };
 
-  nativeBuildInputs = [pkg-config];
+  depsBuildBuild = [pkg-config];
+  nativeBuildInputs = [wayland-scanner];
   propagatedNativeBuildInputs = [cffi];
   buildInputs = [wayland];
   propagatedBuildInputs = [cffi];
@@ -53,13 +55,6 @@ buildPythonPackage rec {
         ${hyprland-toplevel-export-v1-xml} \
         -o "$out/${python.sitePackages}/$pname/protocol"
   '';
-
-  # Tests need this to create sockets
-  # preCheck = ''
-  #   export XDG_RUNTIME_DIR="$PWD"
-  # '';
-
-  # pythonImportsCheck = ["pywayland"];
 
   meta = with lib; {
     homepage = "https://github.com/flacjacket/pywayland";

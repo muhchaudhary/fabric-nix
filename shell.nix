@@ -14,8 +14,8 @@ in
       gobject-introspection
       libdbusmenu-gtk3
       gdk-pixbuf
-      gnome.gnome-bluetooth
-      cinnamon.cinnamon-desktop
+      gnome-bluetooth
+      cinnamon-desktop
 
       # Addional packages
 
@@ -33,15 +33,18 @@ in
               wheel
               build
               python-fabric
+              # TESTING
+              pyopengl
+              numpy
+              pygobject-stubs
             ]
             ++ shared.sharedPythonPackages
       ))
     ];
 
+    # cp -a "${pkgs.python3Packages.pygobject-stubs}/lib/python3.12/site-packages/gi-stubs/repository/." "/home/$USERNAME/.local/lib/python3.12/site-packages/gi/repository/"
     shellHook = ''
       # ${pkgs.python3.interpreter} ./nix/tt.py
-      # cp -a "$(dirname "$(which python)")"/../${pkgs.python3.sitePackages}/gi-stubs/repository/. "/home/$USERNAME/.local/lib/python3.11/site-packages/gi/repository/"
-      # chmod -R ugo+rw "/home/$USERNAME/.local/lib/python3.11/site-packages/gi/repository/"
       export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
     '';
   }

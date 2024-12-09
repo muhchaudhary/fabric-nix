@@ -10,13 +10,21 @@
 }
 
 #seek-bar trough {
-    border-radius: 100px;
+    border-radius: 10px;
     min-height: 8px;
     background-color: rgb(94, 94, 94);
 }
 
+#seek-bar slider {
+    border-radius: 100%;
+    min-width: 8px;
+    min-height: 8px;
+}
+
 #seek-bar trough highlight {
-    border-radius: 20px;
+    border-top-left-radius: 10px;
+    border-bottom-left-radius: 10px;
+    /* border-radius: 20px; */
 }
 
 

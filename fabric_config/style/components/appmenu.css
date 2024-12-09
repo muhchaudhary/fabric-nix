@@ -40,6 +40,7 @@
     margin-right: 5px;
 }
 
+#appmenu-entry.active selection,
 #appmenu-entry selection {
     background-color: #2c2c2c;
     color: #e8e8e8;
@@ -86,13 +87,6 @@
 /* #appmenu-button:hover label, */
 #appmenu-button:hover {
     background-color: alpha(#ffffff, 0.25);
-}
-
-#clockbox {
-    margin-top: 100px;
-    border-radius: 30px;
-    padding: 10px;
-    background-color: alpha(black, 0.4);
 }
 
 #appmenu-button:focus image,

@@ -1,4 +1,3 @@
-import imp
 from fabric_config.components.overview import Overview
 from fabric import Application
 from fabric.utils import get_relative_path, monitor_file

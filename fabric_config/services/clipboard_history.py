@@ -43,6 +43,7 @@ def get_pixbuf_for_data_threaded(data: bytes, callback: Callable):
 
 
 def get_pixbuf_for_file_threaded(file_path: str, callback: Callable):
+
     def thread_function():
         try:
             pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)

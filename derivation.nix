@@ -40,7 +40,7 @@ python3Packages.buildPythonApplication {
     librsvg
     libdbusmenu-gtk3
     gtk-layer-shell
-    gnome.gnome-bluetooth
+    gnome-bluetooth
     cinnamon.cinnamon-desktop
     gdk-pixbuf
   ];

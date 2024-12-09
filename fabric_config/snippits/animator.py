@@ -1,7 +1,10 @@
-import fabric
+import math
 from typing import cast
-from fabric import Service, Signal, Property
+
+import fabric
+from fabric import Property, Service, Signal
 from gi.repository import GLib, Gtk
+
 
 class Animator(Service):
     @Signal
@@ -69,6 +72,7 @@ class Animator(Service):
         max_value: float = 1.0,
         repeat: bool = False,
         tick_widget: Gtk.Widget | None = None,
+        custom_curve: bool = False,
         **kwargs,
     ):
         super().__init__(**kwargs)
@@ -79,6 +83,7 @@ class Animator(Service):
         self._max_value = 1.0
         self._repeat = False
 
+        self.custom_curve = custom_curve
         self.bezier_curve = bezier_curve
         self.duration = duration
         self.value = min_value
@@ -107,7 +112,15 @@ class Animator(Service):
             + time**3 * y_points[3]
         )
 
+    def do_ease_out_elastic(self, t: float) -> float:
+        c4 = (2 * math.pi) / 3
+        return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
+
     def do_ease(self, time: float) -> float:
+        if self.custom_curve:
+            return self.do_lerp(
+                self.min_value, self.max_value, self.do_ease_out_elastic(time)
+            )
         return self.do_lerp(
             self.min_value, self.max_value, self.do_interpolate_cubic_bezier(time)
         )

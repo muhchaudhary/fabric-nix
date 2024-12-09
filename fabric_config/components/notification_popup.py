@@ -127,7 +127,6 @@ class ActionButton(Button):
 
 class NotificationBox(Box):
     def __init__(self, notification: Notification):
-        print(notification.timeout)
         self.progress_timeout = CircularProgressBar(
             name="notification-title-circular-progress-bar",
             size=35,
@@ -411,7 +410,7 @@ class NotificationPopup(WaylandWindow):
             exclusive=False,
         )
     def on_notification_closed(self, fabric_notif, id, reason):
-        print(self._server.notifications)
+        pass
 
     def on_new_notification(self, fabric_notif, id):
         new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
