@@ -9,7 +9,11 @@ def exec_brightnessctl_async(args: str):
     exec_shell_command_async(f"brightnessctl {args}", lambda _: None)
 
 
-SCREEN = os.listdir("/sys/class/backlight")[0]
+SCREEN = os.listdir("/sys/class/backlight")
+if SCREEN:
+    SCREEN = SCREEN[0]
+else:
+    SCREEN = ""
 leds = os.listdir("/sys/class/leds")
 
 kbd = ""
@@ -44,10 +48,12 @@ class Brightness(Service):
 
     @Property(int, "read-write")
     def screen_brightness(self) -> int:  # type: ignore
-        with open(self.screen_backlight_path + "/brightness") as f:
-            brightness = int(f.readline())
+        if os.path.exists(self.screen_backlight_path + "/brightness"):
+            with open(self.screen_backlight_path + "/brightness") as f:
+                brightness = int(f.readline())
 
-        return brightness
+            return brightness
+        return -1
 
     @screen_brightness.setter
     def screen_brightness(self, value: int):
