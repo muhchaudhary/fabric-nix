@@ -130,7 +130,6 @@ class PlayerBoxStack(Box):
         logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
         players: List[PlayerBox] = self.player_stack.get_children()
         if len(players) == 1 and player_name == players[0].player.player_name:
-            print("hiding please")
             self.hide()
             self.current_stack_pos = 0
             return

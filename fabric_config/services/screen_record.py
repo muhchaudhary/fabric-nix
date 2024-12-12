@@ -1,11 +1,10 @@
 import datetime
 import subprocess
 
-from fabric.core.service import Service, Property, Signal
-from fabric.utils import exec_shell_command
-from gi.repository import GLib, Gio
+from fabric.core.service import Property, Service, Signal
+from fabric.utils import exec_shell_command, exec_shell_command_async
+from gi.repository import Gio, GLib
 from loguru import logger
-from fabric.utils import exec_shell_command_async
 
 
 class ScreenRecorder(Service):

@@ -11,94 +11,129 @@ from fabric.widgets.widget import Widget
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
 
+class PowerMenuActionButton(Button):
+    def __init__(self, action_name: str, icon_name: str, icon_size: int, **kwargs):
+        super().__init__(
+            name="powermenu-button",
+            child=Box(
+                orientation="v",
+                children=[
+                    Image(icon_name=icon_name, icon_size=icon_size),
+                    Label(action_name),
+                ],
+            ),
+            **kwargs,
+        )
+
+
+class PowerMenuConfirmMenu(Revealer):
+    def __init__(self, popup: PopupWindow, **kwargs):
+        self.active_button: Button | None = None
+        self.selected_operation: str | None = None
+        self.popup: PopupWindow = popup
+
+        button_name = "powermenu-button"
+        super().__init__(
+            child=Box(
+                orientation="v",
+                children=[
+                    Label("Are You Sure?"),
+                    Button(
+                        name=button_name,
+                        label="YES",
+                        style_classes="warning",
+                        on_clicked=lambda _: self.do_confirm(True),
+                    ),
+                    Button(
+                        name=button_name,
+                        label="NO",
+                        style_classes="okay",
+                        on_clicked=lambda _: self.do_confirm(False),
+                    ),
+                ],
+            ),
+            transition_type="slide-down",
+            **kwargs,
+        )
+
+    def reveal_menu(
+        self,
+        reveal_menu: bool,
+        active_button: Button | None = None,
+        selected_operation: str | None = None,
+    ):
+        if active_button and self.active_button:
+            return
+
+        if active_button:
+            active_button.add_style_class("active") if active_button else None
+        else:
+            self.active_button.remove_style_class(
+                "active"
+            ) if self.active_button else None
+
+        self.selected_operation = selected_operation
+        self.active_button = active_button
+        self.set_reveal_child(reveal_menu)
+
+    def do_confirm(self, confirmation: bool):
+        if confirmation:
+            print(f"Okay lets go, {self.selected_operation}")
+            match self.selected_operation:
+                case "shutdown":
+                    exec_shell_command_async("shutdown now")
+                case "reboot":
+                    exec_shell_command_async("reboot")
+                case "lock":
+                    exec_shell_command_async("bash -c 'pidof hyprlock || hyprlock'")
+            self.popup.toggle_popup()
+        else:
+            self.reveal_menu(False)
+
+
 class PowerMenuPopup(PopupWindow):
     def __init__(self):
         # State
         self.selected_operation: Literal["shutdown", "reboot", "lock"] | None = None
 
         # Props
-        self.box_name = "prayer-info"
-        self.button_name = "appmenu-button"
-        self.icon_size = 150
+        box_name = "powermenu-box"
 
         # Widgets
-        self.confirm_menu: Revealer = Revealer(
-            child=Box(
-                orientation="v",
-                children=[
-                    Label("Are You Sure?"),
-                    Button(
-                        name=self.button_name,
-                        label="YES",
-                        on_clicked=lambda _: self.do_confirm(True),
-                    ),
-                    Button(
-                        name=self.button_name,
-                        label="NO",
-                        style="background-color: red;",
-                        on_clicked=lambda _: self.do_confirm(False),
-                    ),
-                ],
-            ),
-            transition_type="slide-down",
+        self.confirm_menu = PowerMenuConfirmMenu(
+            self,
             notify_reveal_child=lambda _, child_reveal: self.set_action_buttons_focus(
                 not self.confirm_menu.get_reveal_child()
             ),
         )
-
         self.menu = Box(
-            name=self.box_name,
+            name=box_name,
             orientation="v",
             children=[
                 Box(
-                    orientation="h",
                     children=[
-                        Button(
-                            name=self.button_name,
+                        PowerMenuActionButton(
+                            action_name="Power Off",
+                            icon_name="system-shutdown-symbolic",
+                            icon_size=150,
                             on_clicked=lambda button: self.on_button_press(
                                 button, "shutdown"
                             ),
-                            child=Box(
-                                orientation="v",
-                                children=[
-                                    Image(
-                                        icon_name="system-shutdown-symbolic",
-                                        icon_size=self.icon_size,
-                                    ),
-                                    Label(label="Power Off"),
-                                ],
-                            ),
                         ),
-                        Button(
-                            name=self.button_name,
+                        PowerMenuActionButton(
+                            action_name="Lock",
+                            icon_name="system-lock-screen-symbolic",
+                            icon_size=150,
                             on_clicked=lambda button: self.on_button_press(
                                 button, "lock"
                             ),
-                            child=Box(
-                                orientation="v",
-                                children=[
-                                    Image(
-                                        icon_name="system-lock-screen-symbolic",
-                                        icon_size=self.icon_size,
-                                    ),
-                                    Label("Lock", justification="right"),
-                                ],
-                            ),
                         ),
-                        Button(
-                            name=self.button_name,
+                        PowerMenuActionButton(
+                            action_name="Reboot",
+                            icon_name="system-reboot-symbolic",
+                            icon_size=150,
                             on_clicked=lambda button: self.on_button_press(
                                 button, "reboot"
-                            ),
-                            child=Box(
-                                orientation="v",
-                                children=[
-                                    Image(
-                                        icon_name="system-reboot-symbolic",
-                                        icon_size=self.icon_size,
-                                    ),
-                                    Label("Reboot", justification="right"),
-                                ],
                             ),
                         ),
                     ],
@@ -117,32 +152,17 @@ class PowerMenuPopup(PopupWindow):
 
     def set_action_buttons_focus(self, can_focus: bool):
         for child in self.menu.children[0]:
-            child: Widget = child
-            child.set_can_focus(can_focus)
-
-    def do_confirm(self, confirmation: bool):
-        if confirmation:
-            print(f"Okay lets go, {self.selected_operation}")
-            match self.selected_operation:
-                case "shutdown":
-                    exec_shell_command_async("shutdown now")
-                case "reboot":
-                    exec_shell_command_async("reboot")
-                case "lock":
-                    exec_shell_command_async("bash -c 'pidof hyprlock || hyprlock'")
-            self.toggle_popup()
-        else:
-            self.confirm_menu.set_reveal_child(False)
+            child.set_sensitive(can_focus)
 
     def on_button_press(
         self, button: Button, pressed_button: Literal["shutdown", "reboot", "lock"]
     ):
-        self.selected_operation = pressed_button
-        self.confirm_menu.set_reveal_child(True)
+        button.add_style_class("active")
+        self.confirm_menu.reveal_menu(True, button, pressed_button)
 
     def toggle_popup(self, monitor: bool = False):
         self.selected_operation = None
-        self.confirm_menu.set_reveal_child(False)
+        self.confirm_menu.reveal_menu(False)
         self.set_action_buttons_focus(True)
         return super().toggle_popup(monitor=True)
 

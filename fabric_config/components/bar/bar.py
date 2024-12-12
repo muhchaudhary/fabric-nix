@@ -1,13 +1,17 @@
+import stat
 from typing import Literal
 
 from fabric.hyprland.widgets import ActiveWindow, WorkspaceButton, Workspaces
 from fabric.utils import FormattedString
 from fabric.widgets.box import Box
+from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
+from fabric.widgets.image import Image
 from fabric.widgets.shapes import Corner
 from fabric.widgets.wayland import WaylandWindow
 
+from fabric_config import config
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
     OpenAppsBar,
@@ -16,7 +20,6 @@ from fabric_config.components.bar.widgets import (
     SystemTrayRevealer,
 )
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
-
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
 
 
@@ -51,6 +54,18 @@ class StatusBarSeperated(WaylandWindow):
             buttons_factory=None,
         )
 
+        self.recording_indicator = Button(
+            name="panel-button",
+            child=Image(icon_name="media-record-symbolic"),
+            visible=False,
+            on_clicked=lambda *_: config.sc.screencast_stop(),
+        )
+
+        config.sc.connect(
+            "recording",
+            lambda _, status: self.recording_indicator.set_visible(status),
+        )
+
         self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime(formatters="%a %b %d  %I:%M %p", name="panel-button")
         self.battery = BatteryIndicator()
@@ -66,6 +81,7 @@ class StatusBarSeperated(WaylandWindow):
             Box(
                 name="system-bar-group",
                 children=[
+                    self.recording_indicator,
                     self.system_temps,
                     self.system_tray,
                     self.quick_settings,
@@ -110,7 +126,7 @@ class StatusBarSeperated(WaylandWindow):
             child=self.bar_content,
         )
 
-        self.show_all()
+        # self.show_all()
 
 
 class StatusBar(WaylandWindow):

@@ -1,0 +1,78 @@
+#powermenu-box {
+    background-color: alpha(black, 0.9);
+    border-radius: 20px;
+    border-style: solid;
+    /* border-width: 5px; */
+    /* border-color: alpha(var(--bg_h), 0.9); */
+    margin: 5px;
+    padding: 15px;
+}
+
+#powermenu-button.warning label,
+#powermenu-button.okay label {
+    color: black;
+}
+
+#powermenu-button.warning:focus label,
+#powermenu-button.okay:focus label,
+#powermenu-button.warning:hover label,
+#powermenu-button.okay:hover label {
+    color: white;
+}
+
+#powermenu-button.warning {
+    background-color: alpha(var(--red), 0.5);
+}
+
+#powermenu-button.warning:hover,
+#powermenu-button.warning:focus {
+    background-color: alpha(var(--red), 0.8);
+}
+
+#powermenu-button.okay {
+    background-color: alpha(var(--green), 0.5);
+}
+
+#powermenu-button.okay:hover,
+#powermenu-button.okay:focus {
+    background-color: alpha(var(--green), 0.8);
+}
+
+#powermenu-button {
+    /* background-color: red; */
+    margin: 5px;
+    padding: 10px;
+    border-radius: 10px;
+}
+
+#powermenu-button label {
+    font-family: "league spartan";
+    font-weight: bold;
+    font-size: 16px;
+}
+
+#powermenu-button:hover {
+    background-color: alpha(#ffffff, 0.25);
+}
+
+#powermenu-button:focus {
+    background-color: alpha(#ffffff, 0.8);
+}
+
+#powermenu-button:focus image,
+#powermenu-button:focus label {
+    color: black;
+}
+
+
+#powermenu-button.active,
+#powermenu-button:active {
+    background-color: alpha(#ffffff, 1);
+}
+
+#powermenu-button.active label,
+#powermenu-button.active image,
+#powermenu-button:active label,
+#powermenu-button:active image {
+    color: black;
+}

@@ -1,5 +1,6 @@
 @import "./components/bar/battery.css";
 @import "./components/bar/prayer-time.css";
+@import "./components/bar/power-menu.css";
 
 #system-bar {
   background-color: alpha(white, 0.01);
