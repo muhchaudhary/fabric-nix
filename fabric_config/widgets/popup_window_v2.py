@@ -1,7 +1,7 @@
 from typing import Literal
 
 from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
-from gi.repository import GLib
+from gi.repository import GLib, Gdk
 
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
@@ -12,6 +12,7 @@ from fabric.widgets.widget import Widget
 
 # Greatly inspired by:
 #   CREDIT TO AYLUR: https://github.com/Aylur/dotfiles/blob/main/ags/widget/PopupWindow.ts
+
 
 class Padding(EventBox):
     def __init__(self, name: str | None = None, style: str = "", **kwargs):
@@ -26,7 +27,7 @@ class Padding(EventBox):
         self.set_can_focus(False)
 
 
-class PopupRevealer(Box):
+class PopupRevealer(EventBox):
     def __init__(
         self,
         popup_window: WaylandWindow,
@@ -62,7 +63,7 @@ class PopupRevealer(Box):
         )
         super().__init__(
             style=decorations,
-            children=self.revealer,
+            child=self.revealer,
         )
 
 
@@ -227,7 +228,6 @@ class PopupWindow(WaylandWindow):
         enable_inhibitor: bool = False,
         keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
-        **kwargs,
     ):
         self.timeout = timeout
         self.currtimeout = 0
@@ -264,8 +264,8 @@ class PopupWindow(WaylandWindow):
             on_key_release_event=self.on_key_release,
         )
 
-    def on_key_release(self, _, event_key):
-        if event_key.get_keycode()[1] == 9:
+    def on_key_release(self, _, event_key: Gdk.EventKey):
+        if event_key.keyval == Gdk.KEY_Escape:
             self.popup_visible = False
             self.reveal_child.revealer.set_reveal_child(self.popup_visible)
 
@@ -286,6 +286,7 @@ class PopupWindow(WaylandWindow):
         if not self.popup_visible:
             self.reveal_child.revealer.show()
 
+        self.set_property("pass-through", not self.enable_inhibitor)
         self.popup_visible = not self.popup_visible
         self.reveal_child.revealer.set_reveal_child(self.popup_visible)
 
@@ -312,4 +313,5 @@ class PopupWindow(WaylandWindow):
             self.currtimeout += 500
             return True
 
+        self.set_property("pass-through", not self.enable_inhibitor)
         GLib.timeout_add(500, popup_func)

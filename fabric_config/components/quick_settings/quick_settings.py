@@ -1,4 +1,3 @@
-from fabric.widgets.wayland import WaylandWindow
 import fabric_config.config as config
 
 from fabric_config.components.quick_settings.widgets.quick_settings_submenu import (

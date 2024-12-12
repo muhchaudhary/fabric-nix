@@ -148,6 +148,7 @@ class PowerMenuPopup(PopupWindow):
             child=self.menu,
             anchor="center",
             keyboard_mode="on-demand",
+            enable_inhibitor=True,
         )
 
     def set_action_buttons_focus(self, can_focus: bool):
