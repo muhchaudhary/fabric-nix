@@ -1,24 +1,19 @@
 # import fabric
 import string
 from typing import Literal
+
 from fabric import Application, Property
-from fabric.widgets.widget import Widget
-from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
+from fabric.utils import exec_shell_command_async
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
+from fabric.widgets.widget import Widget
+from gi.repository import Gdk, GLib
+
 from fabric_config.widgets.popup_window_v2 import PopupWindow
-from fabric.utils import exec_shell_command_async
-from gi.repository import GLib, Gdk
-
-
-class Resolution:
-    def __init__(self, width: int, height: int):
-        self.width = width
-        self.height = height
 
 
 class MouselessGridSystem(Box):
-    def __init__(self, monitor_width, monitor_height, grid_size: int = 65):
+    def __init__(self, monitor_width, monitor_height, grid_size: int = 60):
         self._monitor_width = monitor_width
         self._monitor_height = monitor_height
         self.grid_elements = list(string.ascii_lowercase)
@@ -100,7 +95,6 @@ class MouselessGridSystem(Box):
 class MouselessOverlay(PopupWindow):
     def __init__(self):
         self.mouseless = MouselessGridSystem(1920, 1044)
-        self.hyprland = HyprlandWithMonitors()
         self._first_key = None
         self._second_key = None
         self._third_key = None
@@ -125,15 +119,14 @@ class MouselessOverlay(PopupWindow):
 
     # TODO: DONT HARDCODE MONITOR SIZE!!!
     def mouse_move(self, x: int, y: int):
-        self.hyprland.send_command(
-            f"/dispatch movecursor {x + (1920 - 1920)} {y + (1080 - 1044)}"
+        exec_shell_command_async(
+            f"ydotool mousemove --absolute {(x + (1920 - 1920)) / 2} {(y + (1080 - 1044)) /2}",
         )
 
     def mouse_click(self, click_type: Literal["left", "right", "middle"]):
         exec_shell_command_async(
-            f"ydotool click { {'left': '0xC0', 'right': '0xC1', 'middle': 'OxC2'}.get(click_type) }"
+            f"ydotool click { {'left': '0xC0', 'right': '0xC1', 'middle': 'OxC2'}.get(click_type) }",
         )
-        return False
 
     def on_key_release(self, _, event_key: Gdk.EventKey):
         print(self._first_key, self._second_key, self._third_key)
@@ -143,7 +136,7 @@ class MouselessOverlay(PopupWindow):
             and self._second_key is not None
             and self._third_key is not None
         ):
-            return self._hide_popup()
+            self.toggle_popup()
         if (
             self._first_key is not None
             and self._second_key is not None
@@ -174,10 +167,11 @@ class MouselessOverlay(PopupWindow):
                 key if key in grid_elements[: len(self.mouseless.children)] else None
             )
 
-        # Handle Escape key
-
         if event_key.keyval in [Gdk.KEY_Escape]:
-            self._hide_popup()
+            self._first_key = None
+            self._second_key = None
+            self._third_key = None
+            self.toggle_popup()
 
     def _handle_box_selection(self):
         if self._second_key in self.mouseless.grid_elements[: len(self._row_children)]:
@@ -204,15 +198,12 @@ class MouselessOverlay(PopupWindow):
 
         y += allocation.height // 2  # Vertical center
         self.mouse_move(x, y)
+        self.toggle_popup()
 
     def _reset_keys(self):
         self._first_key = None
         self._second_key = None
         self._third_key = None
-
-    def _hide_popup(self):
-        self.popup_visible = False
-        self.reveal_child.revealer.set_reveal_child(self.popup_visible)
 
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor)
