@@ -159,23 +159,17 @@ class MouselessOverlay(PopupWindow):
             and self._first_key in grid_elements[: len(self.mouseless.children)]
         ):
             if not self._second_key:
-                # Capture the second key
                 first_key_index = grid_elements.index(self._first_key)
                 self._row_children = self.mouseless.children[first_key_index].children
 
                 self._second_key = (
-                    key
-                    if key in grid_elements[: len(self._row_children)]
-                    else None
+                    key if key in grid_elements[: len(self._row_children)] else None
                 )
             else:
-                # Capture the third key to determine box position
                 self._third_key = key
                 self._handle_box_selection()
-                # Reset keys after selection
 
         else:
-            # Set the first key if it's valid
             self._first_key = (
                 key if key in grid_elements[: len(self.mouseless.children)] else None
             )
@@ -186,7 +180,6 @@ class MouselessOverlay(PopupWindow):
             self._hide_popup()
 
     def _handle_box_selection(self):
-        """Handle the selection and action for the box."""
         if self._second_key in self.mouseless.grid_elements[: len(self._row_children)]:
             second_key_index = self.mouseless.grid_elements.index(self._second_key)
             selected_box: Widget = self._row_children[second_key_index]
@@ -195,28 +188,10 @@ class MouselessOverlay(PopupWindow):
                 "l",
                 "r",
                 "c",
-            ]:  # Assuming "l", "r", and "c" are keys for left, right, and center
-                # if self._third_key == "l":
-                #     self._highlight_widget(selected_box, position="left")
-                # elif self._third_key == "r":
-                #     self._highlight_widget(selected_box, position="right")
-                # elif self._third_key == "c":
-                #     self._highlight_widget(selected_box, position="center")
-
-                # Move the mouse based on the selected position
+            ]:
                 self._move_mouse_to_box(selected_box, self._third_key)
 
-    # def _highlight_widget(self, widget: Widget, position: str = "center"):
-    #     """Apply a highlight style to the given widget."""
-    #     if position == "left":
-    #         widget.set_style("background-color: blue")
-    #     elif position == "right":
-    #         widget.set_style("background-color: green")
-    #     elif position == "center":
-    #         widget.set_style("background-color: red")
-
     def _move_mouse_to_box(self, widget: Widget, position: str):
-        """Move the mouse cursor to a specific position within the widget."""
         allocation: Gdk.Rectangle = widget.get_allocation()
         x, y = allocation.x, allocation.y
 
@@ -231,13 +206,11 @@ class MouselessOverlay(PopupWindow):
         self.mouse_move(x, y)
 
     def _reset_keys(self):
-        """Reset the key tracking variables."""
         self._first_key = None
         self._second_key = None
         self._third_key = None
 
     def _hide_popup(self):
-        """Hide the popup and reset its visibility."""
         self.popup_visible = False
         self.reveal_child.revealer.set_reveal_child(self.popup_visible)
 
