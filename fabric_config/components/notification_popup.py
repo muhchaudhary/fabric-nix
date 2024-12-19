@@ -43,7 +43,7 @@ class AnimationWindow(WaylandWindow):
 
         super().__init__(
             anchor="top left bottom right",
-            layer="top",
+            layer="overlay",
             child=Box(
                 h_expand=True,
                 v_expand=True,
@@ -409,6 +409,7 @@ class NotificationPopup(WaylandWindow):
             visible=True,
             exclusive=False,
         )
+
     def on_notification_closed(self, fabric_notif, id, reason):
         pass
 

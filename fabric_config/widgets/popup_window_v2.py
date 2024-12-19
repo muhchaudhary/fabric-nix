@@ -199,6 +199,7 @@ def make_layout(anchor: str, name: str, popup: PopupRevealer, **kwargs) -> Box:
 class PopupWindow(WaylandWindow):
     def __init__(
         self,
+        layer: Literal["background", "bottom", "top", "overlay"] = "top",
         name: str = "popup-window",
         decorations: str = "padding: 1px;",
         child: Widget | None = None,
@@ -229,6 +230,7 @@ class PopupWindow(WaylandWindow):
         keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
     ):
+        self._layer = layer
         self.timeout = timeout
         self.currtimeout = 0
         self.popup_running = False
@@ -250,7 +252,7 @@ class PopupWindow(WaylandWindow):
         )
 
         super().__init__(
-            layer="top",
+            layer=self._layer,
             keyboard_mode=keyboard_mode,
             visible=False,
             exclusivity="normal",

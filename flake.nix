@@ -14,7 +14,7 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
     fabric-libglace = {
-      url = "github:muhchaudhary/glace";
+      url = "github:muhchaudhary/glace/hyprland";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };

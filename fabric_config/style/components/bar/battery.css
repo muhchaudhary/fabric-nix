@@ -9,29 +9,30 @@
 }
 
 #battery-cairo-icon {
-  min-width: 55px;
-  min-height: 27px;
+  min-width: 60px;
+  min-height: 30px;
   margin: 5px;
-  color: white;
-  background-color: alpha(#ffffff, 0.35);
-  border: solid var(--fg) 2px;
-  border-radius: 4px;
-  transition-property: min-width, border-color, background-color, color;
-  transition-duration: 0.25s;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 7px;
+  transition-property: min-width, border-color, background-color, color, border-radius;
+  transition-duration: 0.5s;
   transition-timing-function: cubic-bezier(0, 0, 1, 1);
+  font-family: "league spartan";
+}
 
+#battery-cairo-icon.default {
+  color: white;
+  border-color: var(--accent);
+  background-color: var(--accent);
 }
 
 #battery-cairo-icon.charging {
-  /* min-width: 60px; */
+  border-radius: 8px;
+  min-width: 60px;
   color: var(--green);
   border-color: var(--green);
   background-color: var(--green);
-}
-
-#battery-label.charging {
-  color: var(--green);
-  border-color: var(--green);
 }
 
 #battery-cairo-icon.low {
@@ -40,19 +41,9 @@
   background-color: alpha(var(--yellow), 0.4);
 }
 
-#battery-label.low {
-  color: var(--yellow);
-  border-color: var(--yellow);
-}
-
 #battery-cairo-icon.critical {
   color: var(--red);
   border-color: var(--red);
   background-color: alpha(var(--red), 0.4);
 
-}
-
-#battery-label.critical {
-  color: var(--red);
-  border-color: var(--red);
 }

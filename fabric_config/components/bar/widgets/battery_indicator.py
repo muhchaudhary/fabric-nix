@@ -9,10 +9,8 @@ from fabric.core.fabricator import Fabricator
 from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-# from fabric.widgets.label import Label
-# from fabric.widgets.revealer import Revealer
 from fabric.widgets.widget import Widget
-from gi.repository import Gdk, Gtk, Rsvg
+from gi.repository import Gdk, Gtk, Rsvg, Pango
 
 from fabric_config.snippits.animator import Animator
 
@@ -27,15 +25,11 @@ class BatteryIndicator(Box):
         self.is_charging = False
         self.curr_percent = 0
         self.battery_button = Button(name="panel-button")
-        self.battery_body = BatteryBodyWidget(name="battery-cairo-icon", percentage=0)
+        self.battery_body = BatteryBodyWidget(
+            name="battery-cairo-icon", percentage=0, style_classes="default"
+        )
 
         self.current_class = ""
-        # self.battery_percent = Label(name="battery-label")
-
-        # self.battery_percent_revealer = Revealer(
-        #     child=self.battery_percent,
-        #     transition_type="slide-left",
-        # )
 
         self.battery = Fabricator(
             poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
@@ -43,18 +37,10 @@ class BatteryIndicator(Box):
         self.battery_button.add(
             Box(
                 children=[
-                    # self.battery_percent_revealer,
                     self.battery_body,
                 ]
             )
         )
-
-        # self.battery_button.connect(
-        #     "clicked",
-        #     lambda *args: self.battery_percent_revealer.set_reveal_child(
-        #         not self.battery_percent_revealer.get_child_revealed(),
-        #     ),
-        # )
 
         self.add(self.battery_button)
 
@@ -69,7 +55,6 @@ class BatteryIndicator(Box):
         if int(percent) != self.curr_percent:
             self.curr_percent = int(percent)
             self.battery_body.percentage = int(self.curr_percent)
-            # self.battery_percent.set_label(str(round(self.curr_percent)) + "%")
 
         self.battery_button.set_tooltip_text(
             str(round(self.curr_percent))
@@ -87,33 +72,24 @@ class BatteryIndicator(Box):
         battery = psutil.sensors_battery()
         return battery if battery else None
 
-    # def on_click(self, *args):
-    #     self.battery_percent_revealer.set_reveal_child(
-    #         not self.battery_percent_revealer.get_child_revealed(),
-    #     )
-
     def update_battery_class(self, percent, is_charging):
         if is_charging:
             self.current_class = "charging"
-            # self.battery_percent.style_classes = [self.current_class]
             self.battery_body.style_classes = [self.current_class]
             return
 
         match percent:
             case num if 30 < num <= 50:
                 self.current_class = "low"
-                # self.battery_percent.style_classes = [self.current_class]
                 self.battery_body.style_classes = [self.current_class]
 
             case num if num <= 30:
                 self.current_class = "critical"
-                # self.battery_percent.style_classes = [self.current_class]
                 self.battery_body.style_classes = [self.current_class]
 
             case _:
                 self.current_class = ""
-                # self.battery_percent.style_classes = []
-                self.battery_body.style_classes = []
+                self.battery_body.style_classes = ["default"]
 
 
 class BatteryBodyWidget(Gtk.DrawingArea, Widget):
@@ -227,15 +203,25 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
         cr.restore()
 
     def do_draw_battery_percent(
-        self, cr: cairo.Context, x, y, width, height, color: Gdk.RGBA
+        self,
+        cr: cairo.Context,
+        x,
+        y,
+        width,
+        height,
+        color: Gdk.RGBA,
+        font: Pango.FontDescription,
     ):
         center_x = x + width / 2
         center_y = y + height / 2
 
         cr.save()
 
-        cr.set_font_size(height * 0.9)
-        cr.select_font_face("roboto", cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD)
+        cr.set_font_size(min(height * 0.9, font.get_size()))
+
+        cr.select_font_face(
+            font.get_family(), cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
+        )
         extent = cr.text_extents(f"{int(self.percentage)}")
         cr.move_to(center_x - extent.width / 2, center_y + extent.height / 2)
 
@@ -281,6 +267,8 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
             "border-radius", Gtk.StateFlags.NORMAL
         )  # type: ignore
 
+        font = style_context.get_font(Gtk.StateFlags.NORMAL)
+
         fill_offset = 3
         terminal_width = 2
 
@@ -317,7 +305,7 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
         terminal_x = margin + body_width + border_width / 2
         terminal_y = margin + (body_height - terminal_height) / 2
 
-        cr.translate(terminal_x + border_width // 2, terminal_y)
+        cr.translate(terminal_x + border_width / 2, terminal_y)
         self.do_render_rectangle(cr, terminal_width, terminal_height, 2)
         cr.fill()
         cr.restore()
@@ -344,5 +332,5 @@ class BatteryBodyWidget(Gtk.DrawingArea, Widget):
             self.draw_lightning_bolt(cr, margin, margin, body_width, body_height)
         else:
             self.do_draw_battery_percent(
-                cr, margin, margin, body_width, body_height, color
+                cr, margin, margin, body_width, body_height, color, font
             )
