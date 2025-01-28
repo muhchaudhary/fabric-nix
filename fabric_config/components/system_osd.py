@@ -307,6 +307,7 @@ class SystemOSD(PopupWindow):
         self.icon = Image()
 
         super().__init__(
+            layer="overlay",
             enable_inhibitor=False,
             transition_duration=150,
             anchor="center-right",

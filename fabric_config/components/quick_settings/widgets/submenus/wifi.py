@@ -72,7 +72,12 @@ class WifiSubMenu(QuickSubMenu):
 
 class WifiToggle(QuickSubToggle):
     def __init__(self, submenu: QuickSubMenu, client: NetworkClient, **kwargs):
-        super().__init__(submenu=submenu, **kwargs)
+        super().__init__(
+            action_icon="network-wireless-disabled-symbolic",
+            action_label=" Wifi Disabled",
+            submenu=submenu,
+            **kwargs,
+        )
         self.client = client
         self.client.connect("device-ready", self.update_action_button)
 
@@ -86,7 +91,9 @@ class WifiToggle(QuickSubToggle):
                 lambda *args: self.set_active_style(wifi.get_property("enabled")),  # type: ignore
             )
 
-            self.action_icon.set_from_icon_name(wifi.get_property("icon-name") +"-symbolic", 24)
+            self.action_icon.set_from_icon_name(
+                wifi.get_property("icon-name") + "-symbolic", 24
+            )
             wifi.bind_property("icon-name", self.action_icon, "icon-name")
 
             self.action_label.set_label(wifi.get_property("ssid"))

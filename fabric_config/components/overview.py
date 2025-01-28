@@ -1,6 +1,9 @@
+from ast import Tuple
+from cProfile import label
 import json
 
 import cairo
+from fabric.utils import invoke_repeater
 import gi
 from fabric.hyprland.service import Hyprland
 from fabric.widgets.box import Box
@@ -18,7 +21,7 @@ from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Glace, Gtk
 
 icon_resolver = IconResolver()
 connection = Hyprland()
@@ -29,7 +32,7 @@ TARGET = [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)]
 
 
 # Credit to Aylur for the createSurfaceFromWidget code
-def createSurfaceFromWidget(widget: Gtk.Widget):
+def createSurfaceFromWidget(widget: Gtk.Widget) -> cairo.ImageSurface:
     alloc = widget.get_allocation()
     surface = cairo.ImageSurface(
         cairo.Format.ARGB32,
@@ -52,8 +55,10 @@ class HyprlandWindowButton(Button):
         address: str,
         app_id: str,
         size,
+        transform: int = 0,
     ):
-        self.size = size
+        self.transform = transform % 4
+        self.size = size if transform in [0, 2] else (size[1], size[0])
         self.address = address
         self.app_id = app_id
         self.title = title
@@ -134,20 +139,14 @@ class WorkspaceEventBox(EventBox):
             TARGET,
             Gdk.DragAction.COPY,
         )
-        if fixed:
-            # TODO: is this needed??
-            fixed.put(
-                # FIXME: Don't hardcode this value, it should be dynamic to the monitor, use HyprctlWithMonitors
-                Box(size=(int(1920 * SCALE), int(1080 * SCALE))),
-                0,
-                0,
-            )
-            fixed.show_all()
+        fixed.show_all() if fixed else None
 
 
+# TODO update with monitors for later....
 class Overview(PopupWindow):
     def __init__(self):
-        self.client_output = ClientOutput()
+        self.glace_manager = Glace.Manager()
+        # self.client_output = ClientOutput()
         self.overview_box = Box(name="overview-window", orientation="v", spacing=5)
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
@@ -156,24 +155,7 @@ class Overview(PopupWindow):
         connection.connect("event::closewindow", self.do_update)
         connection.connect("event::movewindow", self.do_update)
 
-        def update_pixbuf(_, address, pbuf):
-            (
-                self.clients[address].update_image(
-                    CustomImage(
-                        name="overview-frame",
-                        pixbuf=GdkPixbuf.Pixbuf.scale_simple(
-                            pbuf,
-                            self.clients[address].size[0] - 7,
-                            self.clients[address].size[1] - 7,
-                            2,
-                        ),  # type: ignore
-                    )
-                )
-                if address in self.clients
-                else print(f"dont have {address}, {list(self.clients.keys())}"),
-            )
-
-        self.client_output.connect("frame-ready", update_pixbuf)
+        # self.client_output.connect("frame-ready", update_pixbuf)
 
         super().__init__(
             enable_inhibitor=True,
@@ -196,7 +178,7 @@ class Overview(PopupWindow):
         self.overview_box.children = self.overview_box_rows
 
         monitors = {
-            monitor["id"]: (monitor["x"], monitor["y"])
+            monitor["id"]: (monitor["x"], monitor["y"], monitor["transform"])
             for monitor in json.loads(
                 connection.send_command("j/monitors").reply.decode()
             )
@@ -207,12 +189,14 @@ class Overview(PopupWindow):
         ):
             # We don't want any special workspaces to be included
             if client["workspace"]["id"] > 0:
+                print(client["size"])
                 self.clients[client["address"]] = HyprlandWindowButton(
                     window=self,
                     title=client["title"],
                     address=client["address"],
                     app_id=client["initialClass"],
                     size=(client["size"][0] * SCALE, client["size"][1] * SCALE),
+                    transform=monitors[client["monitor"]][2],
                 )
                 if client["workspace"]["id"] not in self.workspace_boxes:
                     self.workspace_boxes.update(
@@ -249,11 +233,40 @@ class Overview(PopupWindow):
                 )
             )
 
+        def update_pixbuf(pixbuf, address):
+            if address not in self.clients:
+                return
+            self.clients[address].update_image(
+                CustomImage(
+                    name="overview-frame",
+                    pixbuf=GdkPixbuf.Pixbuf.scale_simple(
+                        pixbuf,
+                        self.clients[address].size[0] - 7,
+                        self.clients[address].size[1] - 7,
+                        GdkPixbuf.InterpType.BILINEAR,
+                    ).rotate_simple(
+                        {
+                            0: GdkPixbuf.PixbufRotation.NONE,
+                            1: GdkPixbuf.PixbufRotation.CLOCKWISE,
+                            2: GdkPixbuf.PixbufRotation.UPSIDEDOWN,
+                            3: GdkPixbuf.PixbufRotation.COUNTERCLOCKWISE,
+                        }.get(
+                            self.clients[address].transform,
+                            GdkPixbuf.PixbufRotation.NONE,
+                        )
+                    ),
+                )
+            )
+
         for client_addr in self.clients.keys():
-            GLib.timeout_add(
-                300, self.client_output.grab_frame_for_address, client_addr
-            ) if signal_update else self.client_output.grab_frame_for_address(
-                client_addr
+            invoke_repeater(
+                300,
+                self.glace_manager.capture_client_handle,
+                int(client_addr, 16),
+                False,
+                update_pixbuf,
+                client_addr,
+                initial_call=False if signal_update else True,
             )
 
     def do_update(self, *_):

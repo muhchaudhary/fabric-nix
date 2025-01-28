@@ -1,4 +1,3 @@
-import stat
 from typing import Literal
 
 from fabric.hyprland.widgets import ActiveWindow, WorkspaceButton, Workspaces

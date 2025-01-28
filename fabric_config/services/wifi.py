@@ -1,4 +1,4 @@
-from typing import List, Literal
+from typing import Any, List, Literal
 import gi
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import bulk_connect
@@ -6,6 +6,8 @@ from gi.repository import Gio
 from loguru import logger
 
 from fabric.utils import exec_shell_command_async
+
+from gi.repository.NM import DeviceEthernet, DeviceWifi
 
 try:
     gi.require_version("NM", "1.0")
@@ -192,6 +194,65 @@ class Wifi(Service):
         }.get(self._device.get_state(), "unknown")
 
 
+class Ethernet(Service):
+    @Signal
+    def changed(self) -> None: ...
+
+    @Signal
+    def enabled(self) -> bool: ...
+
+    @Property(int, "readable")
+    def speed(self) -> int:
+        return self._device.get_speed()
+
+    @Property(str, "readable")
+    def internet(self) -> str:
+        return {
+            NM.ActiveConnectionState.ACTIVATED: "activated",
+            NM.ActiveConnectionState.ACTIVATING: "activating",
+            NM.ActiveConnectionState.DEACTIVATING: "deactivating",
+            NM.ActiveConnectionState.DEACTIVATED: "deactivated",
+        }.get(
+            self._device.get_active_connection().get_state(),
+            "disconnected",
+        )
+
+    @Property(str, "readable")
+    def icon_name(self) -> str:
+        network = self.internet
+        if network == "activated":
+            return "network-wired-symbolic"
+
+        elif network == "activating":
+            return "network-wired-acquiring-symbolic"
+
+        elif self._device.get_connectivity != NM.ConnectivityState.FULL:
+            return "network-wired-no-route-symbolic"
+
+        return "network-wired-disconnected-symbolic"
+
+    def __init__(self, client: NM.Client, device: NM.DeviceEthernet, **kwargs) -> None:
+        super().__init__(**kwargs)
+        self._client: NM.Client = client
+        self._device: NM.DeviceEthernet = device
+
+        for pn in (
+            "active-connection",
+            "icon-name",
+            "internet",
+            "speed",
+            "state",
+        ):
+            self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
+
+
+        self._device.connect("notify::speed" , lambda *_: print(_))
+
+    def notifier(self, pn):
+        self.notify(pn)
+        self.emit("changed")
+
+
 class NetworkClient(Service):
     @Signal
     def device_ready(self) -> None: ...
@@ -199,6 +260,7 @@ class NetworkClient(Service):
     def __init__(self, **kwargs):
         self._client: NM.Client | None = None
         self.wifi_device: Wifi | None = None
+        self.ethernet_device: Ethernet | None = None
         super().__init__(**kwargs)
         NM.Client.new_async(
             cancellable=None,
@@ -208,21 +270,34 @@ class NetworkClient(Service):
 
     def _init_network_client(self, client: NM.Client, task: Gio.Task, **kwargs):
         self._client = client
-        wifi_device: NM.DeviceWifi = self._get_device(NM.DeviceType.WIFI)  # type: ignore
-        # eth_device: NM.DeviceEthernet = self._get_device(NM.DeviceType.ETHERNET)  # type: ignore
+        wifi_device: NM.DeviceWifi | None = self._get_device(NM.DeviceType.WIFI)  # type: ignore
+        ethernet_device: NM.DeviceEthernet | None = self._get_device(
+            NM.DeviceType.ETHERNET
+        )
 
         if wifi_device:
             self.wifi_device = Wifi(self._client, wifi_device)
             self.emit("device-ready")
 
-        # if eth_device:
-        # self.eth_device = Ethernet(self._client, eth_device)
+        if ethernet_device:
+            self.ethernet_device = Ethernet(client=self._client, device=ethernet_device)
+            self.emit("device-ready")
 
-    def _get_device(self, device_type) -> NM.Device | None:
+        self.notify("primary-device")
+
+    def _get_device(self, device_type) -> Any:
         devices: List[NM.Device] = self._client.get_devices()  # type: ignore
-        return next((x for x in devices if x.get_device_type() == device_type), None)
+        return next(
+            (
+                x
+                for x in devices
+                if x.get_device_type() == device_type
+                and x.get_active_connection() != None
+            ),
+            None,
+        )
 
-    def get_primary_device(self) -> Literal["wifi", "wired"] | None:
+    def _get_primary_device(self) -> Literal["wifi", "wired"] | None:
         if not self._client:
             return None
         return (
@@ -243,4 +318,4 @@ class NetworkClient(Service):
 
     @Property(str, "readable")
     def primary_device(self) -> Literal["wifi", "wired"] | None:
-        return self.get_primary_device()
+        return self._get_primary_device()

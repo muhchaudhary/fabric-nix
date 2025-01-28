@@ -1,6 +1,5 @@
 import json
 import os
-
 from fabric.utils import (
     DesktopApp,
     exec_shell_command_async,
@@ -30,12 +29,13 @@ if not os.path.exists(APP_CACHE):
 def get_recent_apps() -> list:
     recent_apps_list = []
     if os.path.exists(APP_CACHE + "/last_launched.json"):
-        f = open(APP_CACHE + "/last_launched.json", "r")
-        try:
-            recent_apps_list = json.load(f)
-        except json.JSONDecodeError:
-            logger.info("[App Menu] Cache file does not exist or is corrupted")
-        f.close()
+        with open(APP_CACHE + "/last_launched.json", "r") as f:
+            try:
+                recent_apps_list = json.load(f)
+            except json.JSONDecodeError:
+                logger.info("[App Menu] Cache file does not exist or is corrupted")
+            finally:
+                f.close()
     return recent_apps_list
 
 
@@ -97,7 +97,7 @@ class ApplicationButtonV2(Button):
             if self.app_info.name in data:
                 data.remove(self.app_info.name)
             data.insert(0, self.app_info.name)
-            data.pop() if len(data) >= 9 else None
+            data.pop() if len(data) > 9 else None
             json.dump(data, f)
             f.close()
 

@@ -35,7 +35,6 @@ class SystemTrayWidget(Box):
     def do_update_item_button(self, item: Gray.Item, item_button: Button):
         pixmap = Gray.get_pixmap_for_pixmaps(item.get_icon_pixmaps(), 24)
 
-
         # convert the pixmap to a pixbuf
         pixbuf: GdkPixbuf.Pixbuf = (
             pixmap.as_pixbuf(self.pixel_size, GdkPixbuf.InterpType.HYPER)
@@ -44,6 +43,14 @@ class SystemTrayWidget(Box):
             .get_default()
             .load_icon(
                 item.get_icon_name(),
+                self.pixel_size,
+                Gtk.IconLookupFlags.FORCE_SIZE,
+            )
+            if item.get_icon_name()
+            else Gtk.IconTheme()
+            .get_default()
+            .load_icon(
+                "application-x-executable-symbolic",
                 self.pixel_size,
                 Gtk.IconLookupFlags.FORCE_SIZE,
             )

@@ -102,17 +102,26 @@ class QuickSettingsButton(Button):
         self.audio_icon = Image(name="panel-icon")
         config.audio.connect("speaker-changed", self.update_audio)
 
-        def get_network_icon(_):
-            wifi = config.network.wifi_device
-            if not wifi:
-                return
-            self.network_icon.set_from_icon_name(
-                wifi.get_property("icon-name"), self.planel_icon_size
-            )
-            wifi.bind_property("icon-name", self.network_icon, "icon-name")
+        def get_network_icon(*_):
+            if config.network.primary_device == "wifi":
+                wifi = config.network.wifi_device
+                if wifi:
+                    self.network_icon.set_from_icon_name(
+                        wifi.get_icon_name(), self.planel_icon_size
+                    )
+                    # wifi.bind_property("icon-name", self.network_icon, "icon-name")
+
+            else:
+                ethernet = config.network.ethernet_device
+                if ethernet:
+                    self.network_icon.set_from_icon_name(
+                        ethernet.get_icon_name(), self.planel_icon_size
+                    )
 
         self.network_icon = Image(name="panel-icon", icon_size=self.planel_icon_size)
-        config.network.connect("device-ready", get_network_icon)
+        # config.network.connect("device-ready", get_network_icon)
+
+        config.network.connect("notify::primary-device", get_network_icon)
 
         self.add(
             Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])

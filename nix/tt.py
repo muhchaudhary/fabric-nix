@@ -20,6 +20,6 @@ for buildinput in GIR_PATH.split(" "):
 
 
 acc = ["gengir"]
-acc.extend(["-o", f"/home/{os.environ.get('USERNAME')}/.local/lib/python3.12/site-packages/gi"])
+acc.extend(["-o", f"/home/{os.environ.get('USER')}/.local/lib/python3.12/site-packages/gi"])
 acc.extend(GIR_PATHS)
-subprocess.run(acc)
+subprocess.run(acc) if os.environ.get('USER') is not None else None
