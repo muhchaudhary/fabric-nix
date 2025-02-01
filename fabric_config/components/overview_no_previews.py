@@ -13,13 +13,12 @@ from loguru import logger
 
 # WIP icon resolver (app_id to guessing the icon name)
 from fabric_config.utils.icon_resolver import IconResolver
-# Popup window implentation (allows for pressing escape or clicking outside to close the window and stuff)
+
+# Popup window implementation (allows for pressing escape or clicking outside to close the window and stuff)
 from fabric_config.widgets.popup_window_v2 import PopupWindow
-# Rounded image snippit
-from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk
+from gi.repository import Gdk, Gtk
 
 icon_resolver = IconResolver()
 connection = Hyprland()
@@ -224,31 +223,6 @@ class Overview(PopupWindow):
                         ),
                         Label(f"Workspace {w_id}"),
                     ],
-                )
-            )
-
-        def update_pixbuf(pixbuf, address):
-            if address not in self.clients:
-                return
-            self.clients[address].update_image(
-                CustomImage(
-                    name="overview-frame",
-                    pixbuf=GdkPixbuf.Pixbuf.scale_simple(
-                        pixbuf,
-                        self.clients[address].size[0] - 7,
-                        self.clients[address].size[1] - 7,
-                        GdkPixbuf.InterpType.BILINEAR,
-                    ).rotate_simple(
-                        {
-                            0: GdkPixbuf.PixbufRotation.NONE,
-                            1: GdkPixbuf.PixbufRotation.CLOCKWISE,
-                            2: GdkPixbuf.PixbufRotation.UPSIDEDOWN,
-                            3: GdkPixbuf.PixbufRotation.COUNTERCLOCKWISE,
-                        }.get(
-                            self.clients[address].transform,
-                            GdkPixbuf.PixbufRotation.NONE,
-                        )
-                    ),
                 )
             )
 
