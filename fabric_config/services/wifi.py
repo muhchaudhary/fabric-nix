@@ -7,8 +7,6 @@ from loguru import logger
 
 from fabric.utils import exec_shell_command_async
 
-from gi.repository.NM import DeviceEthernet, DeviceWifi
-
 try:
     gi.require_version("NM", "1.0")
     from gi.repository import NM
@@ -245,8 +243,7 @@ class Ethernet(Service):
         ):
             self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
 
-
-        self._device.connect("notify::speed" , lambda *_: print(_))
+        self._device.connect("notify::speed", lambda *_: print(_))
 
     def notifier(self, pn):
         self.notify(pn)

@@ -23,8 +23,8 @@ class WifiSubMenu(QuickSubMenu):
         self.scan_button.connect("clicked", self.start_new_scan)
 
         self.child = ScrolledWindow(
-            min_content_size=(-1, 100),
-            max_content_size=(-1, 100),
+            min_content_size=(-1, 300),
+            max_content_size=(-1, 300),
             propagate_width=True,
             propagate_height=True,
             child=self.available_networks_box,
@@ -94,10 +94,10 @@ class WifiToggle(QuickSubToggle):
             self.action_icon.set_from_icon_name(
                 wifi.get_property("icon-name") + "-symbolic", 24
             )
-            wifi.bind_property("icon-name", self.action_icon, "icon-name")
+            wifi.bind("icon-name", "icon-name", self.action_icon)
 
             self.action_label.set_label(wifi.get_property("ssid"))
-            wifi.bind_property("ssid", self.action_label, "label")
+            wifi.bind("ssid", "label", self.action_label)
 
     def on_action(self, btn):
         wifi: Wifi | None = self.client.wifi_device

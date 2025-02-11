@@ -257,18 +257,16 @@ class PlayerBox(Box):
             ellipsization="end",
             h_align="start",
         )
-        self.player.bind_property(
+        self.player.bind(
             "title",
+            "label",
             self.track_title,
-            "label",
-            GObject.BindingFlags.DEFAULT,
-            lambda _, x: x if x != "" else "No Title",  # type: ignore
+            lambda _, x: x if x != "" else "No Title",
         )
-        self.player.bind_property(
+        self.player.bind(
             "artist",
-            self.track_artist,
             "label",
-            GObject.BindingFlags.DEFAULT,
+            self.track_artist,
             lambda _, x: x if x != "" else "No Artist",  # type: ignore
         )
 
@@ -328,19 +326,19 @@ class PlayerBox(Box):
             child=self.play_pause_stack,
         )
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
-        self.player.bind_property("can-pause", self.play_pause_button, "visible")
+        self.player.bind("can-pause", "visible", self.play_pause_button)
 
         self.next_button = Button(name="player-button", child=self.skip_next_icon)
         self.next_button.connect("clicked", self.on_player_next)
-        self.player.bind_property("can-go-next", self.next_button, "visible")
+        self.player.bind("can-go-next", "visible", self.next_button)
 
         self.prev_button = Button(name="player-button", child=self.skip_prev_icon)
         self.prev_button.connect("clicked", self.on_player_prev)
-        self.player.bind_property("can-go-previous", self.prev_button, "visible")
+        self.player.bind("can-go-previous", "visible", self.prev_button)
 
         self.shuffle_button = Button(name="player-button", child=self.shuffle_icon)
         self.shuffle_button.connect("clicked", lambda _: player.toggle_shuffle())
-        self.player.bind_property("can-shuffle", self.shuffle_button, "visible")
+        self.player.bind("can-shuffle", "visible", self.shuffle_button)
 
         self.button_box.add_center(self.play_pause_button)
         self.button_box.add_start(self.prev_button)
@@ -364,7 +362,7 @@ class PlayerBox(Box):
             if self.player.length
             else None,
         )
-        self.player.bind_property("can-seek", self.seek_bar, "visible")
+        self.player.bind("can-seek", "visible", self.seek_bar)
 
         self.player_info_box = Box(
             style=f"margin-left: {self.image_size + 10}px;"

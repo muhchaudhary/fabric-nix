@@ -8,15 +8,16 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1733507929,
-        "narHash": "sha256-UsSTg4ILd2mX/eHC07CGZ0m7DPCRpI5iBm+3dKANYUk=",
-        "owner": "muhchaudhary",
+        "lastModified": 1738255029,
+        "narHash": "sha256-rYbZxCqXotzoiYvBVC8tdz4KmR8DacnJSuBWcBqIsZI=",
+        "owner": "nikitax44",
         "repo": "fabric",
-        "rev": "0f803f3f76b9661ee4f8b985df23b14053b1e595",
+        "rev": "e2d06eb394c464757c2afec655afc699ce6e65f6",
         "type": "github"
       },
       "original": {
-        "owner": "muhchaudhary",
+        "owner": "nikitax44",
+        "ref": "run-widget_qol",
         "repo": "fabric",
         "type": "github"
       }

@@ -20,6 +20,7 @@ class BatteryIndicator(Box):
         super().__init__(v_align="center", h_align="start", **kwargs)
         if not psutil.sensors_battery():
             self.set_visible(False)
+            self.destroy()
             return
 
         self.is_charging = False

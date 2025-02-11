@@ -93,10 +93,11 @@ class QuickSettingsButton(Button):
             icon_name=config.bluetooth_icons_names["bluetooth"],
             icon_size=self.planel_icon_size,
         )
-        config.bluetooth_client.bind_property(
+
+        config.bluetooth_client.bind(
             "enabled",
-            self.bluetooth_icon,
             "visible",
+            self.bluetooth_icon,
         )
 
         self.audio_icon = Image(name="panel-icon")

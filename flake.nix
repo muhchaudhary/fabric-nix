@@ -6,7 +6,7 @@
     utils.url = "github:numtide/flake-utils";
 
     fabric = {
-      url = "github:muhchaudhary/fabric";
+      url = "github:nikitax44/fabric/run-widget_qol";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     fabric-libgray = {
@@ -50,13 +50,13 @@
         devShells.default = pkgs.callPackage ./shell.nix {
           inherit pkgs;
         };
-        # packages.default = pkgs.callPackage ./derivation.nix {
-        #   inherit (pkgs) lib python3Packages;
-        # };
-        # apps.default = {
-        #   type = "app";
-        #   program = "${self.packages.${system}.default}/bin/fabric-config";
-        # };
+        packages.default = pkgs.callPackage ./derivation.nix {
+          inherit (pkgs) lib python3Packages;
+        };
+        apps.default = {
+          type = "app";
+          program = "${self.packages.${system}.default}/bin/fabric-config";
+        };
       }
     );
 }

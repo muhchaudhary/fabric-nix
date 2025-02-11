@@ -76,8 +76,8 @@ class BluetoothSubMenu(QuickSubMenu):
         self.scan_button.connect("clicked", self.on_scan_toggle)
 
         self.child = ScrolledWindow(
-            min_content_size=(-1, 100),
-            max_content_size=(-1, 100),
+            min_content_size=(-1, 300),
+            max_content_size=(-1, 300),
             propagate_width=True,
             propagate_height=True,
             child=Box(

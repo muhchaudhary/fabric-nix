@@ -94,27 +94,21 @@ class SystemTrayWidget(Box):
 
 class SystemTrayRevealer(Box):
     def __init__(self, icon_size=20, **kwargs):
-        self.icon_size = icon_size
-        super().__init__(**kwargs)
-
         self.button_image = Image(
             icon_name="pan-start-symbolic",
-            icon_size=self.icon_size,
+            icon_size=icon_size,
         )
         self.reveal_button = Button(
             image=self.button_image,
             name="panel-button",
         )
 
-        self.revealed_box = SystemTrayWidget(pixel_size=icon_size)
-
         self.revealer = Revealer(
             transition_type="slide-left",
             transition_duration=300,
-            child=self.revealed_box,
+            child=SystemTrayWidget(pixel_size=icon_size),
         )
-        self.add(self.revealer)
-        self.add(self.reveal_button)
+        super().__init__(children=[self.revealer, self.reveal_button], **kwargs)
 
         self.reveal_button.connect(
             "clicked",

@@ -6,6 +6,7 @@
   background-color: alpha(white, 0.01);
 }
 
+#system-bar-group,
 #system-bar-corner * {
   background-color: alpha(black, 0.9);
 }
@@ -23,10 +24,4 @@
 
 #system-bar-group {
   padding: 0px 10px 0px 10px;
-  background-color: alpha(black, 0.9);
-  /* border-bottom-right-radius: 15px; */
-  /* border-bottom-left-radius: 15px; */
-  /* border-bottom-width: 5px;
-    border-bottom-style: solid;
-    border-bottom-color: var(--accent); */
 }

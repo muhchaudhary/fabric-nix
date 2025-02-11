@@ -9,7 +9,6 @@
   libdbusmenu-gtk3,
   gdk-pixbuf,
   gnome,
-  cinnamon,
   wrapGAppsHook3,
   # Custom Packages
   fabric-libgray,
@@ -41,7 +40,7 @@ python3Packages.buildPythonApplication {
     libdbusmenu-gtk3
     gtk-layer-shell
     gnome-bluetooth
-    cinnamon.cinnamon-desktop
+    cinnamon-desktop
     gdk-pixbuf
   ];
 
