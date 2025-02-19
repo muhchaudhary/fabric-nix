@@ -1,6 +1,5 @@
 from typing import Literal, Optional, cast
 
-from fabric.core.application import Application
 import gi
 from fabric.core.service import Property, Service, Signal
 from fabric.utils.helpers import (
@@ -348,10 +347,3 @@ class MprisPlayerManager(Service):
             lambda *_: self.player_vanished(bus_name),
         )
         self.player_appeared(player)
-
-
-app = Application()
-mpris = MprisPlayerManager()
-
-mpris.connect("notify::players", lambda *_: print(mpris.players))
-app.run()
