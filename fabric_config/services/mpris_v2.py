@@ -1,5 +1,6 @@
 from typing import Literal, Optional, cast
 
+from fabric.core.application import Application
 import gi
 from fabric.core.service import Property, Service, Signal
 from fabric.utils.helpers import (
@@ -271,13 +272,14 @@ class MprisPlayerManager(Service):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._players: dict[str, MprisPlayer] = {}
+        self._bus: Gio.DBusConnection | None = None
 
         # ahoy
         self.do_register()
 
     def do_register(self):
-        bus = Gio.bus_get_sync(Gio.BusType.SESSION)
-        bus.signal_subscribe(
+        self._bus = Gio.bus_get_sync(Gio.BusType.SESSION)
+        self._bus.signal_subscribe(
             "org.freedesktop.DBus",
             "org.freedesktop.DBus",
             "NameOwnerChanged",
@@ -287,23 +289,37 @@ class MprisPlayerManager(Service):
             self.on_name_owner_change,
         )
 
-        [
-            self.do_handle_new_player(player)
+        self._get_available_players()
+
+    def _list_names_callback(
+        self,
+        conn: Gio.DBusConnection,
+        res: Gio.AsyncResult,
+    ):
+        try:
+            reply = conn.call_finish(res)
             for player in filter(
                 lambda x: x.startswith(MPRIS_MEDIAPLAYER_BUS_NAME),
-                bus.call_sync(
-                    "org.freedesktop.DBus",
-                    "/org/freedesktop/DBus",
-                    "org.freedesktop.DBus",
-                    "ListNames",
-                    GLib.Variant("()", ()),
-                    GLib.VariantType("(as)"),  # type: ignore
-                    Gio.DBusCallFlags.NONE,
-                    -1,
-                    None,
-                ).get_child_value(0),
-            )
-        ]
+                reply.get_child_value(0),  # type: ignore
+            ):
+                self.do_handle_new_player(player)
+
+        except Exception:
+            logger.error("[MPRIS MANAGER] Failed to ListNames")
+
+    def _get_available_players(self):
+        self._bus.call(
+            "org.freedesktop.DBus",
+            "/org/freedesktop/DBus",
+            "org.freedesktop.DBus",
+            "ListNames",
+            GLib.Variant("()", ()),
+            GLib.VariantType("(as)"),  # type: ignore
+            Gio.DBusCallFlags.NONE,
+            -1,
+            None,
+            self._list_names_callback,
+        )
 
     def on_name_owner_change(
         self,
@@ -332,3 +348,10 @@ class MprisPlayerManager(Service):
             lambda *_: self.player_vanished(bus_name),
         )
         self.player_appeared(player)
+
+
+app = Application()
+mpris = MprisPlayerManager()
+
+mpris.connect("notify::players", lambda *_: print(mpris.players))
+app.run()
