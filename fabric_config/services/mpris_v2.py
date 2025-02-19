@@ -287,26 +287,23 @@ class MprisPlayerManager(Service):
             self.on_name_owner_change,
         )
 
-        # This is a hack so that we can see the new players on startup and get the signal to fire
-        GLib.idle_add(
-            lambda: [
-                self.do_handle_new_player(player)
-                for player in filter(
-                    lambda x: x.startswith(MPRIS_MEDIAPLAYER_BUS_NAME),
-                    bus.call_sync(
-                        "org.freedesktop.DBus",
-                        "/org/freedesktop/DBus",
-                        "org.freedesktop.DBus",
-                        "ListNames",
-                        GLib.Variant("()", ()),
-                        GLib.VariantType("(as)"),  # type: ignore
-                        Gio.DBusCallFlags.NONE,
-                        -1,
-                        None,
-                    ).get_child_value(0),
-                )
-            ]
-        )
+        [
+            self.do_handle_new_player(player)
+            for player in filter(
+                lambda x: x.startswith(MPRIS_MEDIAPLAYER_BUS_NAME),
+                bus.call_sync(
+                    "org.freedesktop.DBus",
+                    "/org/freedesktop/DBus",
+                    "org.freedesktop.DBus",
+                    "ListNames",
+                    GLib.Variant("()", ()),
+                    GLib.VariantType("(as)"),  # type: ignore
+                    Gio.DBusCallFlags.NONE,
+                    -1,
+                    None,
+                ).get_child_value(0),
+            )
+        ]
 
     def on_name_owner_change(
         self,
