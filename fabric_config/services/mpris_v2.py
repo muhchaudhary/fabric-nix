@@ -1,3 +1,4 @@
+from re import sub
 from typing import Literal, Optional, cast
 
 import gi
@@ -27,6 +28,9 @@ MPRIS_MEDIAPLAYER_PLAYER_BUS_IFACE_NODE = load_dbus_xml(
 )
 
 
+# TODO Shuffle is broken because there is no CanShuffle property, it relies on can_control but thats not all inclusive
+
+
 class MprisPlayer(Service):
     @Signal
     def closed(self, value: bool) -> bool: ...
@@ -45,24 +49,24 @@ class MprisPlayer(Service):
 
     @Property(str, "readable")
     def playback_status(self) -> Literal["Playing", "Paused", "Stopped"]:
-        return GLib.Variant.get_string(
-            self._proxy.get_cached_property("PlaybackStatus").get_string()  # type: ignore
-        )  # type: ignore
+        return self._proxy.get_cached_property("PlaybackStatus").get_string()  # type: ignore
 
     @Property(str, "readable")
     def loop_status(self) -> Literal["None", "Track", "Playlist"]:
-        return GLib.Variant.get_string(
-            self._proxy.get_cached_property("LoopStatus").get_string()  # type: ignore
-        )  # type: ignore
+        return self._proxy.get_cached_property("LoopStatus").get_string()  # type: ignore
 
     # TODO: Playback rate??? (Rate) idk i dont really see why someone would use this ngl
 
     @Property(bool, "read-write", default_value=False)
     def shuffle(self) -> bool:
-        return self._proxy.get_cached_property("Shuffle").get_boolean()  # type: ignore
+        if self._proxy.get_cached_property("Shuffle"):
+            return self._proxy.get_cached_property("Shuffle").get_boolean()  # type: ignore
+        return False
 
     @shuffle.setter
     def shuffle(self, is_shuffle: bool) -> None:
+        if not self._proxy.get_cached_property("Shuffle"):
+            return
         self._proxy_update_property(
             "Shuffle", GLib.Variant("b", value=is_shuffle)
         ) if self.can_control else None
@@ -71,7 +75,28 @@ class MprisPlayer(Service):
     def metadata(self) -> dict:
         return self._proxy.get_cached_property("Metadata")  # type: ignore
 
-        # TODO should there be specfic props for stuff inside metadata? I dont think so tbh
+    # RELY ON METADATA
+    @Property(str, "readable")
+    def arturl(self) -> str:
+        return dict(self.metadata).get("mpris:artUrl", "")  # type: ignore
+
+    @Property(str, "readable")
+    def length(self) -> str:
+        return dict(self.metadata).get("mpris:length", "")  # type: ignore
+
+    @Property(str, "readable")
+    def artist(self) -> str:
+        return dict(self.metadata).get("xesam:artist", "")  # type: ignore
+
+    @Property(str, "readable")
+    def album(self) -> str:
+        return dict(self.metadata).get("xesam:album", "")  # type: ignore
+
+    @Property(str, "readable")
+    def title(self):
+        return dict(self.metadata).get("xesam:title", "")  # type: ignore
+
+    # END RELY ON METADATA
 
     @Property(float, "read-write")
     def volume(self) -> float:
@@ -152,6 +177,28 @@ class MprisPlayer(Service):
                 "notify::g-name-owner": self._on_name_owner_change,
             },
         )
+        # Update all properties to start
+        self.update_all_properties()
+
+    def update_all_properties(self):
+        def on_update_finish(proxy, task):
+            try:
+                self._do_handle_properties_changed(
+                    self._proxy, proxy.call_finish(task)[0], ""
+                )
+            except Exception:
+                logger.error(f"[MPRIS-{self.bus_name}] Failed to retrieve properties")
+
+        self._proxy.call(
+            "org.freedesktop.DBus.Properties.GetAll",
+            GLib.Variant.new_tuple(
+                GLib.Variant.new_string("org.mpris.MediaPlayer2.Player")
+            ),
+            Gio.DBusCallFlags.NONE,
+            -1,
+            None,
+            on_update_finish,
+        )  # User data
 
     def _proxy_update_property(self, property_name: str, value: GLib.Variant):
         self._proxy.call_sync(
@@ -177,8 +224,14 @@ class MprisPlayer(Service):
                 for x in changed_properties.keys()
             ]
         ).intersection([prop.name for prop in self.get_properties()]):
-            self.notify(prop_name)
+            self.notifier(prop_name)
 
+            if prop_name == "metadata":
+                for sub_prop in ["arturl", "album", "artist", "length", "title"]:
+                    self.notifier(sub_prop)
+
+    def notifier(self, prop):
+        self.notify(prop)
         self.changed()
 
     def _do_handle_signal_changed(
@@ -195,7 +248,7 @@ class MprisPlayer(Service):
     def _proxy_call(self, method_name: str, parameter: Optional[GLib.Variant]):
         self._proxy.call(
             method_name,
-            None,
+            parameter,
             Gio.DBusCallFlags.NONE,
             self._proxy.get_default_timeout(),
             None,
@@ -206,7 +259,8 @@ class MprisPlayer(Service):
     def _do_method_callback(self, _, res: Gio.AsyncResult, user_data):
         try:
             self._proxy.call_finish(res)
-        except Exception:
+        except Exception as e:
+            print(e)
             logger.error(
                 f"[MPRIS-{self.bus_name}] Failed to invoke method: {user_data}"
             )
