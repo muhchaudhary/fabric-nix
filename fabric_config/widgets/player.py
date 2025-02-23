@@ -14,10 +14,10 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
-from gi.repository import Gio, GLib, GObject
+from gi.repository import Gio, GLib
 from loguru import logger
 
-from fabric_config.services.mpris import MprisPlayer, MprisPlayerManager
+from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
 from fabric_config.snippits.animator import Animator
 from fabric_config.utils.accent import grab_accent_color_threaded
 from fabric_config.widgets.circleimage import CircleImage
@@ -83,7 +83,7 @@ class PlayerBoxStack(Box):
         self.mpris_manager.connect("player-vanished", self.on_lost_player)
         for player in self.mpris_manager.players:  # type: ignore
             logger.info(
-                f"[PLAYER MANAGER] player found: {player.get_property('player-name')}",
+                f"[PLAYER MANAGER] player found: {player.player_name}",
             )
             self.on_new_player(self.mpris_manager, player)
 
@@ -115,13 +115,11 @@ class PlayerBoxStack(Box):
         else:
             self.buttons_box.show()
 
-        self.player_stack.children = self.player_stack.children + [
-            PlayerBox(player=MprisPlayer(player))
-        ]
+        self.player_stack.children = self.player_stack.children + [PlayerBox(player)]
 
         self.make_new_player_button(self.player_stack.get_children()[-1])
         logger.info(
-            f"[PLAYER MANAGER] adding new player: {player.get_property('player-name')}",
+            f"[PLAYER MANAGER] adding new player: {player.player_name}",
         )
         self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
 
@@ -212,7 +210,7 @@ class PlayerBox(Box):
         self.skipped = False
 
         # Exit Logic
-        self.player.connect("exit", self.on_player_exit)
+        self.player.connect("closed", self.on_player_exit)
 
         self.image_box = CircleImage(size=self.image_size, image_file=self.cover_path)
         self.image_stack = Box(
@@ -223,6 +221,10 @@ class PlayerBox(Box):
         self.image_stack.children = self.image_stack.children + [self.image_box]
 
         self.player.connect("notify::arturl", self.set_image)
+
+        self.player.connect(
+            "seeked", lambda _, position: self.seek_bar.set_value(position)
+        )
 
         def do_anim(p: Animator, *_):
             self.image_box.angle = self.angle_direction * p.value
@@ -235,7 +237,7 @@ class PlayerBox(Box):
             tick_widget=self,
             custom_curve=True,
             notify_value=do_anim,
-            on_finished=lambda *_: self.update_colors(),
+            # on_finished=lambda *_: self.update_colors(),
         )
 
         # Track Info
@@ -267,7 +269,7 @@ class PlayerBox(Box):
             "artist",
             "label",
             self.track_artist,
-            lambda _, x: x if x != "" else "No Artist",  # type: ignore
+            lambda _, x: ", ".join(x) if x != "" else "No Artist",  # type: ignore
         )
 
         self.track_info = Box(
@@ -337,8 +339,10 @@ class PlayerBox(Box):
         self.player.bind("can-go-previous", "visible", self.prev_button)
 
         self.shuffle_button = Button(name="player-button", child=self.shuffle_icon)
-        self.shuffle_button.connect("clicked", lambda _: player.toggle_shuffle())
-        self.player.bind("can-shuffle", "visible", self.shuffle_button)
+        self.shuffle_button.connect(
+            "clicked", lambda _: player.set_property("shuffle", not player.shuffle)
+        )
+        self.player.bind("can-control", "visible", self.shuffle_button)
 
         self.button_box.add_center(self.play_pause_button)
         self.button_box.add_start(self.prev_button)
@@ -353,12 +357,19 @@ class PlayerBox(Box):
             orientation="h",
             draw_value=False,
             name="seek-bar",
+            value=self.player.position if self.player.can_seek else 0,
         )
         self.seek_bar.connect("change-value", self.on_scale_move)
+        self.player.connect(
+            "notify::position", lambda *_: self.seek_bar.set_value(self.player.position)
+        )
         # self.seek_bar.connect("button-release-event", self.on_button_scale_release)
         self.player.connect(
             "notify::length",
-            lambda _, x: self.seek_bar.set_range(0, self.player.length)  # type: ignore
+            lambda _, x: [
+                self.seek_bar.set_range(0, self.player.length),
+                self.seek_bar.set_value(self.player.position),
+            ]  # type: ignore
             if self.player.length
             else None,
         )
@@ -393,7 +404,9 @@ class PlayerBox(Box):
                 self.player_info_box,
                 self.image_stack,
                 Box(
-                    children=Image(icon_name=self.player.player_name, size=21),
+                    children=Image(
+                        icon_name=f"{self.player.player_name}-symbolic", size=21
+                    ),
                     h_align="end",
                     v_align="start",
                     style="margin-top: 20px; margin-right: 10px;",
@@ -407,9 +420,7 @@ class PlayerBox(Box):
         invoke_repeater(1000, self.move_seekbar)
 
     def on_scale_move(self, scale: Scale, event, moved_pos: int):
-        scale.set_value(moved_pos)
         self.player.position = moved_pos
-        # self.player.set_position(moved_pos)
 
     def on_player_exit(self, _, value):
         self.exit = value
@@ -437,9 +448,9 @@ class PlayerBox(Box):
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
-        if status == "paused":
+        if status == "Paused":
             self.play_pause_button.get_child().set_visible_child_name("play")  # type: ignore
-        if status == "playing":
+        if status == "Playing":
             self.play_pause_button.get_child().set_visible_child_name("pause")  # type: ignore
 
     def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
@@ -454,8 +465,7 @@ class PlayerBox(Box):
 
     def update_image(self):
         self.image_box.set_image_from_file(self.cover_path)
-        # self.update_colors()
-        self.art_animator.play()
+        self.update_colors()
 
     def update_colors(self):
         colors = (255, 255, 255)
@@ -467,6 +477,7 @@ class PlayerBox(Box):
             self.seek_bar.set_style(
                 f" trough highlight{{ {bg} {border} }} slider {{ {bg} }}"
             )
+            self.art_animator.play()
 
         grab_accent_color_threaded(image_path=self.cover_path, callback=on_accent_color)
 
@@ -504,8 +515,9 @@ class PlayerBox(Box):
             self.img_callback,
         )
 
-    def move_seekbar(self):
-        if self.exit or not self.player.can_seek:
+    def move_seekbar(self) -> bool:
+        if not self.player.can_seek:
             return False
-        self.seek_bar.set_value(self.player.get_property("position"))
+        if self.player.playback_status == "Playing":
+            self.seek_bar.set_value(value=self.seek_bar.get_value() + 1000000)
         return True

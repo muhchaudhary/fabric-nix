@@ -1,4 +1,6 @@
-from re import sub
+from gi.repository.GLib import Variant
+
+
 from typing import Literal, Optional, cast
 
 import gi
@@ -71,30 +73,31 @@ class MprisPlayer(Service):
             "Shuffle", GLib.Variant("b", value=is_shuffle)
         ) if self.can_control else None
 
-    @Property(object, "readable")
+    @Property(dict, "readable")
     def metadata(self) -> dict:
-        return self._proxy.get_cached_property("Metadata")  # type: ignore
+        prop: Variant | None = self._proxy.get_cached_property("Metadata") # type: ignore
+        return dict(prop) if prop else {} # type: ignore
 
     # RELY ON METADATA
     @Property(str, "readable")
     def arturl(self) -> str:
-        return dict(self.metadata).get("mpris:artUrl", "")  # type: ignore
+        return self.metadata.get("mpris:artUrl", "")
 
-    @Property(str, "readable")
-    def length(self) -> str:
-        return dict(self.metadata).get("mpris:length", "")  # type: ignore
+    @Property(int, "readable", default_value=0)
+    def length(self) -> int:
+        return self.metadata.get("mpris:length", 0)
 
-    @Property(str, "readable")
-    def artist(self) -> str:
-        return dict(self.metadata).get("xesam:artist", "")  # type: ignore
+    @Property(list, "readable")
+    def artist(self) -> list:
+        return self.metadata.get("xesam:artist", "")
 
     @Property(str, "readable")
     def album(self) -> str:
-        return dict(self.metadata).get("xesam:album", "")  # type: ignore
+        return self.metadata.get("xesam:album", "")
 
     @Property(str, "readable")
     def title(self):
-        return dict(self.metadata).get("xesam:title", "")  # type: ignore
+        return self.metadata.get("xesam:title", "")
 
     # END RELY ON METADATA
 
@@ -168,6 +171,9 @@ class MprisPlayer(Service):
             MPRIS_MEDIAPLAYER_BUS_PATH,
             MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME,
         )
+
+        if not self._proxy:
+            return
 
         bulk_connect(
             self._proxy,
