@@ -53,9 +53,18 @@ class MprisPlayer(Service):
     def playback_status(self) -> Literal["Playing", "Paused", "Stopped"]:
         return self._proxy.get_cached_property("PlaybackStatus").get_string()  # type: ignore
 
-    @Property(str, "readable")
+    @Property(str, "read-write", default_value="None")
     def loop_status(self) -> Literal["None", "Track", "Playlist"]:
         return self._proxy.get_cached_property("LoopStatus").get_string()  # type: ignore
+    
+    @loop_status.setter
+    def loop_status(self, status: Literal["None", "Track", "Playlist"]) -> None:
+        if self._proxy.get_cached_property("LoopStatus") is None:
+            return
+
+        self._proxy_update_property(
+            "LoopStatus", GLib.Variant("s", value=status)
+        ) if self.can_control else None
 
     # TODO: Playback rate??? (Rate) idk i dont really see why someone would use this ngl
 
@@ -67,16 +76,17 @@ class MprisPlayer(Service):
 
     @shuffle.setter
     def shuffle(self, is_shuffle: bool) -> None:
-        if not self._proxy.get_cached_property("Shuffle"):
+        if self._proxy.get_cached_property("Shuffle") is None:
             return
+
         self._proxy_update_property(
             "Shuffle", GLib.Variant("b", value=is_shuffle)
         ) if self.can_control else None
 
     @Property(dict, "readable")
     def metadata(self) -> dict:
-        prop: Variant | None = self._proxy.get_cached_property("Metadata") # type: ignore
-        return dict(prop) if prop else {} # type: ignore
+        prop: Variant | None = self._proxy.get_cached_property("Metadata")  # type: ignore
+        return dict(prop) if prop else {}  # type: ignore
 
     # RELY ON METADATA
     @Property(str, "readable")
@@ -207,6 +217,9 @@ class MprisPlayer(Service):
         )  # User data
 
     def _proxy_update_property(self, property_name: str, value: GLib.Variant):
+        if self._proxy is None:
+            logger.error(f"[MPRIS-{self.bus_name}] Proxy is not initialized")
+            return
         self._proxy.call_sync(
             "org.freedesktop.DBus.Properties.Set",
             GLib.Variant(
@@ -219,7 +232,8 @@ class MprisPlayer(Service):
             ),
             Gio.DBusCallFlags.NONE,
             1000,
-        ) if self._proxy else None
+        )
+        self.notifier(property_name)
 
     def _do_handle_properties_changed(
         self, proxy: Gio.DBusProxy, changed_properties, invalidated_properties: str

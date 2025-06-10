@@ -44,10 +44,13 @@ class ApplicationButtonV2(Button):
         self.app_info = app_info
         super().__init__(
             name="appmenu-button",
+            h_expand=True,
+            v_expand=True,
             child=Box(
                 h_align="start",
                 v_align="start",
                 spacing=10,
+                size=(350,-1),
                 children=[
                     Image(pixbuf=app_info.get_icon_pixbuf(size=36)),
                     Box(
@@ -57,7 +60,7 @@ class ApplicationButtonV2(Button):
                                 app_info.display_name,
                                 justfication="left",
                                 h_align="start",
-                                max_chars_width=30,
+                                max_chars_width=25,
                                 ellipsization="end",
                                 name="appmenu-app-name",
                             ),
@@ -65,7 +68,7 @@ class ApplicationButtonV2(Button):
                                 app_info.description if app_info.description else "",
                                 justfication="left",
                                 h_align="start",
-                                max_chars_width=30,
+                                max_chars_width=25,
                                 ellipsization="end",
                                 name="appmenu-app-desc",
                             ),
@@ -97,7 +100,7 @@ class ApplicationButtonV2(Button):
             if self.app_info.name in data:
                 data.remove(self.app_info.name)
             data.insert(0, self.app_info.name)
-            data.pop() if len(data) > 9 else None
+            data.pop() if len(data) > 7 else None
             json.dump(data, f)
             f.close()
 
@@ -111,7 +114,7 @@ class AppMenu(PopupWindow):
             key=lambda x: x.name.lower(),
         )
         self.application_buttons = {}
-        self.buttons_box = Box(orientation="v")
+        self.buttons_box = Box(orientation="v", h_expand=True, v_expand=True)
 
         # Entry
         self.search_app_entry = Entry(
@@ -147,6 +150,7 @@ class AppMenu(PopupWindow):
             h_align="start",
             v_align="start",
             h_expand=True,
+            v_expand=True,
         )
         self.update_recent_apps()
 
@@ -156,6 +160,8 @@ class AppMenu(PopupWindow):
             anchor="center-left",
             transition_type="crossfade",
             child=Box(
+                h_expand=True,
+                v_expand=True,
                 orientation="v",
                 children=[
                     Box(

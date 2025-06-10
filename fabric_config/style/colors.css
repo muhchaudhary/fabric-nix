@@ -1,5 +1,13 @@
 :vars {
-    --accent: #009cd4;
+
+    --bg-test: #101720;
+    /* --bg-test-light: #252f3b; */
+    --bg-test-light: mix(var(--bg-test), var(--accent), 0.2);
+    --bg-test-transparent: alpha(var(--bg-test), 0.95);
+    --fg-test:#F4F1F8;
+    --fg-dim: #b8b7ba;
+
+    --accent: #a6e6e0;
   
     --bg_h: #1d2021;
     --bg: #1e1e1e;

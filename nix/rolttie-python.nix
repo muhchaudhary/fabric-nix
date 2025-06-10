@@ -6,6 +6,10 @@
   pkg-config,
   cmake,
   rlottie,
+  distlib,
+  flit-core,
+  tomli,
+  click,
 }: let
   pybuild = buildPythonPackage rec {
     pname = "py-build-cmake";
@@ -20,11 +24,11 @@
     nativeBuildInputs = [
       cmake
     ];
-    dependencies = [
-      python3Packages.distlib
-      python3Packages.flit-core
-      python3Packages.tomli
-      python3Packages.click
+    propagatedBuildInputs = [
+      distlib
+      flit-core
+      tomli
+      click
     ];
   };
 in

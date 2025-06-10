@@ -1,7 +1,7 @@
 {
   lib,
   pkgs,
-  python3Packages,
+  buildPythonApplication,
   gtk3,
   gtk-layer-shell,
   cairo,
@@ -15,9 +15,17 @@
   fabric-libglace,
   pywayland-custom,
   rlottie-python,
+  python-fabric,
+  psutil,
+  requests,
+  lxml,
+  pam,
+  thefuzz,
+  colorthief,
+  setuptools,
   ...
 }:
-python3Packages.buildPythonApplication {
+buildPythonApplication {
   pname = "fabric-nix-example";
   version = "0.0.1";
   pyproject = true;
@@ -44,18 +52,16 @@ python3Packages.buildPythonApplication {
     gdk-pixbuf
   ];
 
-  dependencies = with python3Packages; [
+  propagatedBuildInputs = [
     python-fabric
-
     psutil
-    colorthief
     requests
     lxml
     pam
     thefuzz
     pywayland-custom
-
-    rlottie-python
+    setuptools
+    colorthief
   ];
 
   doCheck = false;

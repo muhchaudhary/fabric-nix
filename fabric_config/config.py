@@ -2,7 +2,7 @@ from fabric.audio import Audio
 from fabric.bluetooth import BluetoothClient
 
 from fabric_config.services.brightness import Brightness
-from fabric_config.services.mpris import MprisPlayerManager
+from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.wifi import NetworkClient
 

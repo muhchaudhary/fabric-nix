@@ -1,5 +1,5 @@
 #inner-player-box {
-    background-color: alpha(var(--bg_s), 0.7);
+    background-color: var(--bg-test-light);
     border-radius: 20px;
 }
 
@@ -12,7 +12,8 @@
 #seek-bar trough {
     border-radius: 10px;
     min-height: 8px;
-    background-color: rgb(94, 94, 94);
+    background-color: var(--bg-test);
+    transition: background-color 0.15s ease-in-out;
 }
 
 #seek-bar slider {
@@ -29,7 +30,7 @@
 
 
 #seek-bar trough:hover {
-    background-color: var(--bg2);
+    background-color: mix(var(--bg-test), var(--fg-test), 0.2);
 }
 
 #player-box {
@@ -39,7 +40,7 @@
 #player-title {
     font-family: "roboto";
     font-weight: 700;
-    color: var(--fg);
+    color: var(--fg-test);
     font-size: 18px;
 }
 
@@ -55,18 +56,45 @@
     margin-right: 5px;
 }
 
+
+
+#player-icon {
+    color: var(--fg-dim);
+    transition-property: background-color, color;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-in-out;
+}
+
+#player-icon.active {
+    color: var(--accent);
+    border-color: var(--accent);
+    border-width: 0px 0px 2px 0px;
+    border-radius: 0px 0px 5px 5px;
+    border-style:solid;
+}
+
 #player-button {
     min-width: 25px;
     min-height: 25px;
     padding: 8px;
-    border-radius: 100%;
+    border-radius: 20%;
+
+    transition-property: background-color, color;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-in-out;
+
 }
 
 #player-button:hover {
-    background-color: @bg3;
+    background-color: alpha(var(--accent), 0.2);
+    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.2);
+}
+
+#player-button:hover * {
+    color: var(--fg-test);
 }
 
 #player-button:active {
-    background-color: @bg4;
-    box-shadow: 0 0 5px -3px @fg;
+    background-color: alpha(var(--accent), 0.5);
+    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.5);
 }

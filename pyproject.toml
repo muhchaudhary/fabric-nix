@@ -21,3 +21,5 @@ find = { namespaces = true }
 [tool.setuptools.package-data]
 "fabric_config.style" = ["**"]
 "fabric_config.assets" = ["**"]
+"fabric_config.services.service_assets" = ["**"]
+

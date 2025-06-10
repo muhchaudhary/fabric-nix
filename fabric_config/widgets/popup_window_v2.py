@@ -45,6 +45,8 @@ class PopupRevealer(EventBox):
         transition_duration: int = 400,
     ):
         self.revealer: Revealer = Revealer(
+            h_expand=True,
+            v_expand=True,
             name=name,
             child=child,
             transition_type=transition_type,

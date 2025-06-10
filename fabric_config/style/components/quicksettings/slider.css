@@ -8,13 +8,14 @@
   margin-bottom: 5px;
   padding-right: 12.5px;
   min-height: 25px;
-  background-color: alpha(var(--bg3), 0.7);
+  background-color: var(--bg-test);
   border-radius: 20px;
+  transition: background-color 0.1s ease-in-out;
 }
 
 
 #quicksettings-slider trough:hover {
-  background-color: alpha(var(--bg4), 0.7);
+  background-color: mix(var(--bg-test),var(--fg-test), 0.05);
 }
 
 #quicksettings-slider trough highlight {
@@ -24,26 +25,23 @@
 }
 
 #quicksettings-slider trough highlight:disabled {
-  background-color: alpha(var(--gray-dim), 0.7);
+  background-color: var(--fg-dim);
 }
 
 #quicksettings-slider slider {
   border-radius: 100%;
   min-width: 25px;
   min-height: 25px;
-  box-shadow: 0px 0px 5px 1px rgb(94, 94, 94);
+  box-shadow: 0px 0px 5px 0px rgb(94, 94, 94);
   margin-left: 25px;
-  background-color: mix(var(--accent), white, 0.3);
-  transition: min-width 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
-  transition: min-height 0.5s cubic-bezier(0.075, 0.82, 0.165, 1);
+  background-color: mix(var(--accent), var(--fg-test), 0.8);
 }
 
 #quicksettings-slider slider:hover {
-  background-color: mix(var(--accent), white, 0.6);
-  min-height: 30px;
-  min-width: 30px;
+  background-color:  var(--fg-test);
 }
 
 #quicksettings-slider slider:disabled {
-  background-color: alpha(var(--gray-dim), 1);
+  background-color: var(--fg-dim);
+  /* box-shadow: none; */
 }

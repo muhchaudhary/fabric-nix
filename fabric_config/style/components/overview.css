@@ -1,6 +1,6 @@
 #overview-window {
-    background-color: alpha(black, 0.9);
-    border-radius: 50px;
+    background-color: var(--bg-test-transparent);
+    border-radius: 20px;
     padding: 10px;
   }
   
@@ -8,8 +8,8 @@
   #overview-icon {
     border-style: none;
     margin: 5px;
-    background-color: alpha(black, 0.4);
-    border-color: black;
+    background-color: var(--bg-test-transparent);
+    border-color: var(--fg-test);
     border-radius: 15px;
     border-width: 2px;
     border-style: solid;
@@ -35,7 +35,7 @@
   }
   
   #overview-workspace-bg {
-    background-color: #2a2a2a;
+    background-color: var(--bg-test);
   }
   
   #overview-workspace-box {
@@ -46,6 +46,6 @@
     margin-top: 15px;
     font-size: 23px;
     font-weight: bold;
-    font-family: league spartan;
+    font-family: "roboto";
   }
   

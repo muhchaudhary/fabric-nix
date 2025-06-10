@@ -121,7 +121,7 @@ class PlayerBoxStack(Box):
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.player_name}",
         )
-        self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
+        self.player_buttons[self.current_stack_pos].style_classes = ["active"]
 
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
@@ -278,7 +278,7 @@ class PlayerBox(Box):
             orientation="v",
             v_align="start",
             h_align="start",
-            style=f"min-width: {self.player_width-self.image_size - 20}px;",
+            style=f"min-width: {self.player_width - self.image_size - 20}px;",
             children=[
                 self.track_title,
                 self.track_artist,
@@ -286,7 +286,8 @@ class PlayerBox(Box):
         )
         # Player Signals
         self.player.connect("notify::playback-status", self.on_playback_change)
-        self.player.connect("notify::shuffle", self.shuffle_update)
+        self.player.connect("notify::shuffle", self.on_shuffle_update)
+        self.player.connect("notify::loop-status", self.on_loop_update)
 
         # Buttons
         self.button_box = CenterBox(
@@ -306,6 +307,11 @@ class PlayerBox(Box):
         )
         self.shuffle_icon = Image(
             icon_name="media-playlist-shuffle-symbolic",
+            name="player-icon",
+            pixel_size=icon_size,
+        )
+        self.loop_icon = Image(
+            icon_name="media-playlist-repeat-symbolic",
             name="player-icon",
             pixel_size=icon_size,
         )
@@ -342,12 +348,33 @@ class PlayerBox(Box):
         self.shuffle_button.connect(
             "clicked", lambda _: player.set_property("shuffle", not player.shuffle)
         )
-        self.player.bind("can-control", "visible", self.shuffle_button)
 
-        self.button_box.add_center(self.play_pause_button)
-        self.button_box.add_start(self.prev_button)
-        self.button_box.add_start(self.shuffle_button)
-        self.button_box.add_end(self.next_button)
+        self.loop_button = Button(name="player-button", child=self.loop_icon)
+
+        self.loop_button.connect(
+            "clicked",
+            lambda _: self.player.set_property(
+                "loop-status",
+                ["None", "Playlist", "Track"][
+                    (
+                        {
+                            "None": 0,
+                            "Playlist": 1,
+                            "Track": 2,
+                        }.get(player.loop_status, 0)
+                        + 1
+                    )
+                    % 3
+                ],
+            ),
+        )
+
+        self.player.bind("can-control", "visible", self.shuffle_button)
+        self.player.bind("can-control", "visible", self.loop_button)
+
+        self.button_box.center_children = [self.play_pause_button]
+        self.button_box.start_children = [self.prev_button, self.shuffle_button]
+        self.button_box.end_children = [self.loop_button, self.next_button]
 
         # Seek Bar
         self.seek_bar = Scale(
@@ -377,7 +404,7 @@ class PlayerBox(Box):
 
         self.player_info_box = Box(
             style=f"margin-left: {self.image_size + 10}px;"
-            + f"min-width: {self.player_width-self.image_size - 20}px;",
+            + f"min-width: {self.player_width - self.image_size - 20}px;",
             v_align="center",
             h_align="start",
             orientation="v",
@@ -387,7 +414,7 @@ class PlayerBox(Box):
         self.inner_box = Box(
             name="inner-player-box",
             style=f"margin-left: {self.image_size // 2}px;"
-            + f"min-width:{self.player_width-self.image_size // 2}px;"
+            + f"min-width:{self.player_width - self.image_size // 2}px;"
             + f"min-height:{self.player_height}px;",
             v_align="center",
             h_align="start",
@@ -438,13 +465,18 @@ class PlayerBox(Box):
         # self.art_animator.play()
         self.player.previous()
 
-    def shuffle_update(self, _, __):
-        if self.player.shuffle is True:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-on")
-        else:
-            self.shuffle_icon.style_classes = []
-            self.shuffle_icon.add_style_class("shuffle-off")
+    def on_loop_update(self, _, __):
+        self.loop_icon.set_from_icon_name(
+            "media-playlist-repeat-symbolic"
+            if self.player.loop_status != "Track"
+            else "media-playlist-repeat-song-symbolic"
+        )
+        self.loop_icon.style_classes = (
+            ["active"] if self.player.loop_status != "None" else []
+        )
+
+    def on_shuffle_update(self, _, __):
+        self.shuffle_icon.style_classes = ["active"] if self.player.shuffle else []
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
@@ -464,6 +496,7 @@ class PlayerBox(Box):
             logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
+        logger.info(f"[PLAYER] updating cover image to {self.cover_path}")
         self.image_box.set_image_from_file(self.cover_path)
         self.update_colors()
 
@@ -498,6 +531,7 @@ class PlayerBox(Box):
         )
 
         if new_cover_path == self.cover_path:
+            self.update_image()
             return
 
         self.cover_path = new_cover_path
@@ -506,7 +540,7 @@ class PlayerBox(Box):
             self.update_image()
             return
 
-        Gio.File.new_for_uri(uri=url).copy_async(  # type: ignore
+        Gio.File.new_for_uri(uri=url).copy_async(
             Gio.File.new_for_path(self.cover_path),
             Gio.FileCopyFlags.OVERWRITE,
             GLib.PRIORITY_DEFAULT,

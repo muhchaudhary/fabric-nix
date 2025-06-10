@@ -1,9 +1,10 @@
 @import "./components/quicksettings/slider.css";
 @import "./components/quicksettings/button.css";
 @import "./components/quicksettings/player-dark.css";
+@import "./components/quicksettings/submenu.css";
 
 #quicksettings-box {
-    background-color: alpha(#292929, 0.7);
+    background-color: var(--bg-test-light);
     border-radius: 20px;
 }
 
@@ -12,11 +13,10 @@
 }
 
 #quicksettings {
-    background-color: alpha(black, 0.9);
+    background-color: var(--bg-test-transparent);
     border-radius: 20px;
-    border-style: solid;
-    /* border-width: 5px; */
-    /* border-color: alpha(white, 0.9); */
+    /* border-style: solid; */
+    border-width: 5px;
     margin: 5px;
     padding: 15px;
 }

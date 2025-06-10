@@ -1,10 +1,8 @@
 #appmenu {
-    background-color: alpha(black, 0.9);
+    background-color: var(--bg-test-transparent);
     padding: 20px;
     border-top-right-radius: 50px;
     border-bottom-right-radius: 50px;
-    border-right-width: 5px;
-    border-color: var(--accent);
     border-style: solid;
     min-height: 600px;
     min-width: 350px;
@@ -12,12 +10,12 @@
 }
 
 #appmenu-corner * {
-    background-color: alpha(black, 0.9);
+    background-color: var(--bg-test-transparent);
 }
 
 #appmenu-entry,
 #appmenu-button label {
-    font-family: "league spartan";
+    font-family: "jost*";
 }
 
 #appmenu-entry {
@@ -73,6 +71,7 @@
     margin: 5px;
     padding: 10px;
     border-radius: 10px;
+    /* min-width: 350px; */
 }
 
 #appmenu-app-name {

@@ -1,9 +1,6 @@
 #osd {
-  border-left-width: 5px;
-  border-color: var(--accent);
-  border-style: solid;
   min-height: 300px;
-  background-color: alpha(black, 0.9);
+  background-color: var(--bg-test-transparent);
   padding: 20px;
   border-top-left-radius: 50px;
   border-bottom-left-radius: 50px;
@@ -14,11 +11,11 @@
 }
 
 #osd-corner * {
-  background-color: alpha(black, 0.9);
+  background-color: var(--bg-test-transparent);
 }
 
 #osd-icon image {
-  color: white;
+  color: var(--fg-test);
 }
 
 #osd-progress-bar {
@@ -28,7 +25,7 @@
 
 #osd-progress-bar * {
   border-radius: 30px;
-  background-color: #202020;
+  background-color: var(--bg-test-light);
   transition-property: background-color, box-shadow;
   transition-duration: 0.25s;
   transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
@@ -36,8 +33,8 @@
 }
 
 #osd-progress-bar *.filled {
-  background-color: white;
-  box-shadow: 0px 0px 2px 1px white;
+  background-color: var(--fg-test);
+  box-shadow: 0px 0px 2px 1px var(--fg-dim);
 }
 
 #osd-cairo-bar {

@@ -1,5 +1,4 @@
 import datetime
-import subprocess
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import exec_shell_command, exec_shell_command_async
@@ -23,15 +22,18 @@ class ScreenRecorder(Service):
         command = (
             ["grimblast", "copysave", "screen", file_path]
             if save_copy
-            else ["grimblast", "copy" "screen"]
+            else ["grimblast", "copyscreen"]
         )
         if not fullscreen:
             command[2] = "area"
         try:
-            subprocess.run(command, check=True)
-            self.send_screenshot_notification(
-                file_path=file_path if file_path else None,
+            exec_shell_command_async(
+                " ".join(command),
+                lambda *_: self.send_screenshot_notification(
+                    file_path=file_path if file_path else None,
+                ),
             )
+
         except Exception as e:
             logger.error(f"[SCREENSHOT] Failed to run command: {command}")
 

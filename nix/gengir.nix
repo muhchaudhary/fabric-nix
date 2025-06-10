@@ -1,9 +1,10 @@
 {
-  lib,
   buildPythonPackage,
   fetchPypi,
   python,
-  python3Packages,
+  typer,
+  astor,
+  lxml,
   pkg-config,
 }:
 buildPythonPackage rec {
@@ -16,7 +17,7 @@ buildPythonPackage rec {
     hash = "sha256-cM+6HZ9JHuU31croD8Kdh4bQl9AYlXHOufd4D7TUtHU=";
   };
 
-  dependencies = with python3Packages; [
+  propagatedBuildInputs = [
     typer
     astor
     lxml

@@ -8,7 +8,7 @@
 
 #system-bar-group,
 #system-bar-corner * {
-  background-color: alpha(black, 0.9);
+  background-color: var(--bg-test-transparent);
 }
 
 

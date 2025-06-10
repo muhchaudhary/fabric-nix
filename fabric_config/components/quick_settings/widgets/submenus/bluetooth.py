@@ -28,7 +28,9 @@ class BluetoothDeviceBox(CenterBox):
 
         self.add_start(
             Image(
-                icon_name=device.icon_name + "-symbolic", icon_size=24, name="submenu-icon"
+                icon_name=device.icon_name + "-symbolic",
+                icon_size=24,
+                name="submenu-icon",
             )
         )
         self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore

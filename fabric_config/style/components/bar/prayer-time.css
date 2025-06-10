@@ -1,8 +1,24 @@
 #prayer-info {
-    min-width: 140px;
-  }
-  
-  #prayer-info>*>*>*>* {
-    font-size: 16px;
-  }
-  
+  background-color: alpha(black, 0.9);
+  border-radius: 20px;
+  border-style: solid;
+  /* border-width: 5px; */
+  /* border-color: alpha(var(--bg_h), 0.9); */
+  margin: 5px;
+  padding: 15px;
+}
+
+#prayer-info {
+  min-width: 140px;
+}
+
+#prayer-info-prayer-label {
+  font-size: 16px;
+  font-weight: bold;
+  color: #ffffff;
+  margin: 3px;
+}
+
+#prayer-info-time-label {
+  font-size: 12px;
+}

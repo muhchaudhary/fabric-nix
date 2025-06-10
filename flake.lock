@@ -2,38 +2,33 @@
   "nodes": {
     "fabric": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ],
+        "nixpkgs": "nixpkgs",
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1738255029,
-        "narHash": "sha256-rYbZxCqXotzoiYvBVC8tdz4KmR8DacnJSuBWcBqIsZI=",
-        "owner": "nikitax44",
+        "lastModified": 1748775247,
+        "narHash": "sha256-pdENjHNaWLtrg1d5zgiI7DBVRsVYShedi/bTGMJtHEM=",
+        "owner": "Fabric-Development",
         "repo": "fabric",
-        "rev": "e2d06eb394c464757c2afec655afc699ce6e65f6",
+        "rev": "c24c19c74bd66cd353741b32fe303dd62fe86d9f",
         "type": "github"
       },
       "original": {
-        "owner": "nikitax44",
-        "ref": "run-widget_qol",
+        "owner": "Fabric-Development",
         "repo": "fabric",
         "type": "github"
       }
     },
     "fabric-libglace": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1734154195,
-        "narHash": "sha256-Pn9illIMzfNS56F4416agy5Ob4CKnrCGLDItE2u8rew=",
+        "lastModified": 1749312963,
+        "narHash": "sha256-wrPl1G/Cn4A/x4e5Dx0DqfTC/lPO+fJ7gW11dZgu0yc=",
         "owner": "muhchaudhary",
         "repo": "glace",
-        "rev": "6322161b257e05cd3faddbb136458a061c55d950",
+        "rev": "1ea5301538d48bf628c394bbbece81f1b6d32e53",
         "type": "github"
       },
       "original": {
@@ -45,9 +40,7 @@
     },
     "fabric-libgray": {
       "inputs": {
-        "nixpkgs": [
-          "nixpkgs"
-        ]
+        "nixpkgs": "nixpkgs_3"
       },
       "locked": {
         "lastModified": 1734026029,
@@ -65,11 +58,59 @@
     },
     "nixpkgs": {
       "locked": {
-        "lastModified": 1734424634,
-        "narHash": "sha256-cHar1vqHOOyC7f1+tVycPoWTfKIaqkoe1Q6TnKzuti4=",
+        "lastModified": 1733261153,
+        "narHash": "sha256-eq51hyiaIwtWo19fPEeE0Zr2s83DYMKJoukNLgGGpek=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "d3c42f187194c26d9f0309a8ecc469d6c878ce33",
+        "rev": "b681065d0919f7eb5309a93cea2cfa84dec9aa88",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-24.11",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_2": {
+      "locked": {
+        "lastModified": 1749143949,
+        "narHash": "sha256-QuUtALJpVrPnPeozlUG/y+oIMSLdptHxb3GK6cpSVhA=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "d3d2d80a2191a73d1e86456a751b83aa13085d7d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
+        "lastModified": 1716948383,
+        "narHash": "sha256-SzDKxseEcHR5KzPXLwsemyTR/kaM9whxeiJohbL04rs=",
+        "owner": "nixos",
+        "repo": "nixpkgs",
+        "rev": "ad57eef4ef0659193044870c731987a6df5cf56b",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nixos",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_4": {
+      "locked": {
+        "lastModified": 1749143949,
+        "narHash": "sha256-QuUtALJpVrPnPeozlUG/y+oIMSLdptHxb3GK6cpSVhA=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "d3d2d80a2191a73d1e86456a751b83aa13085d7d",
         "type": "github"
       },
       "original": {
@@ -84,7 +125,7 @@
         "fabric": "fabric",
         "fabric-libglace": "fabric-libglace",
         "fabric-libgray": "fabric-libgray",
-        "nixpkgs": "nixpkgs",
+        "nixpkgs": "nixpkgs_4",
         "utils": "utils_2"
       }
     },

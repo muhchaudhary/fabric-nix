@@ -23,7 +23,7 @@ class QuickSubMenu(Box):
         self.child = child
 
         super().__init__(visible=False, **kwargs)
-        self.revealer_child = Box(orientation="v", name="submenu")
+        self.revealer_child = Box(orientation="v", name="quicksettings-submenu")
 
         self.submenu_title_box = self.make_submenu_box()
         self.revealer_child.add(

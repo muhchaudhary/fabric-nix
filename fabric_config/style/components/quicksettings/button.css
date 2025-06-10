@@ -1,28 +1,33 @@
+#quicksettings-togglebutton button image,
+#quicksettings-togglebutton button label,
+#quicksettings-togglebutton button {
+    background-color: var(--bg-test);
+    color: var(--fg-test);
+    transition-property: background-color, color;
+    transition-duration: 0.2s;
+    transition-timing-function: ease-in-out;
+
+}
+
 #quicksettings-togglebutton.active button image,
 #quicksettings-togglebutton.active button label,
 #quicksettings-togglebutton.active button {
     background-color: var(--accent);
-    color: var(--bg);
+    color: var(--bg-test);
 }
 
 #quicksettings-togglebutton.active button:hover image,
 #quicksettings-togglebutton.active button:hover label,
 #quicksettings-togglebutton.active button:hover {
-    background-color: mix(var(--accent), white, 0.2);
+    background-color: mix(var(--accent),var(--fg-test),0.6);
 }
 
 #quicksettings-togglebutton.active button:active image,
 #quicksettings-togglebutton.active button:active label,
 #quicksettings-togglebutton.active button:active {
-    background-color: mix(var(--accent), white, 0.5);
+    background-color: var(--fg-test);
 }
 
-#quicksettings-togglebutton button image,
-#quicksettings-togglebutton button label,
-#quicksettings-togglebutton button {
-    background-color: var(--bg1);
-    color: var(--fg);
-}
 
 #quicksettings-togglebutton button:hover image,
 #quicksettings-togglebutton button:hover label,
