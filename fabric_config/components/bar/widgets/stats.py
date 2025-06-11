@@ -11,7 +11,7 @@ from fabric.widgets.label import Label
 
 class SystemTemps(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button", **kwargs)
+        super().__init__(style_classes=["button-basic", "button-basic-props"], **kwargs)
         self.has_gpu = True if exec_shell_command("nvidia-smi") else False
 
         self.fan_speed_label = Label("-1 RPM")

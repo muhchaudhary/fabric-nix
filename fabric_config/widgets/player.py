@@ -121,7 +121,7 @@ class PlayerBoxStack(Box):
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.player_name}",
         )
-        self.player_buttons[self.current_stack_pos].style_classes = ["active"]
+        self.player_buttons[self.current_stack_pos].style_classes = ["active", "cool-border"]
 
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
@@ -136,11 +136,11 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
             )
-        self.player_buttons[self.current_stack_pos].set_style_classes(["active"])
+        self.player_buttons[self.current_stack_pos].set_style_classes(["active", "cool-border"])
         self.buttons_box.hide() if len(players) == 2 else self.buttons_box.show()
 
     def make_new_player_button(self, player_box):
-        new_button = Button(name="player-stack-button")
+        new_button = Button(name="player-stack-button", style_classes=["cool-border"])
 
         def on_player_button_click(button: Button):
             self.player_buttons[self.current_stack_pos].remove_style_class("active")
@@ -214,6 +214,7 @@ class PlayerBox(Box):
 
         self.image_box = CircleImage(size=self.image_size, image_file=self.cover_path)
         self.image_stack = Box(
+            style_classes=["cool-border"],
             h_align="start",
             v_align="start",
             style="border-radius: 100%; box-shadow: 0px 0 4px 0px black;",
@@ -378,6 +379,7 @@ class PlayerBox(Box):
 
         # Seek Bar
         self.seek_bar = Scale(
+            style_classes=["cool-border"],
             min_value=0,
             max_value=100,
             increments=(5, 5),
@@ -413,7 +415,8 @@ class PlayerBox(Box):
 
         self.inner_box = Box(
             name="inner-player-box",
-            style=f"margin-left: {self.image_size // 2}px;"
+            style_classes=["cool-border"],
+            style=f"margin-left: {self.image_size // 2 - 2}px;"
             + f"min-width:{self.player_width - self.image_size // 2}px;"
             + f"min-height:{self.player_height}px;",
             v_align="center",

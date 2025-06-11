@@ -14,7 +14,7 @@ from fabric_config.widgets.popup_window_v2 import PopupWindow
 class PowerMenuActionButton(Button):
     def __init__(self, action_name: str, icon_name: str, icon_size: int, **kwargs):
         super().__init__(
-            name="powermenu-button",
+            style_classes=["button-basic", "button-basic-props"],
             child=Box(
                 orientation="v",
                 children=[
@@ -40,14 +40,14 @@ class PowerMenuConfirmMenu(Revealer):
                     Label("Are You Sure?"),
                     Button(
                         name=button_name,
+                        style_classes=["button-basic", "button-basic-props", "warning"],
                         label="YES",
-                        style_classes="warning",
                         on_clicked=lambda _: self.do_confirm(True),
                     ),
                     Button(
                         name=button_name,
                         label="NO",
-                        style_classes="okay",
+                        style_classes=["button-basic", "button-basic-props", "okay"],
                         on_clicked=lambda _: self.do_confirm(False),
                     ),
                 ],
@@ -69,7 +69,7 @@ class PowerMenuConfirmMenu(Revealer):
             active_button.add_style_class("active") if active_button else None
         else:
             self.active_button.remove_style_class(
-                "active"
+                "button-basic-active"
             ) if self.active_button else None
 
         self.selected_operation = selected_operation
@@ -158,7 +158,7 @@ class PowerMenuPopup(PopupWindow):
     def on_button_press(
         self, button: Button, pressed_button: Literal["shutdown", "reboot", "lock"]
     ):
-        button.add_style_class("active")
+        button.add_style_class("button-basic-active")
         self.confirm_menu.reveal_menu(True, button, pressed_button)
 
     def toggle_popup(self, monitor: bool = False):
@@ -172,11 +172,26 @@ class PowerMenuButton(Button):
     def __init__(self):
         self.powermenu_popup = PowerMenuPopup()
         super().__init__(
-            name="panel-button",
+            style_classes=["button-basic", "button-basic-props"],
             child=Image(
                 icon_name="system-shutdown-symbolic",
                 icon_size=20,
             ),
-            on_button_press_event=lambda btn,
-            event: self.powermenu_popup.toggle_popup(),
+            on_clicked=lambda *_: [
+                self.powermenu_popup.toggle_popup(),
+                self.add_style_class("button-basic-active"),
+            ],
+        )
+
+        self.powermenu_popup.reveal_child.revealer.connect(
+            "notify::reveal-child",
+            lambda *args: [
+                self.add_style_class("button-basic-active"),
+                self.remove_style_class("button-basic"),
+            ]
+            if self.powermenu_popup.popup_visible
+            else [
+                self.remove_style_class("button-basic-active"),
+                self.add_style_class("button-basic"),
+            ],
         )

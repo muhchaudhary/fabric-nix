@@ -4,6 +4,10 @@
   padding: 20px;
   border-top-left-radius: 50px;
   border-bottom-left-radius: 50px;
+
+  border-style: solid;
+  border-width: 0px 0px 0px 1px;
+  border-color: alpha(var(--fg-test), 0.3);
 }
 
 #osd-corner {
@@ -25,11 +29,10 @@
 
 #osd-progress-bar * {
   border-radius: 30px;
-  background-color: var(--bg-test-light);
+  background-color: alpha(var(--fg-dim), 0.4);
   transition-property: background-color, box-shadow;
   transition-duration: 0.25s;
   transition-timing-function: cubic-bezier(0.42, 0, 0.58, 1);
-  /* transition: background-color 0.3s cubic-bezier(.42,0,.58,1); */
 }
 
 #osd-progress-bar *.filled {

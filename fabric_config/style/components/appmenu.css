@@ -1,25 +1,31 @@
-#appmenu {
-    background-color: var(--bg-test-transparent);
-    padding: 20px;
-    border-top-right-radius: 50px;
-    border-bottom-right-radius: 50px;
-    border-style: solid;
-    min-height: 600px;
-    min-width: 350px;
-    transition: min-height 10s cubic-bezier(0.42, 0, 0.58, 1);
-}
-
+#appmenu,
 #appmenu-corner * {
     background-color: var(--bg-test-transparent);
 }
 
+#appmenu {
+    padding: 20px;
+    border-top-right-radius: 50px;
+    border-bottom-right-radius: 50px;
+    min-height: 600px;
+    min-width: 350px;
+    transition: min-height 10s cubic-bezier(0.42, 0, 0.58, 1);
+
+
+    border-style: solid;
+    border-width: 0px 1px 0px 0px;
+    border-color: alpha(var(--fg-test), 0.3);
+
+}
+
+
 #appmenu-entry,
 #appmenu-button label {
-    font-family: "jost*";
+    font-family: "roboto";
 }
 
 #appmenu-entry {
-    background-color: alpha(white, 0.3);
+    background-color: var(--bg-test-light);
     font-size: 16px;
     font-weight: 500;
     padding: 8px 0px 8px 0px;
@@ -34,26 +40,26 @@
 }
 
 #appmenu-entry image {
-    color: #000000;
+    color: var(--bg-test);
     margin-right: 5px;
 }
 
 #appmenu-entry.active selection,
 #appmenu-entry selection {
-    background-color: #2c2c2c;
-    color: #e8e8e8;
+    background-color: var(--fg-test);
+    color: var(--bg-test);
 }
 
 #appmenu-scroll slider {
     border-width: 2px;
-    border-color: white;
+    border-color: var(--fg-test-transparent);
     border-radius: 20px;
     border-style: solid;
 }
 
 @keyframes app-slot-shine {
     50% {
-        background-color: alpha(white, 0.4);
+        background-color: var(--fg-test-transparent);
         padding: 10px 5px 10px 5px;
     }
 
@@ -67,15 +73,14 @@
 }
 
 #appmenu-button {
-    /* background-color: red; */
+    background-color: var(--bg-test-light);
     margin: 5px;
     padding: 10px;
-    border-radius: 10px;
-    /* min-width: 350px; */
+    transition: background-color 0.1s ease-in-out;
 }
 
 #appmenu-app-name {
-    color: white;
+    color: var(--fg-test);
 }
 
 #appmenu-app-desc {
@@ -85,7 +90,7 @@
 
 /* #appmenu-button:hover label, */
 #appmenu-button:hover {
-    background-color: alpha(#ffffff, 0.25);
+    background-color: alpha(var(--fg-test), 0.25);
 }
 
 #appmenu-button:focus image,
@@ -94,7 +99,7 @@
 }
 
 #appmenu-button:focus {
-    background-color: alpha(#ffffff, 0.8);
+    background-color: alpha(var(--fg-test), 0.5);
 }
 
 #appmenu-button:active label,

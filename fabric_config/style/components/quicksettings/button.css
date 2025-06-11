@@ -1,42 +1,53 @@
 #quicksettings-togglebutton button image,
 #quicksettings-togglebutton button label,
 #quicksettings-togglebutton button {
-    background-color: var(--bg-test);
     color: var(--fg-test);
     transition-property: background-color, color;
     transition-duration: 0.2s;
     transition-timing-function: ease-in-out;
 
+    
+
+}
+
+#quicksettings-togglebutton button {
+    background-color: var(--bg-test-light);
+    
+}
+
+#quicksettings-togglebutton.active button {
+    background-color: var(--accent);
 }
 
 #quicksettings-togglebutton.active button image,
 #quicksettings-togglebutton.active button label,
 #quicksettings-togglebutton.active button {
-    background-color: var(--accent);
+    /* background-color: var(--bg-test-light); */
     color: var(--bg-test);
+    
 }
 
-#quicksettings-togglebutton.active button:hover image,
-#quicksettings-togglebutton.active button:hover label,
+/* #quicksettings-togglebutton.active button:hover image, */
+/* #quicksettings-togglebutton.active button:hover label, */
 #quicksettings-togglebutton.active button:hover {
     background-color: mix(var(--accent),var(--fg-test),0.6);
 }
 
-#quicksettings-togglebutton.active button:active image,
-#quicksettings-togglebutton.active button:active label,
+/* #quicksettings-togglebutton.active button:active image, */
+/* #quicksettings-togglebutton.active button:active label, */
 #quicksettings-togglebutton.active button:active {
     background-color: var(--fg-test);
 }
 
 
-#quicksettings-togglebutton button:hover image,
-#quicksettings-togglebutton button:hover label,
+/* #quicksettings-togglebutton button:hover image, */
+/* #quicksettings-togglebutton button:hover label, */
 #quicksettings-togglebutton button:hover {
     background-color: var(--bg2);
 }
 
-#quicksettings-togglebutton button:active image,
-#quicksettings-togglebutton button:active label,
+/* #quicksettings-togglebutton button:active image, */
+/* #quicksettings-togglebutton button:active label, */
 #quicksettings-togglebutton button:active {
     background-color: var(--bg3);
 }
@@ -45,9 +56,19 @@
     border-radius: 10px 0px 0px 10px;
     min-width: 200px;
     min-height: 35px;
+
+    border-style: solid;
+    border-width: 1px 0px 1px 1px;
+    border-color: alpha(var(--fg-test), 0.3);
+
 }
 
 #quicksettings-toggle-revealer {
     border-radius: 0px 10px 10px 0px;
     padding: 5px;
+
+    border-style: solid;
+    border-width: 1px 1px 1px 0px;
+    border-color: alpha(var(--fg-test), 0.3);
+
 }

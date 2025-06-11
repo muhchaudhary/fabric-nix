@@ -21,12 +21,14 @@ class AudioSlider(QuickSettingsScale):
     def on_speaker_change(self, *args):
         self.scale.set_sensitive(not config.audio.speaker.muted)
         self.scale.set_value(config.audio.speaker.volume)
-        # TODO use class instead of name here
-        self.icon_button.set_name(
-            "panel-button-active",
-        ) if self.client.speaker.muted else self.icon_button.set_name(
-            "panel-button",
-        )
+
+        if self.client.speaker.muted:
+            self.icon_button.add_style_class("button-basic-active")
+            self.icon_button.remove_style_class("button-basic")
+        else:
+            self.icon_button.remove_style_class("button-basic-active")
+            self.icon_button.add_style_class("button-basic")
+
         icon_name = "-".join(str(self.client.speaker.icon_name).split("-")[0:2])
         if icon_name != self.icon_name:
             self.icon_name = icon_name

@@ -1,0 +1,53 @@
+.cool-border {
+    border-radius: 20px;
+    border-style: solid;
+    border-width: 0.7px;
+    border-color: alpha(var(--fg-test), 0.5);
+}
+
+.button-border {
+    border-style: solid;
+    border-width: 1.2px;
+    border-radius: 10px;
+    border-color: transparent;
+}
+
+.button-basic-props {
+    transition-property: background-color, color;
+    transition-duration: 0.15s;
+    transition-timing-function: ease-in-out;
+    border-radius: 10px;
+    padding: 0px 5px 0px 5px;
+
+    border-style: solid;
+    border-width: 1.2px;
+    border-radius: 10px;
+    border-color: transparent;
+}
+
+
+.button-basic:hover {
+    background-color: alpha(var(--bg-test), 0.2);
+    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.2);
+    border-color: alpha(var(--fg-test), 0.4);
+}
+
+.button-basic:hover * {
+    color: var(--fg-test);
+}
+
+
+.button-basic-active,
+.button-basic:focus,
+.button-basic:active {
+    border-color: alpha(var(--fg-test), 0.4);
+
+    background-color: alpha(var(--accent), 0.8);
+    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.5);
+}
+
+.button-basic-active *,
+.button-basic:focus *,
+.button-basic:active * {
+    color: alpha(var(--bg-test), 0.8);
+}

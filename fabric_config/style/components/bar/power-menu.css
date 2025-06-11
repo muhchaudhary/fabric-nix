@@ -1,5 +1,5 @@
 #powermenu-box {
-    background-color: alpha(black, 0.9);
+    background-color: var(--bg-test-transparent);
     border-radius: 20px;
     border-style: solid;
     /* border-width: 5px; */

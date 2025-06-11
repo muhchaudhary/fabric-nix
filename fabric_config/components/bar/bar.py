@@ -54,7 +54,7 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.recording_indicator = Button(
-            name="panel-button",
+            style_classes=["button-basic", "button-basic-props"],
             child=Image(icon_name="media-record-symbolic"),
             visible=False,
             on_clicked=lambda *_: config.sc.screencast_stop(),
@@ -66,12 +66,15 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.open_apps_bar = OpenAppsBar()
-        self.date_time = DateTime(formatters="%a %b %d  %I:%M %p", name="panel-button")
+        self.date_time = DateTime(
+            formatters="%a %b %d  %I:%M %p",
+            style_classes=["button-basic", "button-basic-props"],
+        )
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.system_temps = SystemTemps()
-        self.system_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
+        self.system_tray = SystemTrayRevealer(icon_size=25)
 
         self.power_menu = PowerMenuButton()
 
@@ -140,26 +143,13 @@ class StatusBar(WaylandWindow):
             buttons=[WorkspaceButtonNoLabel(i + 1) for i in range(7)],
             buttons_factory=None,
         )
-        self.active_window = ActiveWindow(
-            name="panel-button",
-            formatter=FormattedString(
-                "{test_title(win_title)}",
-                test_title=lambda x, max_length=40: "Desktop"
-                if len(x) == 0
-                else (
-                    x.capitalize()
-                    if len(x) <= max_length
-                    else x[: max_length - 3].capitalize() + "..."
-                ),
-            ),
-        )
         self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime()
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.sysinfo = SystemTemps()
-        self.sys_tray = SystemTrayRevealer(icon_size=25, name="system-tray")
+        self.sys_tray = SystemTrayRevealer(icon_size=25)
         self.center_box.end_children = [
             self.sysinfo,
             self.sys_tray,
@@ -173,7 +163,6 @@ class StatusBar(WaylandWindow):
             self.prayer_times,
             self.open_apps_bar,
             StatusBarCorner("top-left"),
-            # self.active_window,
         ]
         self.center_box.center_children = [self.workspaces]
 

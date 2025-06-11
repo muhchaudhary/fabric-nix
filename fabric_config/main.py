@@ -34,8 +34,6 @@ class MyApp(Application):
             self.overview,
         )
         self.apply_style()
-        file = monitor_file(get_relative_path("style/colors.css"))
-        _ = file.connect("changed", lambda *_: self.apply_style())
 
     def apply_style(self):
         logger.info("[Main] CSS applied")
@@ -73,6 +71,12 @@ def main():
     def quit():
         logger.info("[Main] Quitting application")
         the_app.quit()
+
+
+    @the_app.action()
+    def apply_style():
+        logger.info("[Main] Applying new style")
+        the_app.apply_style()
 
     the_app.run()
 

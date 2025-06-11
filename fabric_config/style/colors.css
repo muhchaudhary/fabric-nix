@@ -2,12 +2,14 @@
 
     --bg-test: #101720;
     /* --bg-test-light: #252f3b; */
-    --bg-test-light: mix(var(--bg-test), var(--accent), 0.2);
-    --bg-test-transparent: alpha(var(--bg-test), 0.95);
+    --bg-test-light: alpha(var(--bg-test), 0.3);
+    --bg-test-transparent: alpha(var(--bg-test), 0.6);
     --fg-test:#F4F1F8;
+    --fg-test-transparent: alpha(var(--fg-test), 0.5);
     --fg-dim: #b8b7ba;
+    --fg-dim-transparent: alpha(var(--fg-dim), 0.5);
 
-    --accent: #a6e6e0;
+    --accent: alpha(#a6e6e0, 0.75);
   
     --bg_h: #1d2021;
     --bg: #1e1e1e;

@@ -1,5 +1,10 @@
 #quicksettings-submenu {
     background-color: var(--bg-test-light);
-    border-radius: 20px;
     padding: 10px;
+
+    border-radius: 20px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: alpha(var(--fg-test), 0.3);
+
 }

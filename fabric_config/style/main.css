@@ -1,5 +1,6 @@
 @import "./components/components.css";
 @import "colors.css";
+@import "global-classes.css";
 
 * {
   all: unset;
@@ -7,6 +8,12 @@
   font-weight: 500;
   font-size: 15px;
   color: var(--fg);
+}
+
+#system-tray {
+  background-color: var(--bg-test-transparent);
+  padding: 3px 5px 3px 5px;
+  border-radius: 10px;
 }
 
 tooltip {
@@ -36,7 +43,6 @@ scale {
 }
 
 #date-time:hover,
-#system-tray > button:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: alpha(var(--fg), 0.1);
@@ -61,20 +67,19 @@ scale {
 
 #date-time:active,
 #date-time:active label,
-#system-tray > button:active,
 #panel-button-active,
 #panel-button-active image,
 #panel-button:active label,
 #panel-button:active image,
-#panel-button:active > * > * > label,
-#panel-button:active > * > label,
-#panel-button-active > box > label,
+#panel-button:active>*>*>label,
+#panel-button:active>*>label,
+#panel-button-active>box>label,
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
 }
 
-#workspaces > button {
+#workspaces>button {
   border-radius: 100%;
   min-width: 10px;
   min-height: 8px;
@@ -89,45 +94,43 @@ scale {
 }
 
 #player-stack-button {
-  border-radius: 5px;
+  background-color: var(--fg-test-transparent);
   min-width: 30px;
   min-height: 10px;
   margin: 10px 1px 10px 1px;
-  background-color: var(--fg);
 }
 
 #player-stack-button:hover {
-  background-color: #646464;
+  background-color: var(--fg-test);
 }
 
 #player-stack-button.active,
-#workspaces > button.active {
-  border-radius: 5px;
+#workspaces>button.active {
   min-width: 30px;
   margin: 10px 1px 10px 1px;
   background-color: var(--accent);
 }
 
 #player-stack-button.empty,
-#workspaces > button.empty {
+#workspaces>button.empty {
   min-width: 9px;
   margin: 14px 2px 14px 2px;
   background-color: var(--fg4);
 }
 
-#workspaces > button.urgent {
+#workspaces>button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces > button:hover {
+#workspaces>button:hover {
   background-color: var(--bg4);
 }
 
-#system-tray-menu > menuitem menu > menuitem:hover,
-#system-tray-menu > menuitem:hover,
+#system-tray-menu>menuitem menu>menuitem:hover,
+#system-tray-menu>menuitem:hover,
 #submenu-button:hover {
   /* background-color: alpha(var(--bg4), 0.8); */
-  background-color: red;
+  background-color: rgb(94, 69, 69);
   border-color: alpha(var(--fg), 0.1);
 }
 
@@ -135,7 +138,7 @@ scale {
   background-color: var(--accent);
 }
 
-#submenu-button:active > * {
+#submenu-button:active>* {
   color: var(--bg);
 }
 
@@ -158,16 +161,16 @@ scale {
   margin: 5px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   border-width: 1px;
   border-style: double;
   border-color: var(--fg4);
   margin: 5px 0px 5px 0px;
 }
 
-#system-tray-menu > menuitem menu > menuitem:disabled,
-#system-tray-menu > menuitem:disabled {
+#system-tray-menu>menuitem menu>menuitem:disabled,
+#system-tray-menu>menuitem:disabled {
   background-color: var(--bg_h);
 }
 
@@ -177,14 +180,14 @@ scale {
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu > menuitem,
-#system-tray-menu > menuitem {
+#system-tray-menu>menuitem menu>menuitem,
+#system-tray-menu>menuitem {
   background-color: var(--bg2);
   padding: 5px;
   border-radius: 10px;
 }
 
-#system-tray-menu > menuitem menu,
+#system-tray-menu>menuitem menu,
 #system-tray-menu,
 #submenu {
   /* min-width: 450px; */
@@ -195,16 +198,7 @@ scale {
   padding: 10px;
 }
 
-#system-tray > button {
-  padding: 0px 3px 0px 3px;
-  border-radius: 10px;
-}
 
-#system-tray revealer {
-  background-color: red;
-}
-
-#system-tray,
 #panel-icon {
   margin-left: 2px;
   font-size: 25px;

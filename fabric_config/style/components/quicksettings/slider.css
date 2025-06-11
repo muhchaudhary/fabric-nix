@@ -8,14 +8,18 @@
   margin-bottom: 5px;
   padding-right: 12.5px;
   min-height: 25px;
-  background-color: var(--bg-test);
-  border-radius: 20px;
+  background-color: var(--bg-test-transparent);
   transition: background-color 0.1s ease-in-out;
+
+  border-radius: 20px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg-test), 0.3);
 }
 
 
 #quicksettings-slider trough:hover {
-  background-color: mix(var(--bg-test),var(--fg-test), 0.05);
+  background-color: var(--bg-test);
 }
 
 #quicksettings-slider trough highlight {

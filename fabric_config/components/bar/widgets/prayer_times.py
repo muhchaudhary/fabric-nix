@@ -92,16 +92,28 @@ class PrayerTimesService(Service):
 
 class PrayerTimesButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button", **kwargs)
+        super().__init__(style_classes=["button-basic", "button-basic-props"], **kwargs)
         self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
         PrayerTimesPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: self.set_name("panel-button-active")
+            lambda *args: [self.add_style_class(
+                "button-basic-active"
+            ), 
+              self.remove_style_class(
+                "button-basic"
+            )
+            ]
             if PrayerTimesPopup.popup_visible
-            else self.set_name("panel-button"),
+            else [self.remove_style_class(
+                "button-basic-active"
+            ), 
+            self.add_style_class(
+                "button-basic"
+            )
+            ],
         )
 
     def on_click(self, button, *args):

@@ -1,5 +1,5 @@
 #notification-box {
-    background-color: alpha(#000000, 0.9);
+    background-color: var(--bg-test-transparent);
     border-top-left-radius: 20px;
     border-bottom-left-radius: 20px;
     min-width: 400px;

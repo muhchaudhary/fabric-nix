@@ -46,6 +46,7 @@ class ApplicationButtonV2(Button):
             name="appmenu-button",
             h_expand=True,
             v_expand=True,
+            style_classes=["cool-border"],
             child=Box(
                 h_align="start",
                 v_align="start",
@@ -119,6 +120,7 @@ class AppMenu(PopupWindow):
         # Entry
         self.search_app_entry = Entry(
             name="appmenu-entry",
+            style_classes=["cool-border"],
             placeholder="Enter To Search",
             editable=True,
             on_changed=self.on_entry_change,

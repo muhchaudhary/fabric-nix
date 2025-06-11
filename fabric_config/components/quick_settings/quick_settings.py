@@ -71,7 +71,13 @@ class QuickSettingsButtonBox(Box):
 
 class QuickSettings(Box):
     def __init__(self, **kwargs):
-        super().__init__(orientation="v", spacing=10, name="quicksettings", **kwargs)
+        super().__init__(
+            orientation="v",
+            spacing=10,
+            style_classes=["cool-border"],
+            name="quicksettings",
+            **kwargs,
+        )
         self.mprisBox = PlayerBoxStack(config.mprisplayer)
         self.screen_bright_slider = BrightnessSlider(config.brightness)
         self.audio_slider_box = AudioSlider(config.audio)
@@ -85,7 +91,7 @@ class QuickSettings(Box):
 
 class QuickSettingsButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(name="panel-button", **kwargs)
+        super().__init__(style_classes=["button-basic", "button-basic-props"], **kwargs)
         self.planel_icon_size = 20
 
         self.bluetooth_icon = Image(
@@ -131,9 +137,15 @@ class QuickSettingsButton(Button):
 
         QuickSettingsPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: self.set_name("panel-button-active")
+            lambda *args: [
+                self.add_style_class("button-basic-active"),
+                self.remove_style_class("button-basic"),
+            ]
             if QuickSettingsPopup.popup_visible
-            else self.set_name("panel-button"),
+            else [
+                self.remove_style_class("button-basic-active"),
+                self.add_style_class("button-basic"),
+            ],
         )
 
     def update_audio(self, *args):

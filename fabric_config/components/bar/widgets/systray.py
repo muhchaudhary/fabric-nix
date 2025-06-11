@@ -16,7 +16,7 @@ from gi.repository import Gdk, Gray, GdkPixbuf, Gtk  # noqa: E402
 
 class SystemTrayWidget(Box):
     def __init__(self, pixel_size: int = 16, **kwargs) -> None:
-        super().__init__(name="system-tray")
+        super().__init__(name="system-tray", style_classes=["cool-border"])
         self.pixel_size = pixel_size
         self.watcher = Gray.Watcher()
         self.watcher.connect("item-added", self.on_item_added)
@@ -58,7 +58,7 @@ class SystemTrayWidget(Box):
         item_button.set_image(Image(pixbuf=pixbuf, pixel_size=self.pixel_size))
 
     def do_bake_item_button(self, item: Gray.Item) -> Button:
-        button = Button()
+        button = Button(style_classes=["button-basic", "button-basic-props"])
         # context menu handler
         button.connect(
             "button-press-event",
@@ -99,7 +99,7 @@ class SystemTrayRevealer(Box):
         )
         self.reveal_button = Button(
             image=self.button_image,
-            name="panel-button",
+            style_classes=["button-basic", "button-basic-props"],
         )
 
         self.revealer = Revealer(

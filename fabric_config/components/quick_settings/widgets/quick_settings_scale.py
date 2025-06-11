@@ -16,7 +16,7 @@ class QuickSettingsScale(Box):
     ):
         self.pixel_size = pixel_size
         self.icon = Image(icon_name=icon_name, icon_size=self.pixel_size)
-        self.icon_button = Button(image=self.icon, name="panel-button")
+        self.icon_button = Button(image=self.icon, style_classes=["button-basic", "button-basic-props"])
 
         self.scale = Scale(
             min_value=min,
@@ -28,6 +28,7 @@ class QuickSettingsScale(Box):
 
         super().__init__(
             name="quicksettings-box",
+            style_classes=["cool-border"],
             children=Box(
                 spacing=5, children=[self.icon_button, self.scale], h_expand=True
             ),
