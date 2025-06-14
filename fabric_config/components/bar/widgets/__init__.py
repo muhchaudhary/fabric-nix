@@ -1,12 +1,12 @@
 from .battery_indicator import BatteryIndicator
-from .glace import OpenAppsBar
+# from .glace import OpenAppsBar
 from .prayer_times import PrayerTimesButton
 from .stats import SystemTemps
 from .systray import SystemTrayRevealer
 
 __all__ = [
     "BatteryIndicator",
-    "OpenAppsBar",
+    # "OpenAppsBar",
     "PrayerTimesButton",
     "SystemTemps",
     "SystemTrayRevealer",

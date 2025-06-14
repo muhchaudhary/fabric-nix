@@ -13,7 +13,7 @@ from fabric.widgets.wayland import WaylandWindow
 from fabric_config import config
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
-    OpenAppsBar,
+    # OpenAppsBar,
     PrayerTimesButton,
     SystemTemps,
     SystemTrayRevealer,
@@ -24,7 +24,7 @@ from fabric_config.components.quick_settings.quick_settings import QuickSettings
 
 class WorkspaceButtonNoLabel(WorkspaceButton):
     def __init__(self, id):
-        super().__init__(id=id)
+        super().__init__(id=id,style_classes=["button-basic", "button-basic-props", "button-border"])
 
     def do_bake_label(self):
         return None
@@ -54,7 +54,7 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.recording_indicator = Button(
-            style_classes=["button-basic", "button-basic-props"],
+            style_classes=["button-basic", "button-basic-props", "button-border"],
             child=Image(icon_name="media-record-symbolic"),
             visible=False,
             on_clicked=lambda *_: config.sc.screencast_stop(),
@@ -65,10 +65,10 @@ class StatusBarSeperated(WaylandWindow):
             lambda _, status: self.recording_indicator.set_visible(status),
         )
 
-        self.open_apps_bar = OpenAppsBar()
+        # self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime(
             formatters="%a %b %d  %I:%M %p",
-            style_classes=["button-basic", "button-basic-props"],
+            style_classes=["button-basic", "button-basic-props", "button-border"],
         )
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
@@ -102,7 +102,7 @@ class StatusBarSeperated(WaylandWindow):
                 name="system-bar-group",
                 children=[
                     self.prayer_times,
-                    self.open_apps_bar,
+                    # self.open_apps_bar,
                 ],
                 style_classes="left",
             ),
@@ -143,7 +143,7 @@ class StatusBar(WaylandWindow):
             buttons=[WorkspaceButtonNoLabel(i + 1) for i in range(7)],
             buttons_factory=None,
         )
-        self.open_apps_bar = OpenAppsBar()
+        # self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime()
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
@@ -161,7 +161,7 @@ class StatusBar(WaylandWindow):
         self.center_box.start_children = [
             StatusBarCorner("top-right"),
             self.prayer_times,
-            self.open_apps_bar,
+            # self.open_apps_bar,
             StatusBarCorner("top-left"),
         ]
         self.center_box.center_children = [self.workspaces]

@@ -16,7 +16,7 @@ class QuickSettingsScale(Box):
     ):
         self.pixel_size = pixel_size
         self.icon = Image(icon_name=icon_name, icon_size=self.pixel_size)
-        self.icon_button = Button(image=self.icon, style_classes=["button-basic", "button-basic-props"])
+        self.icon_button = Button(image=self.icon, style_classes=["button-basic", "button-basic-props", "button-border"])
 
         self.scale = Scale(
             min_value=min,

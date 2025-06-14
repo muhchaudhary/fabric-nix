@@ -115,6 +115,7 @@ class WorkspaceEventBox(EventBox):
             v_expand=True,
             size=(int(1920 * SCALE), int(1080 * SCALE)),
             name="overview-workspace-bg",
+            style_classes=["cool-border"],
             child=fixed
             if fixed
             # TODO this is lazy, do it right later lol
@@ -147,7 +148,7 @@ class Overview(PopupWindow):
     def __init__(self):
         self.glace_manager = Glace.Manager()
         # self.client_output = ClientOutput()
-        self.overview_box = Box(name="overview-window", orientation="v", spacing=5)
+        self.overview_box = Box(name="overview-window", style_classes=["cool-border"], orientation="v", spacing=5)
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
 

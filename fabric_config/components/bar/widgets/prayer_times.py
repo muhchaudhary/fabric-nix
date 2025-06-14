@@ -18,7 +18,6 @@ country = "Canada"
 api_request = (
     f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
 )
-
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 PRAYER_TIMES_CACHE = os.path.join(CACHE_DIR, "prayer-times")
 PRAYER_TIMES_FILE = os.path.join(PRAYER_TIMES_CACHE, "current_times.json")
@@ -80,7 +79,13 @@ class PrayerTimesService(Service):
 
     def update_times(self, data):
         times = data["timings"]
-        for prayer_name in times:
+        for prayer_name in [
+            "Fajr",
+            "Dhuhr",
+            "Asr",
+            "Maghrib",
+            "Isha",
+        ]:
             self.prayer_info[prayer_name] = times[prayer_name]
         self.notifier("prayer-data")
         self.update(self.prayer_info)
@@ -92,27 +97,21 @@ class PrayerTimesService(Service):
 
 class PrayerTimesButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(style_classes=["button-basic", "button-basic-props"], **kwargs)
+        super().__init__(style_classes=["button-basic", "button-basic-props", "button-border"], **kwargs)
         self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
         PrayerTimesPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: [self.add_style_class(
-                "button-basic-active"
-            ), 
-              self.remove_style_class(
-                "button-basic"
-            )
+            lambda *args: [
+                self.add_style_class("button-basic-active"),
+                self.remove_style_class("button-basic"),
             ]
             if PrayerTimesPopup.popup_visible
-            else [self.remove_style_class(
-                "button-basic-active"
-            ), 
-            self.add_style_class(
-                "button-basic"
-            )
+            else [
+                self.remove_style_class("button-basic-active"),
+                self.add_style_class("button-basic"),
             ],
         )
 
@@ -122,17 +121,22 @@ class PrayerTimesButton(Button):
 
 class PrayerTimes(Box):
     def __init__(self, **kwargs):
-        super().__init__(orientation="v", name="prayer-info", **kwargs)
+        super().__init__(
+            orientation="v", name="prayer-info", style_classes=["cool-border"], **kwargs
+        )
         self.prayer_info_service = PrayerTimesService()
 
         self.prayer_labels = {
-            k: (Label(name="prayer-info-prayer-label"), Label("prayer-info-time-label"))
+            k: (
+                Label(name="prayer-info-prayer-label"),
+                Label(name="prayer-info-time-label"),
+            )
             for k in self.prayer_info_service.prayer_data.keys()
         }
         # # Initilize
         self.on_prayer_update(None, self.prayer_info_service.prayer_data)
         self.prayer_info_service.connect("update", self.on_prayer_update)
-
+        self.add(Box(name="prayer-info-separator"))
         for prayer in self.prayer_labels:
             self.add(
                 CenterBox(
@@ -140,6 +144,7 @@ class PrayerTimes(Box):
                     end_children=self.prayer_labels[prayer][1],
                 )
             )
+            self.add(Box(name="prayer-info-separator"))
 
     def on_prayer_update(self, _, prayer_info):
         def time_format(time):
@@ -149,6 +154,7 @@ class PrayerTimes(Box):
         for info in prayer_info:
             self.prayer_labels[info][0].set_label(info)
             self.prayer_labels[info][1].set_label(time_format(prayer_info[info]))
+
 
 PrayerTimesPopup = PopupWindow(
     transition_duration=350,

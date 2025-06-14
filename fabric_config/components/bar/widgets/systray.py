@@ -58,7 +58,7 @@ class SystemTrayWidget(Box):
         item_button.set_image(Image(pixbuf=pixbuf, pixel_size=self.pixel_size))
 
     def do_bake_item_button(self, item: Gray.Item) -> Button:
-        button = Button(style_classes=["button-basic", "button-basic-props"])
+        button = Button(style_classes=["button-basic", "button-basic-props", "button-border"])
         # context menu handler
         button.connect(
             "button-press-event",
@@ -99,7 +99,7 @@ class SystemTrayRevealer(Box):
         )
         self.reveal_button = Button(
             image=self.button_image,
-            style_classes=["button-basic", "button-basic-props"],
+            style_classes=["button-basic", "button-basic-props", "button-border"],
         )
 
         self.revealer = Revealer(

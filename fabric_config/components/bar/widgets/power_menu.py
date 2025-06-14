@@ -14,7 +14,7 @@ from fabric_config.widgets.popup_window_v2 import PopupWindow
 class PowerMenuActionButton(Button):
     def __init__(self, action_name: str, icon_name: str, icon_size: int, **kwargs):
         super().__init__(
-            style_classes=["button-basic", "button-basic-props"],
+            style_classes=["button-basic", "button-basic-props", "button-border"],
             child=Box(
                 orientation="v",
                 children=[
@@ -40,14 +40,24 @@ class PowerMenuConfirmMenu(Revealer):
                     Label("Are You Sure?"),
                     Button(
                         name=button_name,
-                        style_classes=["button-basic", "button-basic-props", "warning"],
+                        style_classes=[
+                            "button-basic",
+                            "button-basic-props",
+                            "button-border",
+                            "warning",
+                        ],
                         label="YES",
                         on_clicked=lambda _: self.do_confirm(True),
                     ),
                     Button(
                         name=button_name,
                         label="NO",
-                        style_classes=["button-basic", "button-basic-props", "okay"],
+                        style_classes=[
+                            "button-basic",
+                            "button-basic-props",
+                            "button-border",
+                            "okay",
+                        ],
                         on_clicked=lambda _: self.do_confirm(False),
                     ),
                 ],
@@ -172,7 +182,7 @@ class PowerMenuButton(Button):
     def __init__(self):
         self.powermenu_popup = PowerMenuPopup()
         super().__init__(
-            style_classes=["button-basic", "button-basic-props"],
+            style_classes=["button-basic", "button-basic-props", "button-border"],
             child=Image(
                 icon_name="system-shutdown-symbolic",
                 icon_size=20,

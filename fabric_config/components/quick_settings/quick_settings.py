@@ -91,7 +91,7 @@ class QuickSettings(Box):
 
 class QuickSettingsButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(style_classes=["button-basic", "button-basic-props"], **kwargs)
+        super().__init__(style_classes=["button-basic", "button-basic-props", "button-border"], **kwargs)
         self.planel_icon_size = 20
 
         self.bluetooth_icon = Image(

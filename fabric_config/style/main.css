@@ -7,7 +7,7 @@
   font-family: "roboto";
   font-weight: 500;
   font-size: 15px;
-  color: var(--fg);
+  color: var(--fg-test);
 }
 
 #system-tray {
@@ -19,11 +19,13 @@
 tooltip {
   padding: 10px;
   border-radius: 10px;
-  background-color: var(--bg_h);
+  background-color: var(--bg-test-transparent);
 }
 
 tooltip label {
-  font-family: "roboto mono";
+  font-family: "roboto";
+  font-weight: 500;
+  font-size: 15px;
 }
 
 scale {
@@ -45,7 +47,7 @@ scale {
 #date-time:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
-  border-color: alpha(var(--fg), 0.1);
+  border-color: var(--fg-test-transparent);
 }
 
 #panel-button label {
@@ -79,19 +81,6 @@ scale {
   color: var(--bg);
 }
 
-#workspaces>button {
-  border-radius: 100%;
-  min-width: 10px;
-  min-height: 8px;
-  margin: 13px 2px 13px 2px;
-  transition-property: border-radius;
-  transition: min-width 0.25s cubic-bezier(0.075, 0.82, 0.165, 1);
-  background-color: var(--fg);
-}
-
-#workspaces {
-  margin: 0px 5px 0px 5px;
-}
 
 #player-stack-button {
   background-color: var(--fg-test-transparent);
@@ -101,30 +90,45 @@ scale {
 }
 
 #player-stack-button:hover {
-  background-color: var(--fg-test);
+  background-color: var(--fg-test-transparent);
+}
+#workspaces>button {
+  min-height: 10px;
+  margin: 13px 2px 13px 2px;
+  transition-property: border-radius;
+  transition-property: min-width;
+  transition-duration: 0.25s;
+  transition-timing-function: cubic-bezier(0.075, 0.82, 0.165, 1);
+  background-color: alpha(var(--fg-test), 0.9);
+}
+
+#workspaces {
+  margin: 0px 5px 0px 5px;
 }
 
 #player-stack-button.active,
 #workspaces>button.active {
-  min-width: 30px;
+  min-width: 20px;
+  border-radius: 7px;
   margin: 10px 1px 10px 1px;
   background-color: var(--accent);
 }
 
+
 #player-stack-button.empty,
 #workspaces>button.empty {
-  min-width: 9px;
-  margin: 14px 2px 14px 2px;
-  background-color: var(--fg4);
+  /* min-width: 9px; */
+  /* margin: 14px 2px 14px 2px; */
+  background-color: var(--fg-dim-transparent);
 }
 
 #workspaces>button.urgent {
   background-color: var(--red-dim);
 }
 
-#workspaces>button:hover {
-  background-color: var(--bg4);
-}
+/* #workspaces>button:hover {
+  background-color: var(--fg-test-transparent);
+}  */
 
 #system-tray-menu>menuitem menu>menuitem:hover,
 #system-tray-menu>menuitem:hover,

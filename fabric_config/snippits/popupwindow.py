@@ -1,7 +1,8 @@
 import gi
 
-from gi.repository import Gtk, GtkLayerShell
+from gi.repository import Gtk, GtkLayerShell, Gdk
 from fabric.widgets.wayland import WaylandWindow
+from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 
 
 class PopupWindow(WaylandWindow):
@@ -14,9 +15,10 @@ class PopupWindow(WaylandWindow):
     ):
         super().__init__(**kwargs)
         self.exclusivity = "none"
-
+        self._is_centered = False
         self._parent = parent
         self._pointing_widget = pointing_to
+        self._hyprland = HyprlandWithMonitors()
         self._base_margin = self.extract_margin(margin)
         self.margin = self._base_margin.values()
 
@@ -66,6 +68,8 @@ class PopupWindow(WaylandWindow):
         parent_anchor = self._parent.anchor
 
         if len(parent_anchor) != 3:
+            self.anchor = "left bottom"
+            self._is_centered = True
             return move_axe
 
         if (
@@ -89,6 +93,7 @@ class PopupWindow(WaylandWindow):
             else:
                 self.anchor = "top left"
 
+        self._is_centered = False
         return move_axe
 
     def do_reposition(self, move_axe: str):
@@ -109,6 +114,37 @@ class PopupWindow(WaylandWindow):
                 round(self._parent.get_allocated_width() / 2),
                 round(self._parent.get_allocated_height() / 2),
             )
+
+        if self._is_centered:
+            self.margin = tuple(
+                a + b
+                for a, b in zip(
+                    (
+                        (
+                            0,
+                            0,
+                            0,
+                            (
+                                (
+                                    (
+                                        self._hyprland.display.get_monitor(
+                                            self._hyprland.get_current_gdk_monitor_id()
+                                        )
+                                    )
+                                    .get_geometry()
+                                    .width
+                                    / 2
+                                    - self._parent.get_allocated_width() / 2
+                                )
+                                - width / 2
+                            )
+                            + coords_centered[0],
+                        )
+                    ),
+                    self._base_margin.values(),
+                )
+            )
+            return
 
         self.margin = tuple(
             a + b

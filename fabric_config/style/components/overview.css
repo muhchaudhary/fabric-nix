@@ -35,7 +35,7 @@
   }
   
   #overview-workspace-bg {
-    background-color: var(--bg-test);
+    background-color: var(--bg-test-transparent);
   }
   
   #overview-workspace-box {

@@ -12,6 +12,7 @@ from fabric_config.components import (
 )
 from fabric_config.components.bar.bar import ScreenCorners
 from fabric_config.components.overview import Overview
+from fabric_config.components.dock import AppDock
 
 
 class MyApp(Application):
@@ -24,6 +25,7 @@ class MyApp(Application):
         self.systemOverlay = SystemOSD()
         self.nc = NotificationPopup()
         self.appMenu = AppMenu()
+        self.dock = AppDock()
         super().__init__(
             "fabric-bar",
             self.bar,
@@ -32,6 +34,7 @@ class MyApp(Application):
             self.nc,
             self.appMenu,
             self.overview,
+            self.dock,
         )
         self.apply_style()
 
@@ -66,12 +69,11 @@ def main():
     @the_app.action()
     def toggle_system_osd(osd_type: str):
         the_app.systemOverlay.enable_popup(osd_type)
-    
+
     @the_app.action()
     def quit():
         logger.info("[Main] Quitting application")
         the_app.quit()
-
 
     @the_app.action()
     def apply_style():
