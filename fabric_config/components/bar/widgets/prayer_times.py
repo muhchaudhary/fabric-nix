@@ -68,7 +68,6 @@ class PrayerTimesService(Service):
     def _refresh_needed(self) -> bool:
         data = self._read_json()
         if data:
-            data = data["data"]
             retrived_day = data["date"]["gregorian"]["date"]
             current_day = datetime.datetime.today().strftime("%d-%m-%Y")
             return False if retrived_day == current_day else True
@@ -79,7 +78,7 @@ class PrayerTimesService(Service):
         return self.prayer_info
 
     def update_times(self, data):
-        times = data["data"]["timings"]
+        times = data["timings"]
         for prayer_name in [
             "Fajr",
             "Dhuhr",

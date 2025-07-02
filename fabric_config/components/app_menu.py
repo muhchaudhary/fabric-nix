@@ -101,8 +101,7 @@ class ApplicationButtonV2(Button):
             if self.app_info.name in data:
                 data.remove(self.app_info.name)
             data.insert(0, self.app_info.name)
-            
-            data.pop() if len(data) >= 8 else None
+            data.pop() if len(data) > 7 else None
             json.dump(data, f)
             f.close()
 
