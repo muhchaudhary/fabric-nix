@@ -12,9 +12,10 @@ from loguru import logger
 
 from fabric_config.snippits.popupwindow import PopupWindow
 from fabric_config.utils.icon_resolver import IconResolver
+from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 
 gi.require_version("Glace", "0.1")
-from gi.repository import Glace, GLib
+from gi.repository import Glace, GLib, GdkPixbuf
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 APP_CACHE = CACHE_DIR + "/dock"
@@ -42,12 +43,28 @@ class AppBar(Box):
         self.client_buttons = {}
         self._parent = parent
         super().__init__(
-            spacing=10, name="app-bar", style_classes=["window-basic", "cool-border"]
+            spacing=10,
+            name="app-bar",
+            style_classes=["window-basic", "cool-border"],
+            children=[
+                Button(
+                    image=Image(
+                        icon_name="view-app-grid-symbolic",
+                        icon_size=60,
+                    ),
+                    on_button_press_event=lambda *_: print(
+                        self._parent.get_application().actions["toggle-appmenu"][0]()
+                    ),
+                )
+            ],
         )
         self.icon_resolver = IconResolver()
         self._manager = Glace.Manager()
         self._manager.connect("client-added", self.on_client_added)
         self._preview_image = Image()
+        self._hyp = HyprlandWithMonitors()
+
+        self.connect("notify::visible", lambda *_: print(self.is_visible()))
 
         self.popup_revealer = Revealer(
             child=Box(
@@ -112,6 +129,19 @@ class AppBar(Box):
         )
 
         client.connect(
+            "notify::app-id",
+            lambda *_: client_button.set_tooltip_window(
+                Window(
+                    child=Box(
+                        style="background-color: red; min-height: 50px; min-width: 50px;"
+                    ),
+                    visible=False,
+                    all_visible=False,
+                )
+            ),
+        )
+
+        client.connect(
             "notify::activated",
             lambda *_: client_button.add_style_class("active")
             if client.get_activated()
@@ -166,7 +196,7 @@ class AppDock(Window):
             anchor="bottom center",
         )
         self.revealer = Revealer(
-            child=Box(children=AppBar(self), style="padding: 20px 50px 5px 50px;"),
+            child=Box(children=[AppBar(self)], style="padding: 20px 50px 5px 50px;"),
             transition_duration=500,
             transition_type="slide-up",
         )
