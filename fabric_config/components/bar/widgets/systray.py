@@ -58,7 +58,9 @@ class SystemTrayWidget(Box):
         item_button.set_image(Image(pixbuf=pixbuf, pixel_size=self.pixel_size))
 
     def do_bake_item_button(self, item: Gray.Item) -> Button:
-        button = Button(style_classes=["button-basic", "button-basic-props", "button-border"])
+        button = Button(
+            style_classes=["button-basic", "button-basic-props", "button-border"]
+        )
         # context menu handler
         button.connect(
             "button-press-event",
@@ -69,8 +71,6 @@ class SystemTrayWidget(Box):
         return button
 
     def on_button_click(self, button, item: Gray.Item, event):
-        # for prop in item.list_properties():
-        #     print(f"{prop.__doc__}: {item.get_property(prop.__doc__)}")
         match event.button:
             case 1:
                 try:
@@ -79,7 +79,9 @@ class SystemTrayWidget(Box):
                     logger.error(e)
             case 3:
                 menu = item.get_property("menu")
-                menu.set_name("system-tray-menu")
+                for klass in ["tray"]:
+                    menu.get_style_context().add_class(klass)
+
                 if menu:
                     menu.popup_at_widget(
                         button,

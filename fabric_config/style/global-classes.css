@@ -1,3 +1,5 @@
+.tray,
+.tray menu,
 .cool-border {
     border-radius: 20px;
     border-style: solid;
@@ -5,6 +7,7 @@
     border-color: alpha(var(--fg-test), 0.5);
 }
 
+.tray menuitem,
 .button-border {
     border-style: solid;
     border-width: 1.2px;
@@ -12,6 +15,7 @@
     border-color: transparent;
 }
 
+.tray menuitem,
 .button-basic-props label,
 .button-basic-props image,
 .button-basic-props {
@@ -20,12 +24,18 @@
     transition-timing-function: ease-in-out;
 }
 
+.tray menuitem,
 .button-basic-props {
     border-radius: 10px;
     padding: 0px 5px 0px 5px;
 }
 
+.tray menuitem {
+    padding: 5px;
+    margin: 3px;
+}
 
+.tray menuitem:hover,
 .button-basic:hover {
     background-color: alpha(var(--bg-test), 0.2);
     box-shadow: 0 0 5px -3px alpha(var(--accent), 0.2);
@@ -36,7 +46,8 @@
     color: var(--fg-test);
 }
 
-
+.tray menuitem:active,
+.tray menuitem:focus,
 .button-basic-active,
 .button-basic:focus,
 .button-basic:active {
@@ -52,7 +63,8 @@
     color: alpha(var(--bg-test), 0.8);
 }
 
-
+.tray,
+.tray menu,
 .window-basic {
     background-color: var(--bg-test-transparent);
     border-radius: 20px;
@@ -87,4 +99,44 @@
 
 #app-bar-corner * {
     background-color: var(--bg-test-transparent);
+}
+
+/* SYSTRAY specific */
+.tray menuitem arrow {
+    -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
+    color: var(--fg-test);
+    min-width: 15px;
+    min-height: 15px;
+}
+
+.tray menuitem radio {
+    -gtk-icon-source: -gtk-icontheme("radio-symbolic");
+    color: var(--fg-test);
+    min-width: 15px;
+    min-height: 15px;
+}
+
+.tray menuitem check {
+    -gtk-icon-source: -gtk-icontheme("checkbox-symbolic");
+    color: var(--fg-test);
+    min-width: 1em;
+    min-height: 1em;
+    padding-right: 0.5em;
+}
+
+.tray menuitem check:checked {
+    -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
+}
+
+.tray menuitem:disabled label {
+    color: var(--fg-dim);
+}
+
+.tray menuitem separator {
+    background-color: var(--fg-dim-transparent);
+    padding-top: 1px;
+}
+
+.tray menuitem separator:last-child {
+    padding: unset;
 }

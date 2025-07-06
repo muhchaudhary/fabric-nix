@@ -126,26 +126,6 @@ scale {
   background-color: var(--red-dim);
 }
 
-/* #workspaces>button:hover {
-  background-color: var(--fg-test-transparent);
-}  */
-
-#system-tray-menu>menuitem menu>menuitem:hover,
-#system-tray-menu>menuitem:hover,
-#submenu-button:hover {
-  /* background-color: alpha(var(--bg4), 0.8); */
-  background-color: rgb(94, 69, 69);
-  border-color: alpha(var(--fg), 0.1);
-}
-
-#submenu-button:active {
-  background-color: var(--accent);
-}
-
-#submenu-button:active>* {
-  color: var(--bg);
-}
-
 #submenu-title {
   border-style: solid;
   border-bottom-width: 2px;
@@ -164,44 +144,6 @@ scale {
 #submenu-item {
   margin: 5px;
 }
-
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
-  border-width: 1px;
-  border-style: double;
-  border-color: var(--fg4);
-  margin: 5px 0px 5px 0px;
-}
-
-#system-tray-menu>menuitem menu>menuitem:disabled,
-#system-tray-menu>menuitem:disabled {
-  background-color: var(--bg_h);
-}
-
-#submenu-button {
-  background-color: var(--bg2);
-  padding: 8px;
-  border-radius: 10px;
-}
-
-#system-tray-menu>menuitem menu>menuitem,
-#system-tray-menu>menuitem {
-  background-color: var(--bg2);
-  padding: 5px;
-  border-radius: 10px;
-}
-
-#system-tray-menu>menuitem menu,
-#system-tray-menu,
-#submenu {
-  /* min-width: 450px; */
-  background-color: alpha(var(--bg), 1);
-  border-radius: 20px;
-  border-width: 5px;
-  border-color: alpha(var(--accent), 1);
-  padding: 10px;
-}
-
 
 #panel-icon {
   margin-left: 2px;
