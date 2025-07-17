@@ -1,7 +1,6 @@
 from typing import Literal
 
-from fabric.hyprland.widgets import ActiveWindow, WorkspaceButton, Workspaces
-from fabric.utils import FormattedString
+from fabric.hyprland.widgets import WorkspaceButton, Workspaces
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -20,11 +19,13 @@ from fabric_config.components.bar.widgets import (
 )
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
-
+from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
 
 class WorkspaceButtonNoLabel(WorkspaceButton):
     def __init__(self, id):
-        super().__init__(id=id,style_classes=["button-basic", "button-basic-props", "button-border"])
+        super().__init__(
+            id=id, style_classes=["button-basic", "button-basic-props", "button-border"]
+        )
 
     def do_bake_label(self):
         return None
@@ -73,6 +74,7 @@ class StatusBarSeperated(WaylandWindow):
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
+        self.wallpaper_button = WallpapperPickerButton()
         self.system_temps = SystemTemps()
         self.system_tray = SystemTrayRevealer(icon_size=25)
 
@@ -100,10 +102,7 @@ class StatusBarSeperated(WaylandWindow):
             # StatusBarCorner("top-right"),
             Box(
                 name="system-bar-group",
-                children=[
-                    self.prayer_times,
-                    # self.open_apps_bar,
-                ],
+                children=[self.prayer_times, self.wallpaper_button],
                 style_classes="left",
             ),
             StatusBarCorner("top-left"),

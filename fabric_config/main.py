@@ -13,6 +13,7 @@ from fabric_config.components import (
 from fabric_config.components.bar.bar import ScreenCorners
 from fabric_config.components.overview import Overview
 from fabric_config.components.dock import AppDock
+from fabric_config.components.wallpaper_picker import WallPaperPickerOverlay
 
 
 class MyApp(Application):
@@ -26,6 +27,7 @@ class MyApp(Application):
         self.nc = NotificationPopup()
         self.appMenu = AppMenu()
         self.dock = AppDock()
+        self.wallpaper_picker = WallPaperPickerOverlay()
         super().__init__(
             "fabric-bar",
             self.bar,
@@ -69,6 +71,10 @@ def main():
     @the_app.action()
     def toggle_system_osd(osd_type: str):
         the_app.systemOverlay.enable_popup(osd_type)
+
+    @the_app.action()
+    def toggle_wallpaper_picker():
+        the_app.wallpaper_picker.toggle_popup()
 
     @the_app.action()
     def quit():

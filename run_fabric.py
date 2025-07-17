@@ -1,3 +1,4 @@
-from fabric_config.main import *
+from fabric_config.main import main
+
 main()
 

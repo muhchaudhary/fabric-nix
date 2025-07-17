@@ -71,6 +71,14 @@
     padding: 10px;
 }
 
+
+.label-title {
+    font-size: 30px;
+    font-weight: bolder;
+    font-family: 'JetBrains Mono';
+}
+
+/* APP BAR */
 #app-bar {
     padding: 15px;
     border-radius: 30px;
