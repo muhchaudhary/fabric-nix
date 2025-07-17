@@ -4,7 +4,7 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     utils.url = "github:numtide/flake-utils";
-    fabric.url = "github:Vortriz/fabric";
+    fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
   };
@@ -44,8 +44,14 @@
           inherit system overlays;
         };
 
-        python-depends = with pkgs.python3Packages; {
-          inherit lxml psutil requests pam colorthief thefuzz;
+        python-depends = {
+          lxml = pkgs.python3Packages.lxml;
+          psutil = pkgs.python3Packages.psutil;
+          requests = pkgs.python3Packages.requests;
+          pam = pkgs.python3Packages.pam;
+          colorthief = pkgs.python3Packages.colorthief;
+          thefuzz = pkgs.python3Packages.thefuzz;
+          gengir = pkgs.gengir;
           python-fabric = fabric.packages.${system}.python-fabric;
           pywayland-custom = pkgs.python3Packages.callPackage ./nix/pywayland.nix {};
         };

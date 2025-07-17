@@ -5,15 +5,15 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1751477615,
-        "narHash": "sha256-XCJlOKtXAoloLcyaeNRTQwMcICYbe2XgxY0/ga3xS30=",
-        "owner": "Vortriz",
+        "lastModified": 1752107823,
+        "narHash": "sha256-jw6NfobEUbsm3NmBgVUHMk2cWAvD+naRjlRLemO5Z3E=",
+        "owner": "Fabric-Development",
         "repo": "fabric",
-        "rev": "b0d396d59f1b02fcda32ba2a044092884adc9165",
+        "rev": "27037055701557e42220a99d562439b918136bd6",
         "type": "github"
       },
       "original": {
-        "owner": "Vortriz",
+        "owner": "Fabric-Development",
         "repo": "fabric",
         "type": "github"
       }
