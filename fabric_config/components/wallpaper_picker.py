@@ -119,3 +119,5 @@ class WallPaperPickerOverlay(PopupWindow):
 
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor)
+
+wallpaper_picker = WallPaperPickerOverlay()
