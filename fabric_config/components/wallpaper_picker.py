@@ -19,10 +19,13 @@ class ImageButton(Button):
     @Signal
     def wallpaper_change(self, wp_path: str) -> str: ...
 
-    def __init__(self, wallpaper_name, **kwargs):
+    def __init__(self, wallpaper_name, thumb_size=300, **kwargs):
         self.wallpaper_name = wallpaper_name
         self.wp_path = os.path.join(WALLPAPER_DIR, self.wallpaper_name)
-        self.wp_thumb_path = os.path.join(WALLPAPER_THUMBS_DIR, self.wallpaper_name)
+        self.thumb_size = thumb_size
+        self.wp_thumb_path = os.path.join(
+            WALLPAPER_THUMBS_DIR, f"{self.thumb_size}_{self.wallpaper_name}"
+        )
         super().__init__(
             style_classes=["button-basic", "button-basic-props", "cool-border"],
             on_clicked=lambda *_: self._set_wallpaper_from_image(),
@@ -46,15 +49,10 @@ class ImageButton(Button):
             return
 
         exec_shell_command_async(
-            f"ffmpegthumbnailer -i {self.wp_path} -s 512 -o {self.wp_thumb_path}",
-            lambda *_: [
-                print(_),
-                self.set_image(
-                    CustomImage(
-                        image_file=self.wp_thumb_path, style="border-radius: 20px"
-                    )
-                ),
-            ],
+            f"ffmpegthumbnailer -i {self.wp_path} -s {self.thumb_size} -o {self.wp_thumb_path}",
+            lambda *_: self.set_image(
+                CustomImage(image_file=self.wp_thumb_path, style="border-radius: 20px")
+            ),
         )
 
 
@@ -65,7 +63,7 @@ class WallpaperPickerBox(ScrolledWindow):
     def __init__(self):
         super().__init__(
             orientation="h",
-            max_content_size=(-1, 1024),
+            max_content_size=(-1, 800),
         )
         self._buttons = self._grab_wallpeper_images()
         row_size = 3
@@ -119,5 +117,6 @@ class WallPaperPickerOverlay(PopupWindow):
 
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor)
+
 
 wallpaper_picker = WallPaperPickerOverlay()
