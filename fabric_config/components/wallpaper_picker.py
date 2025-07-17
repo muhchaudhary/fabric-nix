@@ -14,6 +14,11 @@ from fabric.core.service import Signal
 WALLPAPER_DIR = f"/home/{GLib.get_user_name()}/wallpapers"
 WALLPAPER_THUMBS_DIR = f"/home/{GLib.get_user_name()}/wallpapers/.thumbs"
 
+if not os.path.exists(WALLPAPER_DIR):
+    os.makedirs(WALLPAPER_DIR)
+
+if not os.path.exists(WALLPAPER_THUMBS_DIR):
+    os.makedirs(WALLPAPER_THUMBS_DIR)
 
 class ImageButton(Button):
     @Signal
