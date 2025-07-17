@@ -17,7 +17,9 @@ class BluetoothDeviceBox(CenterBox):
         super().__init__(spacing=2, name="panel-button", h_expand=True, **kwargs)
         self.device: BluetoothDevice = device
 
-        self.connect_button = Button(name="panel-button")
+        self.connect_button = Button(
+            style_classes=["button-basic", "button-basic-props", "button-border"]
+        )
         self.connect_button.connect(
             "clicked",
             lambda _: self.device.set_property("connecting", not self.device.connected),
@@ -74,7 +76,10 @@ class BluetoothSubMenu(QuickSubMenu):
         )
 
         self.scan_image = Image(icon_name="view-refresh-symbolic", icon_size=24)
-        self.scan_button = Button(image=self.scan_image, name="panel-button")
+        self.scan_button = Button(
+            image=self.scan_image,
+            style_classes=["button-basic", "button-basic-props", "button-border"],
+        )
         self.scan_button.connect("clicked", self.on_scan_toggle)
 
         self.child = ScrolledWindow(
@@ -103,12 +108,15 @@ class BluetoothSubMenu(QuickSubMenu):
 
     def on_scan_toggle(self, btn: Button):
         self.client.toggle_scan()
-        btn.set_style_classes(
-            ["active"]
-        ) if self.client.scanning else btn.set_style_classes([""])
+        if self.client.scanning:
+            btn.add_style_class("button-basic-active")
+        else:
+            btn.remove_style_class("button-basic-active")
 
     def populate_new_device(self, client: BluetoothClient, address: str):
-        device: BluetoothDevice = client.get_device(address)
+        device = client.get_device(address)
+        if device is None:
+            return
         if device.paired:
             self.paired_devices.add(BluetoothDeviceBox(device))
         else:
@@ -150,8 +158,9 @@ class BluetoothToggle(QuickSubToggle):
             self.action_label.set_label("Disabled")
 
     def new_device(self, client: BluetoothClient, address):
-        device: BluetoothDevice = client.get_device(address)
-        device.connect("changed", self.device_connected)
+        device = client.get_device(address)
+        if device is not None:
+            device.connect("changed", self.device_connected)
 
     def device_connected(self, device: BluetoothDevice):
         if device.connected:

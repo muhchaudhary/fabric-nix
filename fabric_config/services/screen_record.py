@@ -1,4 +1,6 @@
 import datetime
+import shlex
+from typing import Any, Callable
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import exec_shell_command, exec_shell_command_async
@@ -6,30 +8,75 @@ from gi.repository import Gio, GLib
 from loguru import logger
 
 
+def exec_shell_command_async_ignore_stdout(
+    cmd: str | list[str],
+    callback: Callable[[str], Any] | None = None,
+) -> tuple[Gio.Subprocess | None, Gio.DataInputStream]:
+    """
+    executes a shell command and returns the output asynchronously
+
+    :param cmd: the shell command to execute
+    :type cmd: str
+    :param callback: a function to retrieve the result at or `None` to ignore the result
+    :type callback: Callable[[str], Any] | None, optional
+    :return: a Gio.Subprocess object which holds a reference to your process and a Gio.DataInputStream object for stdout
+    :rtype: tuple[Gio.Subprocess | None, Gio.DataInputStream]
+    """
+    process = Gio.Subprocess.new(
+        shlex.split(cmd) if isinstance(cmd, str) else cmd,  # type: ignore
+        Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,  # type: ignore
+    )
+
+    stdout = Gio.DataInputStream(
+        base_stream=process.get_stdout_pipe(),  # type: ignore
+        close_base_stream=True,
+    )
+
+    def reader_loop(stdout: Gio.DataInputStream):
+        def read_line(stream: Gio.DataInputStream, res: Gio.AsyncResult):
+            output, *_ = stream.read_line_finish(res)
+            if isinstance(output, bytes):
+                callback(output.decode()) if callback else None
+
+        stdout.read_line_async(GLib.PRIORITY_DEFAULT, None, read_line)
+
+    reader_loop(stdout)
+
+    return process, stdout
+
+
 class ScreenRecorder(Service):
     @Signal
     def recording(self, value: bool) -> None: ...
 
     def __init__(self, **kwargs):
-        self.screenshot_path = GLib.get_home_dir() + "/Pictures/Screenshots/"
+        self.screenshot_path = GLib.get_home_dir() + "/Pictures/Screenshots"
         self.screenrecord_path = GLib.get_home_dir() + "/Videos/Screencasting/"
 
         super().__init__(**kwargs)
 
     def screenshot(self, fullscreen=False, save_copy=True):
         time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
-        file_path = self.screenshot_path + str(time) + ".png"
         command = (
-            ["grimblast", "copysave", "screen", file_path]
+            [
+                "hyprshot",
+                "-s",
+                "-o",
+                self.screenshot_path,
+                "-f",
+                f"{str(time)}_fabric_screenshot.png",
+            ]
             if save_copy
-            else ["grimblast", "copyscreen"]
+            else ["hyprshot", "-s", "--clipboard-only"]
         )
-        if not fullscreen:
-            command[2] = "area"
+        command.extend(
+            ["-m", "active", "-m", "output"] if fullscreen else ["-m", "region"]
+        )
+        command.append("-- ls")  # This is so there is something in stdout
         try:
-            exec_shell_command_async(
+            exec_shell_command_async_ignore_stdout(
                 " ".join(command),
-                lambda *_: self.send_screenshot_notification(
+                lambda file_path: self.send_screenshot_notification(
                     file_path=file_path if file_path else None,
                 ),
             )

@@ -25,7 +25,9 @@ class BatteryIndicator(Box):
 
         self.is_charging = False
         self.curr_percent = 0
-        self.battery_button = Button(name="panel-button")
+        self.battery_button = Button(
+            style_classes=["button-basic", "button-basic-props", "button-border"]
+        )
         self.battery_body = BatteryBodyWidget(
             name="battery-cairo-icon", percentage=0, style_classes="default"
         )

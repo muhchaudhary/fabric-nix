@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+SCREENSHOT_COMMAND=hyprshot
+args=$@
+hyprshot ${args} -- ls
+echo "command done"
