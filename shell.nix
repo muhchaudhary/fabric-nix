@@ -25,7 +25,7 @@ pkgs.mkShell {
     playerctl
     librsvg
 
-    (python3.withPackages (
+    (python312.withPackages (
       ps:
         with ps;
           [
@@ -42,7 +42,7 @@ pkgs.mkShell {
 
   shellHook = ''
     # ${pkgs.python3.interpreter} ./nix/tt.py
-    # cp -rn "${pkgs.python3Packages.pygobject-stubs}/lib/python3.13/site-packages/gi-stubs/repository/." "/home/$USER/.local/lib/python3.12/site-packages/gi/repository/"
+    # cp -rn "${pkgs.python312Packages.pygobject-stubs}/lib/python3.13/site-packages/gi-stubs/repository/." "/home/$USER/.local/lib/python3.12/site-packages/gi/repository/"
     export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
   '';
 }

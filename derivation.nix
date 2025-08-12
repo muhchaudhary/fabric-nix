@@ -8,13 +8,11 @@
   gobject-introspection,
   libdbusmenu-gtk3,
   gdk-pixbuf,
-  gnome,
   wrapGAppsHook3,
   # Custom Packages
   fabric-libgray,
   fabric-libglace,
   pywayland-custom,
-  rlottie-python,
   python-fabric,
   psutil,
   requests,

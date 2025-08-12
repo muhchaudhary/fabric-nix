@@ -5,7 +5,8 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import GLib
-from fabric_config.widgets.rounded_image import CustomImage
+# from fabric_config.widgets.rounded_image import CustomImage
+from fabric.widgets.image import Image
 from fabric.utils import exec_shell_command_async
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric_config.widgets.popup_window_v2 import PopupWindow
@@ -19,6 +20,7 @@ if not os.path.exists(WALLPAPER_DIR):
 
 if not os.path.exists(WALLPAPER_THUMBS_DIR):
     os.makedirs(WALLPAPER_THUMBS_DIR)
+
 
 class ImageButton(Button):
     @Signal
@@ -49,14 +51,14 @@ class ImageButton(Button):
     def _generate_wp_thumbnail(self):
         if os.path.exists(self.wp_thumb_path):
             self.set_image(
-                CustomImage(image_file=self.wp_thumb_path, style="border-radius: 20px")
+                Image(image_file=self.wp_thumb_path, style="border-radius: 20px")
             )
             return
 
         exec_shell_command_async(
             f"ffmpegthumbnailer -i {self.wp_path} -s {self.thumb_size} -o {self.wp_thumb_path}",
             lambda *_: self.set_image(
-                CustomImage(image_file=self.wp_thumb_path, style="border-radius: 20px")
+                Image(image_file=self.wp_thumb_path, style="border-radius: 20px")
             ),
         )
 
@@ -65,12 +67,27 @@ class WallpaperPickerBox(ScrolledWindow):
     @Signal
     def wallpaper_change(self, wp_path: str) -> str: ...
 
-    def __init__(self):
+    def __init__(self, **kwargs):
+        self._buttons = []
         super().__init__(
             orientation="h",
             max_content_size=(-1, 800),
+            on_destroy=self.destroy_wallpaper_images,
+            **kwargs,
         )
-        self._buttons = self._grab_wallpeper_images()
+
+    def destroy_wallpaper_images(self, *_):
+        [b.destroy() for b in self._buttons]
+        [c.destroy() for c in self._main_box.children]
+        self._buttons = []
+        self._main_box.destroy()
+
+    def grab_wallpaper_images(self, *_):
+        if len(self._buttons) == 0:
+            self._buttons = self._grab_wallpeper_images()
+        else:
+            return
+
         row_size = 3
         rows = [
             self._buttons[i : i + row_size]
@@ -101,27 +118,41 @@ class WallpaperPickerBox(ScrolledWindow):
 
 class WallPaperPickerOverlay(PopupWindow):
     def __init__(self):
-        self.wallpaper_box = WallpaperPickerBox()
+        self.wallpaper_box = WallpaperPickerBox(
+            on_wallpaper_change=lambda *_: self.toggle_popup()
+        )
         super().__init__(
             layer="top",
             child=Box(
                 orientation="v",
                 spacing=10,
                 children=[
-                    Label("Wallpaper Picker", style_classes=["label-title"]),
+                    Label(
+                        "Wallpaper Picker",
+                        style_classes=["label-title"],
+                    ),
                     self.wallpaper_box,
                 ],
                 style_classes=["cool-border", "window-basic"],
             ),
             transition_duration=300,
-            transition_type="slide-down",
+            transition_type="crossfade",
             anchor="center",
             enable_inhibitor=True,
         )
-        self.wallpaper_box.connect("wallpaper-change", lambda *_: self.toggle_popup())
+        self.reveal_child.revealer.connect(
+            "notify::child-revealed",
+            lambda *_: [
+                self.wallpaper_box.destroy_wallpaper_images(),
+            ]
+            if not self.reveal_child.revealer.child_revealed
+            else None,
+        )
 
     def toggle_popup(self, monitor: bool = False):
-        super().toggle_popup(monitor)
+        super().toggle_popup(monitor=True)
+        if self.popup_visible:
+            self.wallpaper_box.grab_wallpaper_images()
 
 
 wallpaper_picker = WallPaperPickerOverlay()
