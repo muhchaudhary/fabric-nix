@@ -2,12 +2,6 @@
   min-height: 200px;
 }
 
-#battery-label {
-  margin: 0px 5px -2px 2px;
-  font-size: 15px;
-  font-weight: 900;
-}
-
 #battery-cairo-icon {
   min-width: 60px;
   min-height: 30px;
@@ -22,7 +16,7 @@
 }
 
 #battery-cairo-icon.default {
-  color: white;
+  color: var(--fg-test);
   border-color: var(--accent);
   background-color: var(--accent);
 }

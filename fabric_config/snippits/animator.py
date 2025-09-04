@@ -115,11 +115,20 @@ class Animator(Service):
     def do_ease_out_elastic(self, t: float) -> float:
         c4 = (2 * math.pi) / 3
         return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
+    
+    def do_easeOutBounce(self, t: float) -> float:
+        if t < 4 / 11:
+            return 121 * t * t / 16
+        elif t < 8 / 11:
+            return (363 / 40.0 * t * t) - (99 / 10.0 * t) + 17 / 5.0
+        elif t < 9 / 10:
+            return (4356 / 361.0 * t * t) - (35442 / 1805.0 * t) + 16061 / 1805.0
+        return (54 / 5.0 * t * t) - (513 / 25.0 * t) + 268 / 25.0
 
     def do_ease(self, time: float) -> float:
         if self.custom_curve:
             return self.do_lerp(
-                self.min_value, self.max_value, self.do_ease_out_elastic(time)
+                self.min_value, self.max_value, self.do_easeOutBounce(time)
             )
         return self.do_lerp(
             self.min_value, self.max_value, self.do_interpolate_cubic_bezier(time)

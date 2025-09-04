@@ -54,8 +54,8 @@ class RadialMenu(Gtk.DrawingArea, Widget):
             **kwargs,
         )
 
-        self.num_segments = 4
-        self.get_style()
+        self.num_segments = 3
+        self.get_style_ctx()
         self.hovered_segment = None
 
         self.connect("draw", self.on_draw)
@@ -65,7 +65,7 @@ class RadialMenu(Gtk.DrawingArea, Widget):
         self.connect("button-press-event", self.on_click)
         self.connect("motion-notify-event", self.on_motion)
 
-    def get_style(self):
+    def get_style_ctx(self):
         style_context = self.get_style_context()
         self.width: int = style_context.get_property("min-width", Gtk.StateFlags.NORMAL)  # type: ignore
         self.height: int = style_context.get_property(
@@ -77,7 +77,7 @@ class RadialMenu(Gtk.DrawingArea, Widget):
         )
         self.center_x = (self.width + self.segment_padding) / 2
         self.center_y = (self.height + self.segment_padding) / 2
-        self.radius = self.height / 2
+        self.radius = self.height / 2 - 20
         self.outer_radius = self.radius
         self.inner_radius = self.radius / 3
         # TODO do not hardcode padding
@@ -97,8 +97,8 @@ class RadialMenu(Gtk.DrawingArea, Widget):
         cr.show_text(f"{segment_index}")
 
     def on_draw(self, widget, cr: cairo.Context):
-        self.get_style()
-        cr.set_line_width(4)
+        self.get_style_ctx()
+        cr.set_line_width(8)
 
         angle_step = (2 * math.pi) / self.num_segments
 
@@ -112,13 +112,70 @@ class RadialMenu(Gtk.DrawingArea, Widget):
         for i in range(self.num_segments):
             start_angle = i * angle_step
             end_angle = (i + 1) * angle_step
-            self.draw_segment(
-                cr,
-                start_angle,
-                end_angle,
-                i,
-            )
+            # self.draw_segment(
+            #     cr,
+            #     start_angle,
+            #     end_angle,
+            #     i,
+            # )
+            self.draw_segment_v2(cr, i, self.outer_radius, self.inner_radius)
             self.draw_text(cr, i, start_angle, end_angle)
+
+    def draw_segment_v2(self, cr: cairo.Context, index, outer_radius, inner_radius):
+        p = 5
+
+        inner_theta1 = math.atan((inner_radius + p) / p)
+        outer_theta1 = math.atan((outer_radius - p) / p)
+
+        inner_theta2 = math.atan(p / (inner_radius + p))
+        outer_theta2 = math.atan(p / (inner_radius - p))
+
+        cr.new_path()
+        if self.hovered_segment == index:
+            cr.set_source_rgb(209 / 256, 100 / 256, 42 / 256)
+            self.padding_angle = math.radians(0)
+            self.padding = 0
+        else:
+            cr.set_source_rgb(47 / 256, 90 / 256, 130 / 256)
+
+        start_outer_angle = index * ((2 * math.pi) / self.num_segments)
+        end_outer_angle = (index + 1) * (2 * math.pi) / self.num_segments
+        start_outer = polar_to_cartesian(
+            self.center_x, self.center_y, start_outer_angle, outer_radius
+        )
+        end_outer = polar_to_cartesian(
+            self.center_x, self.center_y, end_outer_angle, outer_radius
+        )
+        start_inner = polar_to_cartesian(
+            self.center_x, self.center_y, start_outer_angle, inner_radius
+        )
+        end_inner = polar_to_cartesian(
+            self.center_x, self.center_y, end_outer_angle, inner_radius
+        )
+        cr.move_to(*start_inner)
+        cr.line_to(*start_outer)
+        cr.arc(
+            self.center_x,
+            self.center_y,
+            outer_radius,
+            start_outer_angle,
+            end_outer_angle,
+        )
+        cr.move_to(*end_outer)
+        cr.line_to(*end_inner)
+        cr.arc_negative(
+            self.center_x,
+            self.center_y,
+            inner_radius,
+            end_outer_angle,
+            start_outer_angle,
+        )
+        cr.move_to(*start_inner)
+
+        cr.close_path()
+        cr.fill_preserve()
+        cr.set_source_rgb(100 / 256, 90 / 256, 256 / 256)
+        cr.stroke()
 
     def draw_arc_between_points(self, ctx, x1, y1, x2, y2, radius, clockwise=False):
         mx, my = (x1 + x2) / 2, (y1 + y2) / 2

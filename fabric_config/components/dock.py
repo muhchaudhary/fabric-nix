@@ -71,13 +71,13 @@ class AppBar(Box):
                 children=self._preview_image,
                 style_classes=["window-basic", "cool-border"],
             ),
-            transition_type="crossfade",
-            transition_duration=400,
+            transition_type="slide-up",
+            transition_duration=100,
         )
 
         self.popup = PopupWindow(
             parent,
-            child=self.popup_revealer,
+            child=Box(style="min-height: 1px", children=self.popup_revealer),
             margin="0px 0px 120px 0px",
             visible=False,
         )
@@ -94,7 +94,7 @@ class AppBar(Box):
 
         def capture_callback(pbuf, _):
             self._preview_image.set_from_pixbuf(
-                pbuf.scale_simple(pbuf.get_width() * 0.15, pbuf.get_height() * 0.15, 2)
+                pbuf.scale_simple(pbuf.get_width() * 0.2, pbuf.get_height() * 0.2, 2)
             )
             self.popup.set_visible(True)
             self.popup_revealer.reveal()
