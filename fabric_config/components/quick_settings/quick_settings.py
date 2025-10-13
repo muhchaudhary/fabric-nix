@@ -1,26 +1,27 @@
-import fabric_config.config as config
+import gi
+from fabric.widgets.box import Box
+from fabric.widgets.button import Button
+from fabric.widgets.image import Image
 
+import fabric_config.config as config
 from fabric_config.components.quick_settings.widgets.quick_settings_submenu import (
     QuickSubToggle,
 )
-
+from fabric_config.components.quick_settings.widgets.sliders import (
+    AudioSlider,
+    BrightnessSlider,
+)
 from fabric_config.components.quick_settings.widgets.submenus import (
     BluetoothSubMenu,
     BluetoothToggle,
     WifiSubMenu,
     WifiToggle,
 )
-from fabric_config.components.quick_settings.widgets.sliders import (
-    AudioSlider,
-    BrightnessSlider,
-)
-
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
-from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.image import Image
+gi.require_version("AstalNetwork", "0.1")
+from gi.repository import AstalNetwork as an
 
 
 class QuickSettingsButtonBox(Box):
@@ -91,7 +92,10 @@ class QuickSettings(Box):
 
 class QuickSettingsButton(Button):
     def __init__(self, **kwargs):
-        super().__init__(style_classes=["button-basic", "button-basic-props", "button-border"], **kwargs)
+        super().__init__(
+            style_classes=["button-basic", "button-basic-props", "button-border"],
+            **kwargs,
+        )
         self.planel_icon_size = 20
 
         self.bluetooth_icon = Image(
@@ -110,25 +114,27 @@ class QuickSettingsButton(Button):
         config.audio.connect("speaker-changed", self.update_audio)
 
         def get_network_icon(*_):
-            if config.network.primary_device == "wifi":
-                wifi = config.network.wifi_device
-                if wifi:
-                    self.network_icon.set_from_icon_name(
-                        wifi.get_icon_name(), self.planel_icon_size
-                    )
-                    # wifi.bind_property("icon-name", self.network_icon, "icon-name")
+            prim = config.network.get_primary()
+
+            if prim == an.Primary.WIFI:
+                wifi = config.network.get_wifi()
+
+                self.network_icon.set_from_icon_name(
+                    wifi.get_icon_name(), self.planel_icon_size
+                )
+                wifi.bind_property("icon-name", self.network_icon, "icon-name")
+
+                print(wifi.get_icon_name())
 
             else:
-                ethernet = config.network.ethernet_device
+                ethernet = config.network.get_wired()
                 if ethernet:
                     self.network_icon.set_from_icon_name(
                         ethernet.get_icon_name(), self.planel_icon_size
                     )
 
         self.network_icon = Image(name="panel-icon", icon_size=self.planel_icon_size)
-        # config.network.connect("device-ready", get_network_icon)
-
-        config.network.connect("notify::primary-device", get_network_icon)
+        get_network_icon()
 
         self.add(
             Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])

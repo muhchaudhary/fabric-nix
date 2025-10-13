@@ -24,16 +24,16 @@
             fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
             basedpyright = nixpkgs.legacyPackages.${system}.basedpyright;
             fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
-            gengir = pkgs.python312Packages.callPackage ./nix/gengir.nix {
-              typer = pkgs.python312Packages.typer;
-              astor = pkgs.python312Packages.astor;
-              lxml = pkgs.python312Packages.lxml;
+            gengir = final.python312Packages.callPackage ./nix/gengir.nix {
+              typer = final.python312Packages.typer;
+              astor = final.python312Packages.astor;
+              lxml = final.python312Packages.lxml;
             };
-            rlottie-python = pkgs.python312Packages.callPackage ./nix/rolttie-python.nix {
-              distlib = pkgs.python312Packages.distlib;
-              flit-core = pkgs.python312Packages.flit-core;
-              tomli = pkgs.python312Packages.tomli;
-              click = pkgs.python312Packages.click;
+            rlottie-python = final.python312Packages.callPackage ./nix/rolttie-python.nix {
+              distlib = final.python312Packages.distlib;
+              flit-core = final.python312Packages.flit-core;
+              tomli = final.python312Packages.tomli;
+              click = final.python312Packages.click;
             };
           })
         ];
@@ -53,10 +53,12 @@
           python-fabric = pkgs.python312Packages.python-fabric;
           pywayland-custom = pkgs.python312Packages.callPackage ./nix/pywayland.nix {};
         };
+
+        astal-depends = [pkgs.astal.network];
       in {
         formatter = pkgs.nixfmt-rfc-style;
         devShells.default = pkgs.callPackage ./shell.nix {
-          inherit pkgs python-depends;
+          inherit pkgs python-depends astal-depends;
         };
         packages.default = pkgs.python312Packages.callPackage ./derivation.nix {
           inherit (pkgs) lib python-depends;
