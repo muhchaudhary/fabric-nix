@@ -3,6 +3,7 @@ import os
 
 import gi
 from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
@@ -15,7 +16,7 @@ from fabric_config.utils.icon_resolver import IconResolver
 from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 
 gi.require_version("Glace", "0.1")
-from gi.repository import Glace, GLib, GdkPixbuf
+from gi.repository import Glace, GLib
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 APP_CACHE = CACHE_DIR + "/dock"
@@ -202,7 +203,15 @@ class AppDock(Window):
         )
         self.children = EventBox(
             events=["enter-notify", "leave-notify"],
-            child=Box(style="min-height: 1px", children=self.revealer),
+            child=CenterBox(
+                center_children=self.revealer,
+                start_children=Box(
+                    style="min-height: 10px; min-width: 5px;"
+                ),
+                end_children=Box(
+                    style="min-height: 10px; min-width: 5px;"
+                ),
+            ),
             on_enter_notify_event=lambda *_: self.revealer.set_reveal_child(True),
             on_leave_notify_event=lambda *_: self.revealer.set_reveal_child(False),
         )

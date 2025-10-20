@@ -1,0 +1,10 @@
+diff --git a/gengir/main.py b/gengir/main.py
+--- a/gengir/main.py
++++ b/gengir/main.py
+@@
+ def generate_module(args):
+-    with open(args['gir_path']) as f:
+-        content = f.read()
++    # Read as bytes so lxml handles XML encoding declarations correctly
++    with open(args['gir_path'], 'rb') as f:
++        content = f.read()
