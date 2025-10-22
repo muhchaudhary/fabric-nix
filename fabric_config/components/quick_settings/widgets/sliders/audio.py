@@ -8,7 +8,7 @@ from fabric_config.components.quick_settings.widgets.quick_settings_scale import
 
 class AudioSlider(QuickSettingsScale):
     def __init__(self, client: Audio):
-        self.client = client
+        self.client: Audio = client
         self.icon_name = ""
         super().__init__(min=0, max=100, pixel_size=28)
         self.scale.connect("change-value", self.on_scale_move)

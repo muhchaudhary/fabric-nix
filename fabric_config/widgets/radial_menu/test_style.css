@@ -1,0 +1,59 @@
+* {
+    all: unset;
+    font-family: "roboto slab";
+    font-weight: 900;
+    font-size: 45px;
+
+}
+
+
+#radial-menu {
+    /* transition-property: min-width, min-height;
+    transition-duration: 0.5s;
+    transition-timing-function: cubic-bezier(0, 0, 1, 1); */
+
+    min-width: 700px;
+    min-height: 700px;
+}
+
+
+#radial-segment-1 {
+    transition-property: background-color, padding, border-color;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0, 0, 1, 1);
+    background-color: rgb(140, 195, 195);
+    border-color: rgba(60, 20, 160, 1);
+    border-width: 15px;
+    border-style: solid;
+    padding: 30px;
+}
+
+#radial-segment-1:hover {
+    padding: 10px;
+    background-color: rgb(53, 79, 79);
+    border-color: aquamarine;
+}
+
+#radial-segment-2 {
+    background-color: rgba(50, 80, 120, 1);
+    border-color: rgba(120, 40, 130, 1);
+    border-width: 15px;
+    border-style: solid;
+    padding: 30px;
+}
+
+#radial-segment-3 {
+    background-color: rgba(100, 60, 90, 1);
+    border-color: rgba(180, 60, 100, 1);
+    border-width: 15px;
+    border-style: solid;
+    padding: 30px;
+}
+
+#radial-segment-4 {
+    background-color: rgba(150, 20, 60, 1);
+    border-color: rgba(240, 80, 70, 1);
+    border-width: 15px;
+    border-style: solid;
+    padding: 30px;
+}

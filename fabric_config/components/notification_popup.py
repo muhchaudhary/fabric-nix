@@ -38,7 +38,6 @@ class AnimationWindow(WaylandWindow):
     def __init__(self):
         self.draw_surfaces = []
         self.drawing_area = Gtk.DrawingArea()
-        self.fixed = Gtk.Fixed()
         self.last_update_time = time.time()
 
         super().__init__(
@@ -47,7 +46,6 @@ class AnimationWindow(WaylandWindow):
             child=Box(
                 h_expand=True,
                 v_expand=True,
-                # children=self.fixed,
                 children=self.drawing_area,
             ),
             exclusivity="none",
