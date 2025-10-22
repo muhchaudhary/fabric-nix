@@ -1,5 +1,4 @@
 import math
-from operator import index
 from typing import Iterable, List, Literal
 
 import cairo
@@ -10,7 +9,6 @@ from fabric.widgets.widget import Widget
 from fabric.widgets.image import Image
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
-from animator import Animator
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
@@ -102,9 +100,8 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
             size,
             **kwargs,
         )
-        self.children_segments = children
+        self.segments = children
         self.center_child = center_child
-        self.num_segments = len(self.children_segments)
         self.get_style_ctx()
         self.hovered_segment = None
 
@@ -121,11 +118,8 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.height: int = style_context.get_property(
             "min-height", Gtk.StateFlags.NORMAL
         )  # type: ignore
-        self.set_size_request(
-            self.width, self.height
-        )
+        self.set_size_request(self.width, self.height)
 
-        print(self.width, self.height)
         self.center_x = (self.width) / 2
         self.center_y = (self.height) / 2
         self.radius = self.height / 2
@@ -135,47 +129,36 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
     def on_draw(self, _, cr: cairo.Context):
         self.get_style_ctx()
 
-        for i in range(self.num_segments):
+        for i in range(len(self.segments)):
             self.draw_segment(cr, i, self.outer_radius, self.inner_radius)
 
     def draw_segment(self, cr: cairo.Context, index, outer_radius, inner_radius):
         cr.new_path()
 
         # Set State
-        state = self.children_segments[index].get_state_flags()
-
+        state = self.segments[index].get_state_flags()
         if self.hovered_segment == index:
             if not (state & Gtk.StateFlags.PRELIGHT):
-                self.children_segments[index].set_state_flags(
-                    Gtk.StateFlags.PRELIGHT, False
-                )
+                self.segments[index].set_state_flags(Gtk.StateFlags.PRELIGHT, False)
         else:
             if state & Gtk.StateFlags.PRELIGHT:
-                self.children_segments[index].unset_state_flags(Gtk.StateFlags.PRELIGHT)
+                self.segments[index].unset_state_flags(Gtk.StateFlags.PRELIGHT)
 
-
-        state = self.children_segments[index].get_state_flags()
+        state = self.segments[index].get_state_flags()
 
         # Apply State
         p = max(
-            (
-                padding := self.get_segment_style(index).get_padding(
-                    self.children_segments[index].get_state_flags()
-                )
-            ).top,
+            (padding := self.get_segment_style(index).get_padding(state)).top,
             padding.bottom,
             padding.left,
             padding.right,
+            0.1,
         )
         inner_radius += p
         outer_radius -= p
 
         border = max(
-            (
-                border := self.get_segment_style(index).get_border(
-                    self.children_segments[index].get_state_flags()
-                )
-            ).top,
+            (border := self.get_segment_style(index).get_border(state)).top,
             border.bottom,
             border.left,
             border.right,
@@ -184,23 +167,20 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
 
         Gdk.cairo_set_source_rgba(
             cr,
-            self.get_segment_style(index).get_property(
-                "background-color", self.children_segments[index].get_state_flags()
-            ),
+            self.get_segment_style(index).get_property("background-color", state),
         )
 
         inner_theta = math.atan(p / (inner_radius))
         outer_theta = math.atan(p / (outer_radius))
-
-        start_outer_angle = index * ((2 * math.pi) / self.num_segments) + outer_theta
+        start_outer_angle = index * ((2 * math.pi) / len(self.segments)) + outer_theta
         end_outer_angle = (index + 1) * (
-            (2 * math.pi) / self.num_segments
+            (2 * math.pi) / len(self.segments)
         ) - outer_theta
-
-        start_inner_angle = index * ((2 * math.pi) / self.num_segments) + inner_theta
+        start_inner_angle = index * ((2 * math.pi) / len(self.segments)) + inner_theta
         end_inner_angle = (index + 1) * (
-            (2 * math.pi) / self.num_segments
+            (2 * math.pi) / len(self.segments)
         ) - inner_theta
+
         cr.arc(
             self.center_x,
             self.center_y,
@@ -219,9 +199,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         cr.fill_preserve()
         Gdk.cairo_set_source_rgba(
             cr,
-            self.get_segment_style(index).get_property(
-                "border-color", self.children_segments[index].get_state_flags()
-            ),
+            self.get_segment_style(index).get_property("border-color", state),
         )
         cr.stroke()
 
@@ -236,9 +214,8 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         if segment is not None:
             print(f"Segment {segment} clicked")
             self.queue_draw()
-        
-        self.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
 
+        self.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
 
     def get_segment(self, x, y):
         dx, dy = x - self.center_x, y - self.center_y
@@ -251,10 +228,10 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         if angle < 0:
             angle += 2 * math.pi
 
-        return int(angle / ((2 * math.pi) / self.num_segments))
+        return int(angle / ((2 * math.pi) / len(self.segments)))
 
     def get_segment_style(self, index: int):
-        return self.children_segments[index].get_style_context()
+        return self.segments[index].get_style_context()
 
 
 class RadialMenu(Gtk.Fixed, Widget):
@@ -316,17 +293,17 @@ class RadialMenu(Gtk.Fixed, Widget):
             size,
             **kwargs,
         )
-        self.children_segments = children
+        self.segments = children
         self.center_child = center_child
         super().put(self.drawing_area, 0, 0)
         self.drawing_area.connect("size-allocate", self.on_size_allocate)
-    
+
     def on_size_allocate(self, _, __):
         print("Size allocated, moving widgets")
         self.move_widgets()
 
     def move_widgets(self):
-        for i in range(len(self.children_segments)):
+        for i in range(len(self.segments)):
             self.move_segment_child(i)
         if self.center_child is not None:
             child_size = self.center_child.get_preferred_size()
@@ -344,10 +321,10 @@ class RadialMenu(Gtk.Fixed, Widget):
             )
 
     def move_segment_child(self, i: int):
-        child = self.children_segments[i].child
+        child = self.segments[i].child
         if child is None:
             return
-        angle_step = (2 * math.pi) / len(self.children_segments)
+        angle_step = (2 * math.pi) / len(self.segments)
         start_angle = i * angle_step
         end_angle = (i + 1) * angle_step
 
@@ -397,6 +374,7 @@ menu = RadialMenu(
         size=(150, 150),
     ),
 )
+
 win = Window(
     layer="overlay",
     child=menu,
@@ -406,7 +384,7 @@ win = Window(
 
 app = Application()
 app.set_stylesheet_from_file(
-    "/home/muhammad/nixOS/fabric/fabric_config/widgets/radial_menu/test_style.css"
+    "test_style.css"
 )
 
 app.run()
