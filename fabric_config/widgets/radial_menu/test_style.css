@@ -6,14 +6,31 @@
 
 }
 
-
 #radial-menu {
     transition-property: background-color;
-    transition-duration: 0.5s;
+    transition-duration: 0.1s;
     transition-timing-function: cubic-bezier(0, 0, 1, 1);
-
+    background-color: red;
     min-width: 700px;
     min-height: 700px;
+    padding: 30px;
+}
+
+.radial-segment {
+    transition-property: background-color, padding, border-color;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0, 0, 1, 1);
+    padding: 30px;
+    background-color: red;
+    border-color: beige;
+    border-width: 10px;
+    border-style: solid;
+}
+
+.radial-segment:hover {
+    padding: 10px;
+    background-color: rgb(53, 79, 79);
+    border-color: aquamarine;
 }
 
 

@@ -9,6 +9,7 @@ from fabric.widgets.widget import Widget
 from fabric.widgets.image import Image
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
+from animator import Animator
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
@@ -57,6 +58,15 @@ class RadialMenuSegment(Widget):
             size,
             **kwargs,
         )
+
+    def get_padding(self, state: Gtk.StateFlags):
+        return max(
+            (padding := self.get_style_context().get_padding(state)).top,
+            padding.bottom,
+            padding.left,
+            padding.right,
+        )
+
 
 class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
     def __init__(
@@ -132,7 +142,9 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         for i in range(len(self.segments)):
             self.draw_segment(cr, i, self.outer_radius, self.inner_radius)
 
-    def draw_segment(self, cr: cairo.Context, index, outer_radius, inner_radius):
+    def draw_segment(
+        self, cr: cairo.Context, index: int, outer_radius: float, inner_radius: float
+    ):
         cr.new_path()
 
         # Set State
@@ -143,17 +155,9 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         else:
             if state & Gtk.StateFlags.PRELIGHT:
                 self.segments[index].unset_state_flags(Gtk.StateFlags.PRELIGHT)
-
         state = self.segments[index].get_state_flags()
-
         # Apply State
-        p = max(
-            (padding := self.get_segment_style(index).get_padding(state)).top,
-            padding.bottom,
-            padding.left,
-            padding.right,
-            0.1,
-        )
+        p = self.segments[index].get_padding(state)
         inner_radius += p
         outer_radius -= p
 
@@ -170,8 +174,8 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
             self.get_segment_style(index).get_property("background-color", state),
         )
 
-        inner_theta = math.atan(p / (inner_radius))
-        outer_theta = math.atan(p / (outer_radius))
+        inner_theta = math.atan(p / (inner_radius)) if p != 0 else 0
+        outer_theta = math.atan(p / (outer_radius)) if p != 0 else 0
         start_outer_angle = index * ((2 * math.pi) / len(self.segments)) + outer_theta
         end_outer_angle = (index + 1) * (
             (2 * math.pi) / len(self.segments)
@@ -352,6 +356,7 @@ class RadialMenu(Gtk.Fixed, Widget):
 radial_children = [
     RadialMenuSegment(
         name=f"radial-segment-{i}",
+        style_classes="radial-segment",
         child=Box(
             orientation="vertical",
             children=[
@@ -363,7 +368,7 @@ radial_children = [
             ],
         ),
     )
-    for i in range(1, 5)
+    for i in range(0, 4)
 ]
 
 menu = RadialMenu(
@@ -383,8 +388,6 @@ win = Window(
 )
 
 app = Application()
-app.set_stylesheet_from_file(
-    "test_style.css"
-)
+app.set_stylesheet_from_file("test_style.css")
 
 app.run()
