@@ -115,7 +115,14 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.get_style_ctx()
         self.hovered_segment = None
 
+        self.animator = Animator(
+            bezier_curve=[0, 0, 1, 1],
+            duration=1,
+            tick_widget=self,
+            notify_value=self.on_animate_play,
+        )
         self.connect("draw", self.on_draw)
+
         self.add_events(
             [Gdk.EventMask.BUTTON_PRESS_MASK, Gdk.EventMask.POINTER_MOTION_MASK]
         )
@@ -152,12 +159,17 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         if self.hovered_segment == index:
             if not (state & Gtk.StateFlags.PRELIGHT):
                 self.segments[index].set_state_flags(Gtk.StateFlags.PRELIGHT, False)
+                self.animate_segment(index, state, Gtk.StateFlags.PRELIGHT)
         else:
             if state & Gtk.StateFlags.PRELIGHT:
                 self.segments[index].unset_state_flags(Gtk.StateFlags.PRELIGHT)
         state = self.segments[index].get_state_flags()
         # Apply State
-        p = self.segments[index].get_padding(state)
+        p = (
+            self.segments[index].get_padding(state)
+            if index != self.hovered_segment
+            else self.hovered_padding
+        )
         inner_radius += p
         outer_radius -= p
 
@@ -206,6 +218,20 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
             self.get_segment_style(index).get_property("border-color", state),
         )
         cr.stroke()
+
+    def animate_segment(
+        self, index: int, from_state: Gtk.StateFlags, to_state: Gtk.StateFlags
+    ):
+        self.hovered_segment = index
+        from_state_padding = self.segments[index].get_padding(from_state)
+        to_state_padding = self.segments[index].get_padding(to_state)
+        self.animator.min_value = from_state_padding
+        self.animator.max_value = to_state_padding
+        self.animator.play()
+
+    def on_animate_play(self, p: Animator, *_):
+        self.hovered_padding = p.value
+        self.queue_draw()  # see if this is needed
 
     def on_motion(self, widget, event):
         segment = self.get_segment(event.x, event.y)
