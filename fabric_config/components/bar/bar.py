@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fabric.hyprland.widgets import WorkspaceButton, Workspaces
+from fabric.hyprland.widgets import WorkspaceButton, HyprlandWorkspaces
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -47,7 +47,7 @@ class StatusBarSeperated(WaylandWindow):
     def __init__(self):
         self.bar_content = CenterBox(name="system-bar")
 
-        self.workspaces = Workspaces(
+        self.workspaces = HyprlandWorkspaces(
             name="workspaces",
             spacing=2,
             buttons=[WorkspaceButtonNoLabel(i) for i in range(1, 7)],
@@ -136,7 +136,7 @@ class StatusBar(WaylandWindow):
     ):
         # causes gtk issue, look into this
         self.center_box = CenterBox(name="main-window")
-        self.workspaces = Workspaces(
+        self.workspaces = HyprlandWorkspaces(
             name="workspaces",
             spacing=2,
             buttons=[WorkspaceButtonNoLabel(i + 1) for i in range(7)],
