@@ -131,11 +131,14 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.previous_hovered = None
 
         # Weight shift parameters
-        self.shift_distance = 16.0
+        self.shift_distance = 32.0
         self.shift_offset_x = 0.0
         self.shift_offset_y = 0.0
         self.target_shift_x = 0.0
         self.target_shift_y = 0.0
+
+        self._shift_start_x = 0.0
+        self._shift_start_y = 0.0
 
         self.shift_animator = Animator(
             bezier_curve=(0.25, 1.2, 0.5, 1.0),
@@ -183,7 +186,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.connect("motion-notify-event", self.on_motion)
 
     def get_style_ctx(self):
-        # TODO: allow the user to choose outer radius, inner radius just like they can choose size
+        # TODO: allow the user to choose inner radius just like they can choose size
         style_context = self.get_style_context()
         self.size = max(
             style_context.get_property("min-width", style_context.get_state()),
@@ -193,11 +196,11 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
             self.size + self.shift_distance * 2, self.size + self.shift_distance * 2
         )
 
-        self.center_x = (self.size + self.shift_distance * 2) / 2
-        self.center_y = (self.size + self.shift_distance * 2) / 2
+        self.center_x = (self.size / 2) + self.shift_distance
+        self.center_y = (self.size / 2) + self.shift_distance
 
-        self.outer_radius = (self.size) / 2
-        self.inner_radius = self.outer_radius / 3
+        self.outer_radius = self.size / 2
+        self.inner_radius = self.outer_radius / 2.5
 
     def on_draw(self, _, cr: cairo.Context):
         self.get_style_ctx()
@@ -216,10 +219,10 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         cr.save()
 
         segment = self.segments[index]
-
-        cr.new_path()
-
         state = segment.get_state_flags()
+
+        cr.set_line_width(segment.get_border(state))
+        cr.new_path()
 
         if segment.is_animating:
             p = segment.animated_padding
@@ -228,8 +231,6 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
 
         inner_radius += p
         outer_radius -= p
-
-        cr.set_line_width(self.segments[index].get_border(state))
 
         Gdk.cairo_set_source_rgba(
             cr, self.get_segment_style(index).get_property("background-color", state)
@@ -265,9 +266,9 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         Gdk.cairo_set_source_rgba(
             cr, self.get_segment_style(index).get_property("border-color", state)
         )
-        cr.stroke()
 
-        cr.restore()  # Restore context state
+        cr.stroke()
+        cr.restore()
 
     def animate_hover_in(self, index: int):
         segment = self.segments[index]
@@ -343,10 +344,6 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
     def on_shift_animate(self, animator: Animator, *_):
         progress = animator.value
 
-        if not hasattr(self, "_shift_start_x"):
-            self._shift_start_x = 0.0
-            self._shift_start_y = 0.0
-
         # Interpolate
         self.shift_offset_x = (
             self._shift_start_x + (self.target_shift_x - self._shift_start_x) * progress
@@ -375,8 +372,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
                 self.queue_draw()
 
     def on_click(self, _, event):
-        segment = self.get_segment(event.x, y=event.y)
-        if segment is not None:
+        if (segment := self.get_segment(event.x, y=event.y)) is not None:
             self.segments[segment].emit("clicked", True)
             self.queue_draw()
 
@@ -384,13 +380,13 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
 
     def get_segment(self, x, y):
         dx, dy = x - self.center_x, y - self.center_y
-        distance = math.sqrt(dx**2 + dy**2)
 
-        if distance > self.outer_radius or distance < self.inner_radius:
+        if (
+            distance := math.sqrt(dx**2 + dy**2)
+        ) > self.outer_radius or distance < self.inner_radius:
             return None
 
-        angle = math.atan2(dy, dx)
-        if angle < 0:
+        if (angle := math.atan2(dy, dx)) < 0:
             angle += 2 * math.pi
 
         return int(angle / ((2 * math.pi) / len(self.segments)))
@@ -466,7 +462,6 @@ class RadialMenu(Gtk.Fixed, Widget):
         self.drawing_area.connect("draw", self.on_drawing_area_draw)
 
     def on_size_allocate(self, _, __):
-        print("Size allocated, moving widgets")
         self.move_widgets()
 
     def on_drawing_area_draw(self, *_):
