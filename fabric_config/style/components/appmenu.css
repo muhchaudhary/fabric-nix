@@ -65,7 +65,7 @@
 
     100% {
         background-color: unset;
-    }
+    } 
 }
 
 #appmenu-button.shine {
@@ -93,22 +93,17 @@
     background-color: alpha(var(--fg-test), 0.25);
 }
 
-#appmenu-button:focus image,
+/* #appmenu-button:focus image,
 #appmenu-button:focus label {
     color: black;
-}
+} */
 
 #appmenu-button:focus {
-    background-color: alpha(var(--fg-test), 0.5);
-}
-
-#appmenu-button:active label,
-#appmenu-button:active image {
-    color: black;
+    background-color: alpha(var(--fg-test), 0.4);
 }
 
 #appmenu-button:active {
-    background-color: alpha(#ffffff, 1);
+    background-color: alpha(var(--fg-test), 0.4);
 }
 
 #appmenu-button label {

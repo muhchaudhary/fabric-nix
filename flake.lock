@@ -24,11 +24,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1749312963,
-        "narHash": "sha256-wrPl1G/Cn4A/x4e5Dx0DqfTC/lPO+fJ7gW11dZgu0yc=",
+        "lastModified": 1760493677,
+        "narHash": "sha256-oH9JFf0/ASJFxl//ou3IkoCRf/Bm79ndRl/OPUINjAA=",
         "owner": "muhchaudhary",
         "repo": "glace",
-        "rev": "1ea5301538d48bf628c394bbbece81f1b6d32e53",
+        "rev": "0dbd52d13fb739ed64c2b330921f2db4b0f0ada0",
         "type": "github"
       },
       "original": {
@@ -106,11 +106,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1760038930,
-        "narHash": "sha256-Oncbh0UmHjSlxO7ErQDM3KM0A5/Znfofj2BSzlHLeVw=",
+        "lastModified": 1761114652,
+        "narHash": "sha256-f/QCJM/YhrV/lavyCVz8iU3rlZun6d+dAiC3H+CDle4=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "0b4defa2584313f3b781240b29d61f6f9f7e0df3",
+        "rev": "01f116e4df6a15f4ccdffb1bcd41096869fb385c",
         "type": "github"
       },
       "original": {
