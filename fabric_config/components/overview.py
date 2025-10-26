@@ -148,7 +148,12 @@ class Overview(PopupWindow):
     def __init__(self):
         self.glace_manager = Glace.Manager()
         # self.client_output = ClientOutput()
-        self.overview_box = Box(name="overview-window", style_classes=["cool-border"], orientation="v", spacing=5)
+        self.overview_box = Box(
+            name="overview-window",
+            style_classes=["cool-border"],
+            orientation="v",
+            spacing=5,
+        )
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
 
@@ -190,7 +195,6 @@ class Overview(PopupWindow):
         ):
             # We don't want any special workspaces to be included
             if client["workspace"]["id"] > 0:
-                print(client["size"])
                 self.clients[client["address"]] = HyprlandWindowButton(
                     window=self,
                     title=client["title"],
@@ -260,15 +264,12 @@ class Overview(PopupWindow):
             )
 
         for client_addr in self.clients.keys():
-            invoke_repeater(
-                300,
-                self.glace_manager.capture_client_handle,
-                int(client_addr, 16),
-                False,
-                update_pixbuf,
-                client_addr,
-                initial_call=False if signal_update else True,
-            )
+            try:
+                self.glace_manager.capture_client_handle(
+                    int(client_addr, 16), False, update_pixbuf, client_addr
+                )
+            except Exception as e:
+                logger.error(f"Error capturing client {client_addr}: {e}")
 
     def do_update(self, *_):
         if self.popup_visible:
