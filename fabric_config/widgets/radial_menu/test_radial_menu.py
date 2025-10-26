@@ -10,6 +10,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.box import Box
 from fabric.widgets.label import Label
 from animator import Animator
+from fabric.core import Signal
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gdk, Gtk
@@ -20,6 +21,9 @@ def polar_to_cartesian(x, y, angle, r):
 
 
 class RadialMenuSegment(Widget):
+    @Signal
+    def clicked(self, is_clicked: bool) -> bool: ...
+
     def __init__(
         self,
         child: Widget | None = None,
@@ -59,12 +63,23 @@ class RadialMenuSegment(Widget):
             **kwargs,
         )
 
+        self.animated_padding = 0.0
+        self.is_animating = False
+
     def get_padding(self, state: Gtk.StateFlags):
         return max(
             (padding := self.get_style_context().get_padding(state)).top,
             padding.bottom,
             padding.left,
             padding.right,
+        )
+
+    def get_border(self, state: Gtk.StateFlags):
+        return max(
+            (border := self.get_style_context().get_border(state)).top,
+            border.bottom,
+            border.left,
+            border.right,
         )
 
 
@@ -112,15 +127,53 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         )
         self.segments = children
         self.center_child = center_child
-        self.get_style_ctx()
         self.hovered_segment = None
+        self.previous_hovered = None
 
-        self.animator = Animator(
-            bezier_curve=[0, 0, 1, 1],
-            duration=1,
+        # Weight shift parameters
+        self.shift_distance = 16.0
+        self.shift_offset_x = 0.0
+        self.shift_offset_y = 0.0
+        self.target_shift_x = 0.0
+        self.target_shift_y = 0.0
+
+        self.shift_animator = Animator(
+            bezier_curve=(0.25, 1.2, 0.5, 1.0),
+            duration=0.35,
             tick_widget=self,
-            notify_value=self.on_animate_play,
         )
+        self.shift_animator.connect("notify::value", self.on_shift_animate)
+
+        self.get_style_ctx()
+
+        self.segment_animators = []
+        for i in range(len(self.segments)):
+            hover_in = Animator(
+                bezier_curve=(0.34, 1.56, 0.64, 1.0),
+                duration=0.4,
+                tick_widget=self,
+            )
+            hover_in.connect(
+                "notify::value", lambda a, _, idx=i: self.on_segment_animate(idx, a)
+            )
+
+            hover_out = Animator(
+                bezier_curve=(0.5, 1.8, 0.5, 1.0),
+                duration=0.35,
+                tick_widget=self,
+            )
+            hover_out.connect(
+                "notify::value", lambda a, _, idx=i: self.on_segment_animate(idx, a)
+            )
+
+            self.segment_animators.append(
+                {
+                    "hover_in": hover_in,
+                    "hover_out": hover_out,
+                    "animating_type": None,  # 'in' or 'out'
+                }
+            )
+
         self.connect("draw", self.on_draw)
 
         self.add_events(
@@ -130,72 +183,67 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.connect("motion-notify-event", self.on_motion)
 
     def get_style_ctx(self):
+        # TODO: allow the user to choose outer radius, inner radius just like they can choose size
         style_context = self.get_style_context()
-        self.width: int = style_context.get_property("min-width", Gtk.StateFlags.NORMAL)  # type: ignore
-        self.height: int = style_context.get_property(
-            "min-height", Gtk.StateFlags.NORMAL
-        )  # type: ignore
-        self.set_size_request(self.width, self.height)
+        self.size = max(
+            style_context.get_property("min-width", style_context.get_state()),
+            style_context.get_property("min-height", style_context.get_state()),
+        )
+        self.set_size_request(
+            self.size + self.shift_distance * 2, self.size + self.shift_distance * 2
+        )
 
-        self.center_x = (self.width) / 2
-        self.center_y = (self.height) / 2
-        self.radius = self.height / 2
-        self.outer_radius = self.radius
-        self.inner_radius = self.radius / 3
+        self.center_x = (self.size + self.shift_distance * 2) / 2
+        self.center_y = (self.size + self.shift_distance * 2) / 2
+
+        self.outer_radius = (self.size) / 2
+        self.inner_radius = self.outer_radius / 3
 
     def on_draw(self, _, cr: cairo.Context):
         self.get_style_ctx()
 
+        cr.save()
+        cr.translate(self.shift_offset_x, self.shift_offset_y)
+
         for i in range(len(self.segments)):
             self.draw_segment(cr, i, self.outer_radius, self.inner_radius)
+
+        cr.restore()
 
     def draw_segment(
         self, cr: cairo.Context, index: int, outer_radius: float, inner_radius: float
     ):
+        cr.save()
+
+        segment = self.segments[index]
+
         cr.new_path()
 
-        # Set State
-        state = self.segments[index].get_state_flags()
-        if self.hovered_segment == index:
-            if not (state & Gtk.StateFlags.PRELIGHT):
-                self.segments[index].set_state_flags(Gtk.StateFlags.PRELIGHT, False)
-                self.animate_segment(index, state, Gtk.StateFlags.PRELIGHT)
+        state = segment.get_state_flags()
+
+        if segment.is_animating:
+            p = segment.animated_padding
         else:
-            if state & Gtk.StateFlags.PRELIGHT:
-                self.segments[index].unset_state_flags(Gtk.StateFlags.PRELIGHT)
-        state = self.segments[index].get_state_flags()
-        # Apply State
-        p = (
-            self.segments[index].get_padding(state)
-            if index != self.hovered_segment
-            else self.hovered_padding
-        )
+            p = segment.get_padding(state)
+
         inner_radius += p
         outer_radius -= p
 
-        border = max(
-            (border := self.get_segment_style(index).get_border(state)).top,
-            border.bottom,
-            border.left,
-            border.right,
-        )
-        cr.set_line_width(border)
+        cr.set_line_width(self.segments[index].get_border(state))
 
         Gdk.cairo_set_source_rgba(
-            cr,
-            self.get_segment_style(index).get_property("background-color", state),
+            cr, self.get_segment_style(index).get_property("background-color", state)
         )
 
+        theta = (2 * math.pi) / len(self.segments)
         inner_theta = math.atan(p / (inner_radius)) if p != 0 else 0
         outer_theta = math.atan(p / (outer_radius)) if p != 0 else 0
-        start_outer_angle = index * ((2 * math.pi) / len(self.segments)) + outer_theta
-        end_outer_angle = (index + 1) * (
-            (2 * math.pi) / len(self.segments)
-        ) - outer_theta
-        start_inner_angle = index * ((2 * math.pi) / len(self.segments)) + inner_theta
-        end_inner_angle = (index + 1) * (
-            (2 * math.pi) / len(self.segments)
-        ) - inner_theta
+
+        start_outer_angle = index * theta + outer_theta
+        end_outer_angle = (index + 1) * theta - outer_theta
+
+        start_inner_angle = index * theta + inner_theta
+        end_inner_angle = (index + 1) * theta - inner_theta
 
         cr.arc(
             self.center_x,
@@ -213,36 +261,123 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         )
         cr.close_path()
         cr.fill_preserve()
+
         Gdk.cairo_set_source_rgba(
-            cr,
-            self.get_segment_style(index).get_property("border-color", state),
+            cr, self.get_segment_style(index).get_property("border-color", state)
         )
         cr.stroke()
 
-    def animate_segment(
-        self, index: int, from_state: Gtk.StateFlags, to_state: Gtk.StateFlags
-    ):
-        self.hovered_segment = index
-        from_state_padding = self.segments[index].get_padding(from_state)
-        to_state_padding = self.segments[index].get_padding(to_state)
-        self.animator.min_value = from_state_padding
-        self.animator.max_value = to_state_padding
-        self.animator.play()
+        cr.restore()  # Restore context state
 
-    def on_animate_play(self, p: Animator, *_):
-        self.hovered_padding = p.value
-        self.queue_draw()  # see if this is needed
+    def animate_hover_in(self, index: int):
+        segment = self.segments[index]
+        animators = self.segment_animators[index]
+        segment.is_animating = True
+        animators["animating_type"] = "in"
+
+        state = segment.get_state_flags()
+        if not (state & Gtk.StateFlags.PRELIGHT):
+            segment.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
+
+        normal_padding = segment.get_padding(Gtk.StateFlags.NORMAL)
+        hover_padding = segment.get_padding(Gtk.StateFlags.PRELIGHT)
+
+        animators["hover_out"].pause()
+
+        animators["hover_in"].min_value = segment.animated_padding or normal_padding
+        animators["hover_in"].max_value = hover_padding
+        animators["hover_in"].play()
+
+    def animate_hover_out(self, index: int):
+        segment = self.segments[index]
+        animators = self.segment_animators[index]
+        animators["animating_type"] = "out"
+
+        state = segment.get_state_flags()
+        if state & Gtk.StateFlags.PRELIGHT:
+            segment.unset_state_flags(Gtk.StateFlags.PRELIGHT)
+
+        normal_padding = segment.get_padding(Gtk.StateFlags.NORMAL)
+
+        animators["hover_in"].pause()
+
+        animators["hover_out"].min_value = segment.animated_padding
+        animators["hover_out"].max_value = normal_padding
+        animators["hover_out"].play()
+
+    def on_segment_animate(self, index: int, animator: Animator):
+        segment = self.segments[index]
+        segment.animated_padding = animator.value
+
+        animators = self.segment_animators[index]
+        if (
+            animators["animating_type"] == "out"
+            and animator == animators["hover_out"]
+            and animator.value == animator.max_value
+        ):
+            segment.is_animating = False
+
+        self.queue_draw()
+
+    def animate_weight_shift(self, segment_index: int | None):
+        self._shift_start_x = self.shift_offset_x
+        self._shift_start_y = self.shift_offset_y
+
+        if segment_index is None:
+            self.target_shift_x = 0.0
+            self.target_shift_y = 0.0
+        else:
+            angle_per_segment = (2 * math.pi) / len(self.segments)
+            mid_angle = (segment_index + 0.5) * angle_per_segment
+
+            self.target_shift_x = self.shift_distance * math.cos(mid_angle)
+            self.target_shift_y = self.shift_distance * math.sin(mid_angle)
+
+        # Reset and play animation
+        self.shift_animator.pause()
+        self.shift_animator.min_value = 0.0
+        self.shift_animator.max_value = 1.0
+        self.shift_animator.value = 0.0
+        self.shift_animator.play()
+
+    def on_shift_animate(self, animator: Animator, *_):
+        progress = animator.value
+
+        if not hasattr(self, "_shift_start_x"):
+            self._shift_start_x = 0.0
+            self._shift_start_y = 0.0
+
+        # Interpolate
+        self.shift_offset_x = (
+            self._shift_start_x + (self.target_shift_x - self._shift_start_x) * progress
+        )
+        self.shift_offset_y = (
+            self._shift_start_y + (self.target_shift_y - self._shift_start_y) * progress
+        )
+
+        self.queue_draw()
 
     def on_motion(self, widget, event):
         segment = self.get_segment(event.x, event.y)
         if segment != self.hovered_segment:
-            self.hovered_segment = segment
-            self.queue_draw()
+            # Handle hover out for previous segment
+            if self.hovered_segment is not None:
+                self.previous_hovered = self.hovered_segment
+                self.animate_hover_out(self.previous_hovered)
 
-    def on_click(self, widget, event):
+            # Handle hover in for new segment
+            self.hovered_segment = segment
+            if self.hovered_segment is not None:
+                self.animate_hover_in(self.hovered_segment)
+                self.animate_weight_shift(self.hovered_segment)
+            else:
+                self.animate_weight_shift(None)
+                self.queue_draw()
+
+    def on_click(self, _, event):
         segment = self.get_segment(event.x, y=event.y)
         if segment is not None:
-            print(f"Segment {segment} clicked")
+            self.segments[segment].emit("clicked", True)
             self.queue_draw()
 
         self.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
@@ -251,7 +386,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         dx, dy = x - self.center_x, y - self.center_y
         distance = math.sqrt(dx**2 + dy**2)
 
-        if distance > self.radius or distance < self.inner_radius:
+        if distance > self.outer_radius or distance < self.inner_radius:
             return None
 
         angle = math.atan2(dy, dx)
@@ -328,29 +463,41 @@ class RadialMenu(Gtk.Fixed, Widget):
         super().put(self.drawing_area, 0, 0)
         self.drawing_area.connect("size-allocate", self.on_size_allocate)
 
+        self.drawing_area.connect("draw", self.on_drawing_area_draw)
+
     def on_size_allocate(self, _, __):
         print("Size allocated, moving widgets")
         self.move_widgets()
 
+    def on_drawing_area_draw(self, *_):
+        self.move_widgets()
+        return False
+
     def move_widgets(self):
+        shift_x = self.drawing_area.shift_offset_x
+        shift_y = self.drawing_area.shift_offset_y
+
         for i in range(len(self.segments)):
-            self.move_segment_child(i)
+            self.move_segment_child(i, shift_x, shift_y)
         if self.center_child is not None:
             child_size = self.center_child.get_preferred_size()
+            center_x = self.drawing_area.center_x + shift_x
+            center_y = self.drawing_area.center_y + shift_y
+
             if self.center_child in super().get_children():
                 super().move(
                     self.center_child,
-                    self.drawing_area.outer_radius - child_size.natural_size.width / 2,
-                    self.drawing_area.center_y - child_size.natural_size.height / 2,
+                    center_x - child_size.natural_size.width / 2,
+                    center_y - child_size.natural_size.height / 2,
                 )
                 return
             super().put(
                 self.center_child,
-                self.drawing_area.center_x - child_size.natural_size.width / 2,
-                self.drawing_area.center_y - child_size.natural_size.height / 2,
+                center_x - child_size.natural_size.width / 2,
+                center_y - child_size.natural_size.height / 2,
             )
 
-    def move_segment_child(self, i: int):
+    def move_segment_child(self, i: int, shift_x: float = 0, shift_y: float = 0):
         child = self.segments[i].child
         if child is None:
             return
@@ -360,8 +507,8 @@ class RadialMenu(Gtk.Fixed, Widget):
 
         child_size = child.get_preferred_size()
         segment_center_x, segment_center_y = polar_to_cartesian(
-            self.drawing_area.center_x,
-            self.drawing_area.center_y,
+            self.drawing_area.center_x + shift_x,
+            self.drawing_area.center_y + shift_y,
             (start_angle + end_angle) / 2,
             (self.drawing_area.outer_radius + self.drawing_area.inner_radius) / 2,
         )
@@ -381,36 +528,58 @@ class RadialMenu(Gtk.Fixed, Widget):
 
 radial_children = [
     RadialMenuSegment(
-        name=f"radial-segment-{i}",
         style_classes="radial-segment",
         child=Box(
             orientation="vertical",
             children=[
                 Image(
-                    image_file="/home/muhammad/Pictures/bolt.png",
-                    size=(100, -1),
+                    icon_name=[
+                        "changes-prevent-symbolic",
+                        "night-light-symbolic",
+                        "system-reboot-symbolic",
+                        "system-log-out-symbolic",
+                        "system-shutdown-symbolic",
+                    ][i],
+                    icon_size=64,
+                    style="color: black;",
                 ),
-                Label(f"Item {i}", style="color: black; font-size: 30px;"),
+                Label(
+                    ["Lock", "Sleep", "Reboot", "Log Out", "Shut Down"][i],
+                    style="color: black; font-size: 20px;",
+                ),
             ],
         ),
     )
-    for i in range(0, 4)
+    for i in range(0, 5)
 ]
 
-menu = RadialMenu(
-    name="radial-menu",
-    children=radial_children,
-    center_child=Image(
-        image_file="/home/muhammad/Pictures/bolt.png",
-        size=(150, 150),
-    ),
-)
+
+def on_child_click(child: RadialMenuSegment, _):
+    print(f'Child with label "{child.child.get_children()[1].get_label()}" clicked!')
+
+
+for child in radial_children:
+    child.connect("clicked", on_child_click)
+
 
 win = Window(
     layer="overlay",
-    child=menu,
+    child=RadialMenu(
+        name="radial-menu",
+        children=radial_children,
+        center_child=Box(
+            orientation="v",
+            name="radial-menu-center",
+            children=[
+                Image(
+                    icon_name="emblem-system-symbolic",
+                    icon_size=200,
+                ),
+                # Label("Power", style="color: black; font-size: 32px;"),
+            ],
+        ),
+    ),
     anchor="center",
-    style="background-color: unset;",
 )
 
 app = Application()
