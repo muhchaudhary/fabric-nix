@@ -43,6 +43,7 @@
         };
 
         python-depends = {
+          pyinstrument = pkgs.python312Packages.pyinstrument;
           lxml = pkgs.python312Packages.lxml;
           psutil = pkgs.python312Packages.psutil;
           requests = pkgs.python312Packages.requests;

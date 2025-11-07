@@ -131,7 +131,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         self.previous_hovered = None
 
         # Weight shift parameters
-        self.shift_distance = 32.0
+        self.shift_distance = 3.0
         self.shift_offset_x = 0.0
         self.shift_offset_y = 0.0
         self.target_shift_x = 0.0

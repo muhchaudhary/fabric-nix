@@ -12,7 +12,7 @@
 }
 
 #radial-menu-center {
-    background-color: rgba(35, 197, 54, 0.6); 
+    background-color: rgba(35, 159, 197, 0.6);
     /* padding: 60px; */
     border-radius: 100%;
     border-color: rgb(0, 0, 0);
@@ -28,7 +28,7 @@
 
 .radial-segment {
     padding: 30px;
-    background-color: rgba(35, 197, 54, 0.6);
+    background-color: rgba(35, 159, 197, 0.6);
     border-color: rgb(0, 0, 0);
     border-width: 3px;
     border-style: solid;
