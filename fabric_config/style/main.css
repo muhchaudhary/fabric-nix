@@ -12,8 +12,6 @@
 
 #system-tray {
   background-color: var(--bg-test-transparent);
-  padding: 3px 5px 3px 5px;
-  border-radius: 10px;
 }
 
 tooltip {
@@ -42,12 +40,15 @@ scale {
   border-width: 2px;
   border-radius: 10px;
   border-color: transparent;
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #date-time:hover,
 #panel-button:hover {
   background-color: alpha(mix(var(--accent), black, 0.5), 0.8);
   border-color: var(--fg-test-transparent);
+  padding: 2px 7px 2px 7px;
+  margin: -2px 0px -2px 0px;
 }
 
 #panel-button label {
@@ -65,6 +66,8 @@ scale {
   border-color: transparent;
   border-bottom-style: solid;
   border-bottom-color: alpha(white, 0.5);
+  padding: 2px 7px 2px 7px;
+  margin: -2px 0px -2px 0px;
 }
 
 #date-time:active,
@@ -79,6 +82,8 @@ scale {
 #panel-button:active {
   background-color: var(--accent);
   color: var(--bg);
+  padding: 2px 7px 2px 7px;
+  margin: -2px 0px -2px 0px;
 }
 
 
@@ -112,18 +117,19 @@ scale {
   border-radius: 7px;
   margin: 10px 1px 10px 1px;
   background-color: var(--accent);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 
 #player-stack-button.empty,
 #workspaces>button.empty {
-  /* min-width: 9px; */
-  /* margin: 14px 2px 14px 2px; */
   background-color: var(--fg-dim-transparent);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #workspaces>button.urgent {
   background-color: var(--red-dim);
+  transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 #submenu-title {
@@ -157,9 +163,3 @@ scale {
   font-weight: 900;
 }
 
-#clockbox {
-  margin-top: 100px;
-  border-radius: 30px;
-  padding: 10px;
-  background-color: alpha(black, 0.4);
-}

@@ -18,15 +18,14 @@ class ClockWidget(WaylandWindow):
             orientation="v",
         )
 
-        self.center_box.add_center(self.main_box)
+        # self.center_box.add_center(self.main_box)
 
         super().__init__(
             layer="bottom",
             anchor="left top right",
-            # margin="100px 0px 0px 0px",
             all_visible=True,
             exclusive=False,
-            child=self.center_box,
+            child=self.main_box,
         )
 
         self.show_all()

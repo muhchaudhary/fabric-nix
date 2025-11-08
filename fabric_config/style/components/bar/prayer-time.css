@@ -12,6 +12,13 @@
   margin: 3px;
 }
 
+#prayer-info-row.urgent {
+  margin: 5px 0px 5px 0px;
+  padding: 0px 5px 0px 5px;
+  background-color: var(--fg-dim-transparent);
+  border-radius: 5px;
+}
+
 #prayer-info-time-label {
   font-size: 14px;
   color: var(--fg-test);

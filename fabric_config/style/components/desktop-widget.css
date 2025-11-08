@@ -1,19 +1,18 @@
 #date>label,
 #clock>label {
-    font-family: "league spartan";
-    font-weight: 800;
-    font-size: 96px;
-    /* color: alpha(@fg, 0.8); */
-    color: mix(@accent, white, 0.2);
+    font-family: "Oswald";
+    font-weight: bold;
+    font-size: 10em;
+    color: mix(var(--accent), white, 0.2);
+    text-decoration:solid underline var(--accent);
+    text-shadow: 0 0 3px var(--bg-test); /* Solid outline*/
 }
 
-/* #date>label {
-    text-shadow: alpha(mix(@accent, white, 0.3), 1) 3px 3px;
+#date>label {
+    font-size: 4em;
+    padding-bottom: 6px;
+    text-decoration:none;
 }
-
-#clock>label {
-    text-shadow: alpha(mix(@accent, white, 0.3), 1) 5px 5px;
-} */
 
 #date,
 #clock {
@@ -30,9 +29,12 @@
     border-radius: 0px 0px 22px 22px;
 }
 
-#date>label {
-    font-size: 40px;
-    padding-bottom: 6px;
+
+#clockbox {
+  margin-top: 100px;
+  /* border-radius: 30px; */
+  /* padding: 10px; */
+  /* background-color: alpha(black, 0.4); */
 }
 
 /* #sysinfo-container {
