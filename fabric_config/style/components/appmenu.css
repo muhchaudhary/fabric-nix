@@ -29,8 +29,8 @@
     font-size: 16px;
     font-weight: 500;
     padding: 8px 0px 8px 0px;
-    color: #ffffff;
-    caret-color: white;
+    color: var(--fg-test);
+    caret-color: var(--fg-test);
     border-radius: 50px;
     transition: min-width 0.5s cubic-bezier(0.33, 1.29, 1, 1.15);
 }
@@ -65,7 +65,7 @@
 
     100% {
         background-color: unset;
-    } 
+    }
 }
 
 #appmenu-button.shine {
@@ -85,7 +85,7 @@
 
 #appmenu-app-desc {
     font-style: italic;
-    color: #bababa;
+    color: var(--fg-dim);
 }
 
 /* #appmenu-button:hover label, */

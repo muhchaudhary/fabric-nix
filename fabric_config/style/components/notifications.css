@@ -7,7 +7,7 @@
   
   #notification-action-buttons,
   #notification-box box label {
-    color: white;
+    color: var(--fg-test);
   }
   
   #notification-action-buttons button.start-action {
@@ -21,11 +21,11 @@
   
   #notification-seperator {
     min-height: 3px;
-    background-color: alpha(white, 0.4);
+    background-color: var(--bg-test);
   }
   
   #notification-action-buttons button {
-    background-color: alpha(#393939, 0.4);
+    background-color: var(--bg-test);
     padding: 7px;
     margin: 0px 2px 0px 2px;
   }
@@ -35,12 +35,12 @@
   }
   
   #notification-title-button:hover {
-    background-color: alpha(#404040, 0.4);
+    background-color: var(--fg--test);
   }
   
   
   #notification-title-button:active {
-    background-color: alpha(#dadada, 0.4);
+    background-color: var(--fg-test);
   }
   
   #notification-title-circular-progress-bar {
@@ -50,13 +50,13 @@
   }
   
   #notification-action-buttons button:hover {
-    background-color: #404040;
+    background-color: var(--bg-test-transparent);
   }
   
   #notification-action-buttons button:active label,
   #notification-action-buttons button:active {
-    background-color: #dadada;
-    color: #2c2c2c;
+    background-color: var(--bg-test);
+    color: var(--fg-test);
   }
   
   #notification-image image {
