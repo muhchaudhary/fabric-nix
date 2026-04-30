@@ -1,5 +1,6 @@
 import os
 import subprocess
+import sys
 
 GIR_PATHS = []
 
@@ -21,8 +22,9 @@ for buildinput in GIR_PATH.split(" "):
 
 
 acc = ["gengir"]
+python_tag = f"python{sys.version_info.major}.{sys.version_info.minor}"
 acc.extend(
-    ["-o", f"/home/{os.environ.get('USER')}/.local/lib/python3.12/site-packages/gi"]
+    ["-o", f"/home/{os.environ.get('USER')}/.local/lib/{python_tag}/site-packages/gi"]
 )
 acc.extend(GIR_PATHS)
 subprocess.run(acc) if os.environ.get("USER") is not None else None

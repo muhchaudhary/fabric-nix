@@ -51,17 +51,21 @@ class PopupRevealer(EventBox):
             child=child,
             transition_type=transition_type,
             transition_duration=transition_duration,
-            notify_child_revealed=lambda revealer, _: [
-                revealer.hide(),
-                popup_window.set_visible(False),
-            ]
-            if not revealer.fully_revealed
-            else None,
-            notify_reveal_child=lambda revealer, _: [
-                popup_window.set_visible(True),
-            ]
-            if revealer.child_revealed
-            else None,
+            notify_child_revealed=lambda revealer, _: (
+                [
+                    revealer.hide(),
+                    popup_window.set_visible(False),
+                ]
+                if not revealer.fully_revealed
+                else None
+            ),
+            notify_reveal_child=lambda revealer, _: (
+                [
+                    popup_window.set_visible(True),
+                ]
+                if revealer.child_revealed
+                else None
+            ),
         )
         super().__init__(
             style=decorations,

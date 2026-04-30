@@ -3,6 +3,7 @@ from fabric.utils import get_relative_path, monitor_file
 from loguru import logger
 
 import fabric_config.config as config
+
 from fabric_config.components import (
     AppMenu,
     ClockWidget,

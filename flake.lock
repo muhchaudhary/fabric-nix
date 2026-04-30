@@ -21,11 +21,11 @@
         "utils": "utils"
       },
       "locked": {
-        "lastModified": 1761432464,
-        "narHash": "sha256-ELXYed743Xnad8hOMmN5RI0S8w0rltcZbylQjjFiv6s=",
+        "lastModified": 1776442246,
+        "narHash": "sha256-l5H9z9kq8QKbO57xigIU132NaLWPULg23oVOS9E5Sqk=",
         "owner": "Fabric-Development",
         "repo": "fabric",
-        "rev": "0f3d317b047799191ff04a32352a63084eac11d9",
+        "rev": "23cab85fc61f1cdbb5f60db0027dc57026ba05b7",
         "type": "github"
       },
       "original": {
@@ -126,6 +126,22 @@
         "type": "github"
       }
     },
+    "nixpkgsPygobject3": {
+      "locked": {
+        "lastModified": 1733261153,
+        "narHash": "sha256-eq51hyiaIwtWo19fPEeE0Zr2s83DYMKJoukNLgGGpek=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b681065d0919f7eb5309a93cea2cfa84dec9aa88",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "b681065d0919f7eb5309a93cea2cfa84dec9aa88",
+        "type": "github"
+      }
+    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1749143949,
@@ -160,11 +176,11 @@
     },
     "nixpkgs_4": {
       "locked": {
-        "lastModified": 1762363567,
-        "narHash": "sha256-YRqMDEtSMbitIMj+JLpheSz0pwEr0Rmy5mC7myl17xs=",
+        "lastModified": 1777268161,
+        "narHash": "sha256-bxrdOn8SCOv8tN4JbTF/TXq7kjo9ag4M+C8yzzIRYbE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "ae814fd3904b621d8ab97418f1d0f2eb0d3716f4",
+        "rev": "1c3fe55ad329cbcb28471bb30f05c9827f724c76",
         "type": "github"
       },
       "original": {
@@ -192,11 +208,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1762596750,
-        "narHash": "sha256-rXXuz51Bq7DHBlfIjN7jO8Bu3du5TV+3DSADBX7/9YQ=",
+        "lastModified": 1777268161,
+        "narHash": "sha256-bxrdOn8SCOv8tN4JbTF/TXq7kjo9ag4M+C8yzzIRYbE=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "b6a8526db03f735b89dd5ff348f53f752e7ddc8e",
+        "rev": "1c3fe55ad329cbcb28471bb30f05c9827f724c76",
         "type": "github"
       },
       "original": {
@@ -213,6 +229,7 @@
         "fabric-libgray": "fabric-libgray",
         "hyprland-overview-rs": "hyprland-overview-rs",
         "nixpkgs": "nixpkgs_6",
+        "nixpkgsPygobject3": "nixpkgsPygobject3",
         "utils": "utils_2"
       }
     },
