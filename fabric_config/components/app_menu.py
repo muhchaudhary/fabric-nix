@@ -51,7 +51,7 @@ class ApplicationButtonV2(Button):
                 h_align="start",
                 v_align="start",
                 spacing=10,
-                size=(350,-1),
+                size=(350, -1),
                 children=[
                     Image(pixbuf=app_info.get_icon_pixbuf(size=36)),
                     Box(
@@ -162,8 +162,8 @@ class AppMenu(PopupWindow):
             anchor="center-left",
             transition_type="crossfade",
             child=Box(
-                h_expand=True,
-                v_expand=True,
+                # h_expand=True,
+                # v_expand=True,
                 orientation="v",
                 children=[
                     Box(

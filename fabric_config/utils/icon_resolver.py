@@ -23,7 +23,9 @@ if not os.path.exists(CACHE_DIR):
 
 
 class IconResolver:
-    def __init__(self, default_applicaiton_icon: str = "application-x-executable-symbolic"):
+    def __init__(
+        self, default_applicaiton_icon: str = "application-x-executable-symbolic"
+    ):
         if os.path.exists(ICON_CACHE_FILE):
             f = open(ICON_CACHE_FILE)
             try:

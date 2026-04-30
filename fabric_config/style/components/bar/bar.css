@@ -3,7 +3,7 @@
 @import "./components/bar/power-menu.css";
 
 #system-bar {
-  background-color: alpha(white, 0.01);
+  background-color: alpha(black, 0.005);
 }
 
 #system-bar-group,
@@ -11,17 +11,19 @@
   background-color: var(--bg-test-transparent);
 }
 
-
 #system-bar-group.center,
 #system-bar-group.right {
-  border-bottom-left-radius: 15px;
+  border-bottom-left-radius: 10px;
+  padding-left: 10px;
 }
 
 #system-bar-group.center,
 #system-bar-group.left {
-  border-bottom-right-radius: 15px;
+  border-bottom-right-radius: 10px;
+  /* padding: 0px 10px 0px 0px; */
+  padding-right: 10px;
 }
 
-#system-bar-group {
-  padding: 0px 10px 0px 10px;
+#system-bar-group.center {
+  min-width: 138px;
 }

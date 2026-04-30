@@ -5,6 +5,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from gi.repository import GLib
+
 # from fabric_config.widgets.rounded_image import CustomImage
 from fabric.widgets.image import Image
 from fabric.utils import exec_shell_command_async
@@ -45,7 +46,7 @@ class ImageButton(Button):
             self.wallpaper_change(self.wp_path)
 
         exec_shell_command_async(
-            f"hyprctl hyprpaper reload ,'{self.wp_path}'", on_wallpaper_change
+            f"hyprctl hyprpaper wallpaper ', {self.wp_path}'", on_wallpaper_change
         )
 
     def _generate_wp_thumbnail(self):

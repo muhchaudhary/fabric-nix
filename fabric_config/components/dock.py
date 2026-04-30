@@ -205,12 +205,8 @@ class AppDock(Window):
             events=["enter-notify", "leave-notify"],
             child=CenterBox(
                 center_children=self.revealer,
-                start_children=Box(
-                    style="min-height: 10px; min-width: 5px;"
-                ),
-                end_children=Box(
-                    style="min-height: 10px; min-width: 5px;"
-                ),
+                start_children=Box(style="min-height: 10px; min-width: 5px;"),
+                end_children=Box(style="min-height: 10px; min-width: 5px;"),
             ),
             on_enter_notify_event=lambda *_: self.revealer.set_reveal_child(True),
             on_leave_notify_event=lambda *_: self.revealer.set_reveal_child(False),

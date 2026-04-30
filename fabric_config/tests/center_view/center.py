@@ -168,6 +168,7 @@ class CenterViewOSD(Revealer):
         elif type == "kbd":
             self.update_label_keyboard()
 
+
 if __name__ == "__main__":
     view = CenterView()
     window = Window(

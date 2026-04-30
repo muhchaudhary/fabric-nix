@@ -120,7 +120,7 @@ class MouselessOverlay(PopupWindow):
     # TODO: DONT HARDCODE MONITOR SIZE!!!
     def mouse_move(self, x: int, y: int):
         exec_shell_command_async(
-            f"ydotool mousemove --absolute {(x + (1920 - 1920)) / 2} {(y + (1080 - 1044)) /2}",
+            f"ydotool mousemove --absolute {(x + (1920 - 1920)) / 2} {(y + (1080 - 1044)) / 2}",
         )
 
     def mouse_click(self, click_type: Literal["left", "right", "middle"]):

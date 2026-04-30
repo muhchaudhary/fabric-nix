@@ -56,7 +56,7 @@ class MprisPlayer(Service):
     @Property(str, "read-write", default_value="None")
     def loop_status(self) -> Literal["None", "Track", "Playlist"]:
         return self._proxy.get_cached_property("LoopStatus").get_string()  # type: ignore
-    
+
     @loop_status.setter
     def loop_status(self, status: Literal["None", "Track", "Playlist"]) -> None:
         if self._proxy.get_cached_property("LoopStatus") is None:

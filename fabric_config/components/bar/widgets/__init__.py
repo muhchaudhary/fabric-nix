@@ -1,4 +1,5 @@
 from .battery_indicator import BatteryIndicator
+
 # from .glace import OpenAppsBar
 from .prayer_times import PrayerTimesButton
 from .stats import SystemTemps

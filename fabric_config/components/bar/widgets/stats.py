@@ -11,7 +11,10 @@ from fabric.widgets.label import Label
 
 class SystemTemps(Button):
     def __init__(self, **kwargs):
-        super().__init__(style_classes=["button-basic", "button-basic-props", "button-border"], **kwargs)
+        super().__init__(
+            style_classes=["button-basic", "button-basic-props", "button-border"],
+            **kwargs,
+        )
         self.has_gpu = True if exec_shell_command("nvidia-smi") else False
 
         self.fan_speed_label = Label("-1 RPM")
@@ -63,9 +66,9 @@ class SystemTemps(Button):
             sleep(1)
 
     def update_labels(self, data):
-        self.fan_speed_label.set_label(f"{data["fan-speed"]} RPM") if data[
+        self.fan_speed_label.set_label(f"{data['fan-speed']} RPM") if data[
             "fan-speed"
-        ] is not None else self.fan_speed_label.set_label(f"{data["gpu-temp"]}°C   ")
+        ] is not None else self.fan_speed_label.set_label(f"{data['gpu-temp']}°C   ")
 
-        self.cpu_temp_label.set_label(f"{data["cpu-temp"]}°C")
+        self.cpu_temp_label.set_label(f"{data['cpu-temp']}°C")
         return True

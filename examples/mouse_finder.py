@@ -106,7 +106,7 @@ class AnimationWindow(WaylandWindow):
             0,
             eyelid_len,
             -eye_radius * 2 - eylide_width,
-            2 * eyelid_len ,
+            2 * eyelid_len,
             2 * eylide_width,
         )  # Lower arc
 

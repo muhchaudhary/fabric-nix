@@ -22,7 +22,11 @@ class LabelWindow(Window):
             layer="top",
             anchor="center",
             style="background-color: unset",
-            child=Box(size=(350, 350), children=self.label, style="border-radius: 100%; background-color: black;"),
+            child=Box(
+                size=(350, 350),
+                children=self.label,
+                style="border-radius: 100%; background-color: black;",
+            ),
         )
 
         anim = Animator(

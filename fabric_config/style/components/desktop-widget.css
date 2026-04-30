@@ -1,58 +1,19 @@
-#date>label,
-#clock>label {
-    font-family: "Oswald";
-    font-weight: bold;
-    font-size: 10em;
-    color: mix(var(--accent), white, 0.2);
-    text-decoration:solid underline var(--accent);
-    text-shadow: 0 0 3px var(--bg-test); /* Solid outline*/
+#date label,
+#clock label {
+  font-family: "Oswald";
+  font-weight: bolder;
+  color: mix(var(--accent), white, 0.2);
 }
 
-#date>label {
-    font-size: 4em;
-    padding-bottom: 6px;
-    text-decoration:none;
+#clock label {
+  font-size: 10em;
+  text-decoration: solid underline mix(var(--accent), white, 0.2);
 }
 
-#date,
-#clock {
-    padding: 0px 10px 0px 10px;
-    background-color: transparent;
+#date label {
+  font-size: 4em;
 }
-
-#date {
-    padding-top: 10px;
-    border-radius: 22px 22px 0px 0px;
-}
-
-#clock {
-    border-radius: 0px 0px 22px 22px;
-}
-
 
 #clockbox {
-  margin-top: 100px;
-  /* border-radius: 30px; */
-  /* padding: 10px; */
-  /* background-color: alpha(black, 0.4); */
+  margin-top: 50px;
 }
-
-/* #sysinfo-container {
-    padding: 20px;
-    background-color: alpha(#000000, 0.6);
-    border-radius: 1.5em;
-    min-width: 10px;
-} */
-
-/* #battery-circular-progress-bar {
-    border-color: alpha(#009d15, 0.5);
-    color: alpha(#767676, 0.3);
-    min-width: 1em;
-}
-
-#cpu-circular-progress-bar,
-#ram-circular-progress-bar {
-    border-color: green;
-    color: alpha(#767676, 0.3);
-    min-width: 1em;
-} */

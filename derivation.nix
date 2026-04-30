@@ -40,6 +40,7 @@ buildPythonApplication {
     # Additional packages
     fabric-libgray
     fabric-libglace
+    hyprland-overview-rs
     networkmanager
     playerctl
     librsvg

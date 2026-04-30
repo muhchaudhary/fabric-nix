@@ -5,7 +5,6 @@
     border-style: solid;
     border-width: 0.3px;
     border-color: alpha(var(--fg-test), 0.5);
-    padding: 3px 5px 3px 5px;
 }
 
 .tray menuitem,
@@ -123,6 +122,10 @@
     color: var(--fg-test);
     min-width: 15px;
     min-height: 15px;
+}
+
+.tray menuitem radio:checked {
+    -gtk-icon-source: -gtk-icontheme("radio-checked-symbolic");
 }
 
 .tray menuitem check {

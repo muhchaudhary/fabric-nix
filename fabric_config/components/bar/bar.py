@@ -12,7 +12,6 @@ from fabric.widgets.wayland import WaylandWindow
 from fabric_config import config
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
-    # OpenAppsBar,
     PrayerTimesButton,
     SystemTemps,
     SystemTrayRevealer,
@@ -20,6 +19,7 @@ from fabric_config.components.bar.widgets import (
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
 from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
+
 
 class WorkspaceButtonNoLabel(WorkspaceButton):
     def __init__(self, id):
@@ -34,12 +34,21 @@ class WorkspaceButtonNoLabel(WorkspaceButton):
 class StatusBarCorner(Box):
     def __init__(self, corner: Literal["top-right", "top-left"]):
         super().__init__(
-            style="margin-bottom: 15px;",
+            # style="margin-bottom: 25px;",
+            orientation="vertical",
+            h_expand=False,
+            v_expand=False,
             name="system-bar-corner",
-            children=Corner(
-                orientation=corner,
-                size=15,
-            ),
+            children=[
+                Corner(
+                    orientation=corner,
+                    size=10,
+                ),
+                Box(
+                    v_expand=True,
+                    style="background-color: unset;",
+                ),
+            ],
         )
 
 
@@ -109,9 +118,9 @@ class StatusBarSeperated(WaylandWindow):
         ]
         self.bar_content.center_children = [
             StatusBarCorner("top-right"),
-            Box(
+            CenterBox(
                 name="system-bar-group",
-                children=[
+                center_children=[
                     self.workspaces,
                 ],
                 style_classes="center",
@@ -138,6 +147,8 @@ class StatusBar(WaylandWindow):
         self.center_box = CenterBox(name="main-window")
         self.workspaces = HyprlandWorkspaces(
             name="workspaces",
+            h_align="center",
+            v_align="center",
             spacing=2,
             buttons=[WorkspaceButtonNoLabel(i + 1) for i in range(7)],
             buttons_factory=None,
@@ -163,7 +174,9 @@ class StatusBar(WaylandWindow):
             # self.open_apps_bar,
             StatusBarCorner("top-left"),
         ]
-        self.center_box.center_children = [self.workspaces]
+        self.center_box.center_children = Box(
+            name="workspace-box", children=[self.workspaces]
+        )
 
         super().__init__(
             layer="top",
@@ -210,8 +223,8 @@ class ScreenCorners(WaylandWindow):
             v_expand=False,
             name="system-bar-corner",
             children=Corner(
-                orientation=orientation,  # type: ignore
-                size=15,
+                orientation=orientation,
+                size=10,
             ),
         )
 

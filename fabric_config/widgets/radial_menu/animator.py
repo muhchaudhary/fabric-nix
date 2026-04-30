@@ -115,7 +115,7 @@ class Animator(Service):
     def do_ease_out_elastic(self, t: float) -> float:
         c4 = (2 * math.pi) / 3
         return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
-    
+
     def do_easeOutBounce(self, t: float) -> float:
         if t < 4 / 11:
             return 121 * t * t / 16

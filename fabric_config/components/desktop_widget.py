@@ -1,4 +1,3 @@
-
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
@@ -29,5 +28,3 @@ class ClockWidget(WaylandWindow):
         )
 
         self.show_all()
-
-

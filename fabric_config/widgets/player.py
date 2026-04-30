@@ -121,7 +121,10 @@ class PlayerBoxStack(Box):
         logger.info(
             f"[PLAYER MANAGER] adding new player: {player.player_name}",
         )
-        self.player_buttons[self.current_stack_pos].style_classes = ["active", "cool-border"]
+        self.player_buttons[self.current_stack_pos].style_classes = [
+            "active",
+            "cool-border",
+        ]
 
     def on_lost_player(self, mpris_manager, player_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
@@ -136,7 +139,9 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
             )
-        self.player_buttons[self.current_stack_pos].set_style_classes(["active", "cool-border"])
+        self.player_buttons[self.current_stack_pos].set_style_classes(
+            ["active", "cool-border"]
+        )
         self.buttons_box.hide() if len(players) == 2 else self.buttons_box.show()
 
     def make_new_player_button(self, player_box):

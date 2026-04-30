@@ -5,6 +5,7 @@ import gi
 from fabric_config.services.brightness import Brightness
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.screen_record import ScreenRecorder
+
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as Network
 

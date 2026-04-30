@@ -1,5 +1,6 @@
 import os
 import subprocess
+
 GIR_PATHS = []
 
 
@@ -7,7 +8,7 @@ GIR_PATH: str = os.environ.get("nativeBuildInputs")
 
 seen_gir = []
 for buildinput in GIR_PATH.split(" "):
-    test_path= buildinput + "/share/gir-1.0"
+    test_path = buildinput + "/share/gir-1.0"
     if os.path.exists(test_path):
         for f in os.listdir(test_path):
             if (
@@ -20,6 +21,8 @@ for buildinput in GIR_PATH.split(" "):
 
 
 acc = ["gengir"]
-acc.extend(["-o", f"/home/{os.environ.get('USER')}/.local/lib/python3.13/site-packages/gi"])
+acc.extend(
+    ["-o", f"/home/{os.environ.get('USER')}/.local/lib/python3.12/site-packages/gi"]
+)
 acc.extend(GIR_PATHS)
-subprocess.run(acc) if os.environ.get('USER') is not None else None
+subprocess.run(acc) if os.environ.get("USER") is not None else None

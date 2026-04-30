@@ -1,0 +1,33 @@
+* {
+    all: unset;
+}
+
+#notification_widget {
+    background-color: rgb(29, 29, 29);
+    border-radius: 10px;
+    transition: all 2.0s ease;
+}
+
+#container {
+    /* padding: 10px;
+    background-color: rgb(0,0,0);
+    border-radius: 0px 0px 0px 10px; */
+}
+
+#corner {
+    background-color: black;
+}
+
+
+#timer highlight{
+    background-color: rgba(255, 255, 255, 0.902);
+}
+
+
+#timer trough{
+    min-height: 2px;
+}
+
+#body {
+    font-size: 12px;
+}

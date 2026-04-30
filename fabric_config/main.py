@@ -12,7 +12,8 @@ from fabric_config.components import (
 )
 from fabric_config.components.bar.bar import ScreenCorners
 from fabric_config.components.overview import Overview
-from fabric_config.components.dock import AppDock
+
+# from fabric_config.components.dock import AppDock
 from fabric_config.components.wallpaper_picker import wallpaper_picker
 
 
@@ -26,7 +27,7 @@ class MyApp(Application):
         self.systemOverlay = SystemOSD()
         self.nc = NotificationPopup()
         self.appMenu = AppMenu()
-        self.dock = AppDock()
+        # self.dock = AppDock()
         self.wallpaper_picker = wallpaper_picker
         super().__init__(
             "fabric-bar",
@@ -36,7 +37,7 @@ class MyApp(Application):
             self.nc,
             self.appMenu,
             self.overview,
-            self.dock,
+            # self.dock,
         )
         self.apply_style()
 
@@ -44,9 +45,11 @@ class MyApp(Application):
         logger.info("[Main] CSS applied")
         return self.set_stylesheet_from_file(get_relative_path("style/main.css"))
 
-the_app = MyApp()
-def main():
 
+the_app = MyApp()
+
+
+def main():
     @the_app.action()
     def toggle_appmenu():
         the_app.appMenu.toggle_popup()

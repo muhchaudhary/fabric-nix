@@ -19,7 +19,7 @@ class OnScreenDisplay(Window):
             min_value=0,
             max_value=self.scale_max,
             value=50,
-            notify_value=lambda*_:print("changed"),
+            notify_value=lambda *_: print("changed"),
             on_change_value=lambda scale, event, moved_pos: [
                 scale.set_value(moved_pos),
                 self.osd_label.set_label(str(int(moved_pos))),

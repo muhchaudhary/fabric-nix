@@ -96,7 +96,7 @@ class PrayerTimesService(Service):
 
         if 0 <= time_to_next_prayer.total_seconds() <= 60:
             self.notify_next_prayer()
-        
+
         return True
 
     @Property(object, "read-write")

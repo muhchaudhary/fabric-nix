@@ -7,6 +7,7 @@
     fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
+    hyprland-overview-rs.url = "github:muhchaudhary/overview-rs";
   };
 
   outputs = {
@@ -18,12 +19,15 @@
   } @ inputs:
     utils.lib.eachDefaultSystem (
       system: let
+        pythonVerson = pkgs.python312;
+
         overlays = [
           fabric.overlays.${system}.default
           (final: prev: {
             fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
             basedpyright = nixpkgs.legacyPackages.${system}.basedpyright;
             fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
+            hyprland-overview-rs = inputs.hyprland-overview-rs.packages.${system}.pythonPackage;
             gengir = final.python312Packages.callPackage ./nix/gengir.nix {
               typer = final.python312Packages.typer;
               astor = final.python312Packages.astor;
@@ -47,15 +51,19 @@
           lxml = pkgs.python312Packages.lxml;
           psutil = pkgs.python312Packages.psutil;
           requests = pkgs.python312Packages.requests;
-          pam = pkgs.python312Packages.pam;
+          pam = pkgs.python312Packages.python-pam;
           colorthief = pkgs.python312Packages.colorthief;
           thefuzz = pkgs.python312Packages.thefuzz;
           gengir = pkgs.gengir;
           python-fabric = pkgs.python312Packages.python-fabric;
           pywayland-custom = pkgs.python312Packages.callPackage ./nix/pywayland.nix {};
+          hyprland-overview-rs = pkgs.hyprland-overview-rs;
+          qrcode = pkgs.python312Packages.qrcode;
+          ijson = pkgs.python312Packages.ijson;
+          debugpy = pkgs.python312Packages.debugpy;
         };
 
-        astal-depends = [pkgs.astal.network];
+        astal-depends = [pkgs.astal.network pkgs.dart-sass];
       in {
         formatter = pkgs.nixfmt-rfc-style;
         devShells.default = pkgs.callPackage ./shell.nix {
