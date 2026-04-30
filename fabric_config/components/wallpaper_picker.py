@@ -1,5 +1,6 @@
 import os
 import mimetypes
+import json
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -15,12 +16,45 @@ from fabric.core.service import Signal
 
 WALLPAPER_DIR = f"/home/{GLib.get_user_name()}/wallpapers"
 WALLPAPER_THUMBS_DIR = f"/home/{GLib.get_user_name()}/wallpapers/.thumbs"
+CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
+WALLPAPER_CACHE = CACHE_DIR + "/wallpaper-picker"
+LAST_WALLPAPER_FILE = WALLPAPER_CACHE + "/last_selected.json"
 
 if not os.path.exists(WALLPAPER_DIR):
     os.makedirs(WALLPAPER_DIR)
 
 if not os.path.exists(WALLPAPER_THUMBS_DIR):
     os.makedirs(WALLPAPER_THUMBS_DIR)
+
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+
+if not os.path.exists(WALLPAPER_CACHE):
+    os.makedirs(WALLPAPER_CACHE)
+
+
+def _save_last_wallpaper(wp_path: str):
+    try:
+        with open(LAST_WALLPAPER_FILE, "w") as f:
+            json.dump({"path": wp_path}, f)
+    except Exception:
+        return
+
+
+def _get_last_wallpaper() -> str | None:
+    if not os.path.exists(LAST_WALLPAPER_FILE):
+        return None
+
+    try:
+        with open(LAST_WALLPAPER_FILE, "r") as f:
+            data = json.load(f)
+            path = data.get("path")
+            if path and os.path.exists(path):
+                return path
+    except Exception:
+        return None
+
+    return None
 
 
 class ImageButton(Button):
@@ -42,11 +76,11 @@ class ImageButton(Button):
         self._generate_wp_thumbnail()
 
     def _set_wallpaper_from_image(self):
-        def on_wallpaper_change(*_):
-            self.wallpaper_change(self.wp_path)
+        _save_last_wallpaper(self.wp_path)
+        self.wallpaper_change(self.wp_path)
 
         exec_shell_command_async(
-            f"hyprctl hyprpaper wallpaper ', {self.wp_path}'", on_wallpaper_change
+            f"hyprctl hyprpaper wallpaper ', {self.wp_path}'", lambda *_: None
         )
 
     def _generate_wp_thumbnail(self):
@@ -143,11 +177,24 @@ class WallPaperPickerOverlay(PopupWindow):
         )
         self.reveal_child.revealer.connect(
             "notify::child-revealed",
-            lambda *_: [
-                self.wallpaper_box.destroy_wallpaper_images(),
-            ]
-            if not self.reveal_child.revealer.child_revealed
-            else None,
+            lambda *_: (
+                [
+                    self.wallpaper_box.destroy_wallpaper_images(),
+                ]
+                if not self.reveal_child.revealer.child_revealed
+                else None
+            ),
+        )
+        self._apply_last_selected_wallpaper()
+
+    def _apply_last_selected_wallpaper(self):
+        last_wallpaper = _get_last_wallpaper()
+        if not last_wallpaper:
+            return
+
+        exec_shell_command_async(
+            f"hyprctl hyprpaper wallpaper ', {last_wallpaper}'",
+            lambda *_: None,
         )
 
     def toggle_popup(self, monitor: bool = False):
