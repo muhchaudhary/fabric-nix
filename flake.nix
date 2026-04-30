@@ -3,8 +3,6 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-    # Pygobject3 is broken, use an older version until it is fixed
-    nixpkgsPygobject3.url = "github:NixOS/nixpkgs/b681065d0919f7eb5309a93cea2cfa84dec9aa88";
     utils.url = "github:numtide/flake-utils";
     fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
@@ -15,7 +13,6 @@
   outputs = {
     self,
     nixpkgs,
-    nixpkgsPygobject3,
     utils,
     fabric,
     ...
@@ -25,9 +22,6 @@
         # Change this single value to switch Python version across the flake.
         pythonPackagesAttr = "python314Packages";
         pythonAttr = builtins.replaceStrings ["Packages"] [""] pythonPackagesAttr;
-        pygobject3Pkgs = import nixpkgsPygobject3 {
-          inherit system;
-        };
 
         overlays = [
           fabric.overlays.${system}.default
@@ -35,17 +29,14 @@
             "${pythonPackagesAttr}" = prev.${pythonPackagesAttr}.overrideScope (
               pyfinal: pyprev: {
                 pygobject3 = pyprev.pygobject3.overridePythonAttrs (_: {
-                  inherit (pygobject3Pkgs.${pythonPackagesAttr}.pygobject3) version src;
+                  version = "3.50.0";
+                  src = final.fetchurl {
+                    url = "mirror://gnome/sources/pygobject/3.50/pygobject-3.50.0.tar.xz";
+                    hash = "sha256-jYNudbWogdRX7hYiyuSjK826KKC6ViGTrbO7tHJHIhI=";
+                  };
                 });
-                python-fabric = pyfinal.callPackage ./nix/fabric.nix {
-                  gtk3 = final.gtk3;
-                  glib = final.glib;
-                  gtk-layer-shell = final.gtk-layer-shell;
-                  gobject-introspection = final.gobject-introspection;
-                  libdbusmenu-gtk3 = final.libdbusmenu-gtk3;
-                  gdk-pixbuf = final.gdk-pixbuf;
-                  librsvg = final.librsvg;
-                  webkitgtk_4_1 = final.webkitgtk_4_1;
+                python-fabric = final.callPackage "${inputs.fabric}/default.nix" {
+                  python312Packages = pyfinal;
                 };
               }
             );

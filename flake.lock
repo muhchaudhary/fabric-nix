@@ -126,22 +126,6 @@
         "type": "github"
       }
     },
-    "nixpkgsPygobject3": {
-      "locked": {
-        "lastModified": 1733261153,
-        "narHash": "sha256-eq51hyiaIwtWo19fPEeE0Zr2s83DYMKJoukNLgGGpek=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "b681065d0919f7eb5309a93cea2cfa84dec9aa88",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "b681065d0919f7eb5309a93cea2cfa84dec9aa88",
-        "type": "github"
-      }
-    },
     "nixpkgs_2": {
       "locked": {
         "lastModified": 1749143949,
@@ -229,7 +213,6 @@
         "fabric-libgray": "fabric-libgray",
         "hyprland-overview-rs": "hyprland-overview-rs",
         "nixpkgs": "nixpkgs_6",
-        "nixpkgsPygobject3": "nixpkgsPygobject3",
         "utils": "utils_2"
       }
     },
