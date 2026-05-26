@@ -66,99 +66,110 @@
   padding: 2px 0px;
 }
 
-/* Row items (wifi networks, bluetooth devices) */
-#submenu-row {
-  padding: 6px 8px;
-  border-radius: 10px;
+/* Reusable submenu item card — used by WiFi AP rows, BT device rows, etc. */
+#submenu-card {
+  padding: 10px 12px;
+  border-radius: 12px;
   border-style: solid;
   border-width: 1px;
-  border-color: transparent;
+  border-color: alpha(var(--fg-test), 0.08);
+  background-color: alpha(var(--fg-test), 0.05);
+  margin: 2px 0px;
   transition-property: background-color, border-color;
   transition-duration: 0.15s;
   transition-timing-function: ease;
 }
 
-#submenu-row:hover {
-  background-color: alpha(var(--fg-test), 0.08);
-  border-color: alpha(var(--fg-test), 0.08);
+/* Hover/active only fire on Button cards (e.g. WiFi rows) */
+#submenu-card:hover {
+  background-color: alpha(var(--fg-test), 0.1);
+  border-color: alpha(var(--fg-test), 0.14);
 }
 
-#submenu-row:active {
-  background-color: alpha(var(--fg-test), 0.14);
+#submenu-card:active {
+  background-color: alpha(var(--fg-test), 0.16);
 }
 
-#submenu-row.active {
+#submenu-card.active {
   background-color: alpha(var(--accent), 0.12);
-  border-color: alpha(var(--accent), 0.25);
+  border-color: alpha(var(--accent), 0.3);
 }
 
-#submenu-row.active:hover {
+#submenu-card.active:hover {
   background-color: alpha(var(--accent), 0.18);
+  border-color: alpha(var(--accent), 0.4);
 }
 
-/* Icons and labels inside rows */
-#submenu-row-icon {
+/* Shared inner element names */
+#submenu-card-icon {
   color: var(--fg-dim);
 }
 
-#submenu-row.active #submenu-row-icon {
+#submenu-card.active #submenu-card-icon {
   color: var(--accent);
 }
 
-#submenu-row-label {
+#submenu-card-label {
   font-size: 14px;
   font-weight: 500;
   color: var(--fg-test);
 }
 
-#submenu-row-check {
+#submenu-card-check {
   color: var(--accent);
 }
 
-/* Toggle pill — reusable component (TogglePill widget) */
-#toggle-pill {
-  font-size: 12px;
-  font-weight: 500;
-  padding: 3px 12px;
-  border-radius: 20px;
+/* iOS-style toggle switch (Gtk.Switch) */
+switch {
+  border-radius: 14px;
+  min-width: 44px;
+  min-height: 26px;
+  background-color: alpha(var(--fg-dim), 0.25);
   border-style: solid;
   border-width: 1px;
-  border-color: alpha(var(--fg-dim), 0.25);
-  color: var(--fg-dim);
-  transition-property: background-color, color, border-color;
-  transition-duration: 0.2s;
-  transition-timing-function: ease;
+  border-color: alpha(var(--fg-test), 0.1);
+  outline-style: none;
 }
 
-#toggle-pill:hover {
-  background-color: alpha(var(--fg-test), 0.08);
-  border-color: alpha(var(--fg-test), 0.2);
-  color: var(--fg-test);
+switch:hover {
+  background-color: alpha(var(--fg-dim), 0.38);
 }
 
-#toggle-pill:active {
-  background-color: alpha(var(--fg-test), 0.14);
+switch:checked {
+  background-color: var(--accent);
+  border-color: transparent;
 }
 
-/* "on" state */
-#toggle-pill.on {
-  color: var(--accent);
-  border-color: alpha(var(--accent), 0.5);
-  background-color: alpha(var(--accent), 0.14);
+switch:checked:hover {
+  background-color: mix(var(--accent), white, 0.12);
 }
 
-#toggle-pill.on:hover {
-  background-color: alpha(var(--accent), 0.22);
-  border-color: alpha(var(--accent), 0.65);
+switch:disabled {
+  background-color: alpha(var(--fg-dim), 0.12);
+  border-color: alpha(var(--fg-test), 0.06);
 }
 
-#toggle-pill.on:active {
-  background-color: alpha(var(--accent), 0.32);
+switch slider {
+  border-radius: 50%;
+  min-width: 20px;
+  min-height: 20px;
+  background-color: white;
+  margin: 2px;
+  box-shadow: 0px 1px 3px alpha(black, 0.3);
 }
 
-/* "loading" state while connecting */
-#toggle-pill.loading {
-  color: var(--fg-dim);
-  border-color: alpha(var(--fg-dim), 0.3);
-  background-color: alpha(var(--fg-dim), 0.07);
+switch:hover slider {
+  box-shadow: 0px 2px 6px alpha(black, 0.4);
+}
+
+switch:disabled slider {
+  background-color: alpha(white, 0.4);
+  box-shadow: none;
+}
+
+/* Suppress GTK's built-in check/cross icons in the track */
+switch image {
+  min-width: 0;
+  min-height: 0;
+  color: transparent;
 }

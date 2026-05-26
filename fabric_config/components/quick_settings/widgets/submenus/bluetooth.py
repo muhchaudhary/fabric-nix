@@ -2,7 +2,7 @@ from fabric_config.components.quick_settings.widgets.quick_settings_submenu impo
     QuickSubMenu,
     QuickSubToggle,
 )
-from fabric_config.widgets.toggle_pill import TogglePill
+from fabric_config.widgets.toggle_pill import ToggleSwitch
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -14,14 +14,12 @@ from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
 
 class BluetoothDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        super().__init__(h_expand=True, name="submenu-row", **kwargs)
+        super().__init__(h_expand=True, name="submenu-card", **kwargs)
         self.device: BluetoothDevice = device
 
-        self.pill = TogglePill(
-            on_label="Connected",
-            off_label="Connect",
+        self.switch = ToggleSwitch(
             active=device.connected,
-            on_toggled=self._on_pill_toggled,
+            on_toggled=self._on_switch_toggled,
         )
 
         self.device.connect("notify::connecting", self._on_connecting)
@@ -35,25 +33,23 @@ class BluetoothDeviceBox(CenterBox):
                     Image(
                         icon_name=device.icon_name + "-symbolic",
                         icon_size=16,
-                        name="submenu-row-icon",
+                        name="submenu-card-icon",
                     ),
-                    Label(label=device.name, name="submenu-row-label", ellipsize="end"),
+                    Label(label=device.name, name="submenu-card-label", ellipsize="end"),
                 ],
             )
         )
-        self.add_end(self.pill)
+        self.add_end(self.switch)
 
-    def _on_pill_toggled(self, active: bool):
-        self.device.set_property("connecting", active)
+    def _on_switch_toggled(self, active: bool):
+        self.device.set_property("connecting", not self.device.connected)
 
     def _on_connecting(self, device, _):
-        if self.device.connecting:
-            self.pill._label.set_label("Connecting…")
-            self.pill.add_style_class("loading")
+        self.switch.set_sensitive(not self.device.connecting)
 
     def _on_connected(self, *args):
-        self.pill.remove_style_class("loading")
-        self.pill.set_active(self.device.connected)
+        self.switch.set_sensitive(True)
+        self.switch.set_active(self.device.connected)
 
 
 class BluetoothSubMenu(QuickSubMenu):

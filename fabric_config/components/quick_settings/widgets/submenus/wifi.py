@@ -73,11 +73,11 @@ class WifiSubMenu(QuickSubMenu):
             spacing=10,
             v_align="center",
             children=[
-                Image(icon_name=ap.get_icon_name(), icon_size=16, name="submenu-row-icon"),
+                Image(icon_name=ap.get_icon_name(), icon_size=16, name="submenu-card-icon"),
                 Label(
                     label=ap.get_ssid(),
                     h_align="start",
-                    name="submenu-row-label",
+                    name="submenu-card-label",
                     ellipsize="end",
                 ),
             ],
@@ -89,11 +89,11 @@ class WifiSubMenu(QuickSubMenu):
                 Image(
                     icon_name="object-select-symbolic",
                     icon_size=14,
-                    name="submenu-row-check",
+                    name="submenu-card-check",
                 )
             )
 
-        btn = Button(name="submenu-row", child=row, h_expand=True)
+        btn = Button(name="submenu-card", child=row, h_expand=True)
         if is_connected:
             btn.add_style_class("active")
         btn.connect(
