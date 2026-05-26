@@ -2,6 +2,7 @@ from fabric_config.components.quick_settings.widgets.quick_settings_submenu impo
     QuickSubMenu,
     QuickSubToggle,
 )
+from fabric_config.widgets.toggle_pill import TogglePill
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -13,17 +14,18 @@ from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
 
 class BluetoothDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        super().__init__(h_expand=True, **kwargs)
+        super().__init__(h_expand=True, name="submenu-row", **kwargs)
         self.device: BluetoothDevice = device
 
-        self.connect_button = Button(name="submenu-connect-button")
-        self.connect_button.connect(
-            "clicked",
-            lambda _: self.device.set_property("connecting", not self.device.connected),
+        self.pill = TogglePill(
+            on_label="Connected",
+            off_label="Connect",
+            active=device.connected,
+            on_toggled=self._on_pill_toggled,
         )
 
-        self.device.connect("notify::connecting", self.on_device_connecting)
-        self.device.connect("notify::connected", self.on_device_connect)
+        self.device.connect("notify::connecting", self._on_connecting)
+        self.device.connect("notify::connected", self._on_connected)
 
         self.add_start(
             Box(
@@ -39,24 +41,19 @@ class BluetoothDeviceBox(CenterBox):
                 ],
             )
         )
-        self.add_end(self.connect_button)
+        self.add_end(self.pill)
 
-        # Wrap in a named button for hover/row styling
-        self._outer = None
-        self.on_device_connect()
+    def _on_pill_toggled(self, active: bool):
+        self.device.set_property("connecting", active)
 
-    def on_device_connecting(self, device, _):
+    def _on_connecting(self, device, _):
         if self.device.connecting:
-            self.connect_button.set_label("Connecting…")
-            self.connect_button.set_style_classes(["connecting"])
+            self.pill._label.set_label("Connecting…")
+            self.pill.add_style_class("loading")
 
-    def on_device_connect(self, *args):
-        if self.device.connected:
-            self.connect_button.set_label("Connected")
-            self.connect_button.set_style_classes(["connected"])
-        else:
-            self.connect_button.set_label("Connect")
-            self.connect_button.set_style_classes(["disconnected"])
+    def _on_connected(self, *args):
+        self.pill.remove_style_class("loading")
+        self.pill.set_active(self.device.connected)
 
 
 class BluetoothSubMenu(QuickSubMenu):
@@ -92,7 +89,7 @@ class BluetoothSubMenu(QuickSubMenu):
 
         for device in self.client.devices:
             if device.paired:
-                self.paired_devices.add(self._make_device_row(device))
+                self.paired_devices.add(BluetoothDeviceBox(device))
 
         self.scan_button = Button(
             image=Image(icon_name="view-refresh-symbolic", icon_size=14),
@@ -122,11 +119,6 @@ class BluetoothSubMenu(QuickSubMenu):
             **kwargs,
         )
 
-    def _make_device_row(self, device: BluetoothDevice) -> Button:
-        device_box = BluetoothDeviceBox(device)
-        row = Button(name="submenu-row", child=device_box, h_expand=True)
-        return row
-
     def on_scan_toggle(self, btn: Button):
         self.client.toggle_scan()
         if self.client.scanning:
@@ -138,11 +130,11 @@ class BluetoothSubMenu(QuickSubMenu):
         device = client.get_device(address)
         if device is None:
             return
-        row = self._make_device_row(device)
+        box = BluetoothDeviceBox(device)
         if device.paired:
-            self.paired_devices.add(row)
+            self.paired_devices.add(box)
         else:
-            self.available_devices.add(row)
+            self.available_devices.add(box)
 
 
 class BluetoothToggle(QuickSubToggle):

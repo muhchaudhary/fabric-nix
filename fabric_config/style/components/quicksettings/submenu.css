@@ -115,38 +115,50 @@
   color: var(--accent);
 }
 
-/* Bluetooth connect button pill */
-#submenu-connect-button {
+/* Toggle pill — reusable component (TogglePill widget) */
+#toggle-pill {
   font-size: 12px;
   font-weight: 500;
-  padding: 3px 10px;
+  padding: 3px 12px;
   border-radius: 20px;
   border-style: solid;
   border-width: 1px;
+  border-color: alpha(var(--fg-dim), 0.25);
+  color: var(--fg-dim);
   transition-property: background-color, color, border-color;
-  transition-duration: 0.15s;
+  transition-duration: 0.2s;
   transition-timing-function: ease;
 }
 
-#submenu-connect-button.connected {
-  color: var(--accent);
-  border-color: alpha(var(--accent), 0.45);
-  background-color: alpha(var(--accent), 0.12);
-}
-
-#submenu-connect-button.connecting {
-  color: var(--fg-dim);
-  border-color: alpha(var(--fg-dim), 0.3);
-  background-color: alpha(var(--fg-dim), 0.08);
-}
-
-#submenu-connect-button.disconnected {
-  color: var(--fg-dim);
-  border-color: alpha(var(--fg-dim), 0.25);
-}
-
-#submenu-connect-button:hover {
-  background-color: alpha(var(--fg-test), 0.1);
+#toggle-pill:hover {
+  background-color: alpha(var(--fg-test), 0.08);
   border-color: alpha(var(--fg-test), 0.2);
   color: var(--fg-test);
+}
+
+#toggle-pill:active {
+  background-color: alpha(var(--fg-test), 0.14);
+}
+
+/* "on" state */
+#toggle-pill.on {
+  color: var(--accent);
+  border-color: alpha(var(--accent), 0.5);
+  background-color: alpha(var(--accent), 0.14);
+}
+
+#toggle-pill.on:hover {
+  background-color: alpha(var(--accent), 0.22);
+  border-color: alpha(var(--accent), 0.65);
+}
+
+#toggle-pill.on:active {
+  background-color: alpha(var(--accent), 0.32);
+}
+
+/* "loading" state while connecting */
+#toggle-pill.loading {
+  color: var(--fg-dim);
+  border-color: alpha(var(--fg-dim), 0.3);
+  background-color: alpha(var(--fg-dim), 0.07);
 }
