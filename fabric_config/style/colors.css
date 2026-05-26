@@ -12,7 +12,7 @@
   --bg-test-light: alpha(var(--bg-test), 0.3);
   --bg-test-light: alpha(var(--bg-test), 0.3);
 
-  --accent: alpha(#74b700, 0.75);
+  --accent: alpha(#00b7b7, 0.75);
 
   --red: #fb4934;
   --green: #4bbb26;

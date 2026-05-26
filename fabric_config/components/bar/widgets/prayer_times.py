@@ -2,6 +2,7 @@ import datetime
 import json
 import os
 
+import gi
 import requests
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import exec_shell_command, invoke_repeater
@@ -11,25 +12,58 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from gi.repository import GLib
 
+gi.require_version("Geoclue", "2.0")
+from gi.repository import Geoclue
+
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
-city = "Toronto"
-country = "Canada"
-api_request = (
-    f"http://api.aladhan.com/v1/timingsByCity?city={city}&country={country}&method=2"
-)
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 PRAYER_TIMES_CACHE = os.path.join(CACHE_DIR, "prayer-times")
 PRAYER_TIMES_FILE = os.path.join(PRAYER_TIMES_CACHE, "current_times.json")
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
-if not os.path.exists(PRAYER_TIMES_CACHE):
-    os.makedirs(PRAYER_TIMES_CACHE)
+LOCATION_CACHE_FILE = os.path.join(PRAYER_TIMES_CACHE, "location.json")
+os.makedirs(PRAYER_TIMES_CACHE, exist_ok=True)
+
+
+def _save_location(lat: float, lon: float, city: str = ""):
+    try:
+        with open(LOCATION_CACHE_FILE, "w") as f:
+            json.dump({"lat": lat, "lon": lon, "city": city}, f)
+    except Exception:
+        pass
+
+
+def _load_location() -> dict | None:
+    try:
+        with open(LOCATION_CACHE_FILE) as f:
+            return json.load(f)
+    except Exception:
+        return None
+
+
+def _reverse_geocode(lat: float, lon: float) -> str:
+    try:
+        url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
+        resp = requests.get(
+            url, timeout=5, headers={"User-Agent": "fabric-config/1.0"}
+        )
+        if resp.status_code == 200:
+            addr = resp.json().get("address", {})
+            city = (
+                addr.get("city")
+                or addr.get("town")
+                or addr.get("village")
+                or addr.get("county", "")
+            )
+            country = addr.get("country", "")
+            return ", ".join(x for x in [city, country] if x)
+    except Exception:
+        pass
+    return f"{lat:.2f}°, {lon:.2f}°"
 
 
 class PrayerTimesService(Service):
     @Signal
-    def update(self, json_data: object) -> object: ...
+    def update(self, _json_data: object) -> object: ...
 
     @Signal
     def changed(self) -> None: ...
@@ -39,12 +73,13 @@ class PrayerTimesService(Service):
         self._current_prayer = "None"
         self._next_prayer = "None"
         self._time_to_next_prayer = "None"
+        self._location_name = ""
         super().__init__(**kwargs)
+        cached = _load_location()
+        if cached:
+            self._location_name = cached.get("city", "")
         invoke_repeater(1000 * 60, self.update_prayer_state)
-        invoke_repeater(
-            86400 * 1000,
-            lambda: self.refresh(),
-        )
+        invoke_repeater(86400 * 1000, lambda: self.refresh())
 
     def notify_next_prayer(self):
         exec_shell_command(
@@ -126,35 +161,73 @@ class PrayerTimesService(Service):
         self._time_to_next_prayer = value
         self.notify("time-to-next-prayer")
 
+    @Property(str, "read-write")
+    def location_name(self) -> str:
+        return self._location_name
+
+    @location_name.setter
+    def location_name(self, value: str):
+        self._location_name = value
+        self.notify("location-name")
+
     def refresh(self):
         self._request_data() if self._refresh_needed() else self.update_times(
             self._read_json()
         )
         return self.get_property("prayer-data")
 
-    def _request_data(self):
+    def force_refresh(self):
+        self._request_data()
+
+    def _fetch_with_coords(self, lat: float, lon: float):
+        ts = int(datetime.datetime.now().timestamp())
+        url = f"http://api.aladhan.com/v1/timings/{ts}?latitude={lat}&longitude={lon}&method=2"
         try:
-            response = requests.get(url=api_request)
+            response = requests.get(url=url, timeout=10)
             if response.status_code == 200:
                 with open(PRAYER_TIMES_FILE, "w") as outfile:
                     json.dump(response.json()["data"], outfile, indent=4)
                 self.update_times(self._read_json())
-        except Exception as _:
-            return
+        except Exception:
+            pass
+
+    def _request_data(self):
+        def on_geoclue_ready(_, result):
+            try:
+                simple = Geoclue.Simple.new_finish(result)
+                loc = simple.get_location()
+                lat = loc.get_property("latitude")
+                lon = loc.get_property("longitude")
+                city = _reverse_geocode(lat, lon)
+                _save_location(lat, lon, city)
+                self.location_name = city
+                self._fetch_with_coords(lat, lon)
+            except Exception:
+                cached = _load_location()
+                if cached:
+                    self.location_name = cached.get("city", "")
+                    self._fetch_with_coords(cached["lat"], cached["lon"])
+
+        Geoclue.Simple.new(
+            "fabric-config",
+            Geoclue.AccuracyLevel.CITY,
+            None,
+            on_geoclue_ready,
+        )
 
     def _read_json(self) -> dict | None:
         try:
-            with open(PRAYER_TIMES_FILE, "r") as infile:
+            with open(PRAYER_TIMES_FILE) as infile:
                 return json.load(infile)
-        except Exception as _:
+        except Exception:
             return None
 
     def _refresh_needed(self) -> bool:
         data = self._read_json()
         if data:
-            retrived_day = data["date"]["gregorian"]["date"]
+            retrieved_day = data["date"]["gregorian"]["date"]
             current_day = datetime.datetime.today().strftime("%d-%m-%Y")
-            return False if retrived_day == current_day else True
+            return retrieved_day != current_day
         return True
 
     @Property(object, "readable")
@@ -163,19 +236,13 @@ class PrayerTimesService(Service):
 
     def update_times(self, data):
         times = data["timings"]
-        for prayer_name in [
-            "Fajr",
-            "Dhuhr",
-            "Asr",
-            "Maghrib",
-            "Isha",
-        ]:
+        for prayer_name in ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]:
             self.prayer_info[prayer_name] = times[prayer_name]
         self.notifier("prayer-data")
         self.emit("update", self.prayer_info)
         self.update_prayer_state()
 
-    def notifier(self, name: str, args=None):
+    def notifier(self, name: str, _args=None):
         self.notify(name)
         self.emit("changed")
 
@@ -196,7 +263,7 @@ class PrayerTimesButton(Button):
         self.update_label()
         PrayerTimesPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: [
+            lambda *_: [
                 self.add_style_class("button-basic-active"),
                 self.remove_style_class("button-basic"),
             ]
@@ -207,10 +274,10 @@ class PrayerTimesButton(Button):
             ],
         )
 
-    def on_click(self, button, *args):
+    def on_click(self, *_):
         PrayerTimesPopup.toggle_popup()
 
-    def update_label(self, *args):
+    def update_label(self, *_):
         self.prayer_button_label.set_label(
             f"{self.prayer_service.current_prayer} ({self.prayer_service.time_to_next_prayer} left)"
         )
@@ -223,6 +290,28 @@ class PrayerTimes(Box):
         )
         self.prayer_info_service = PrayerTimesService()
 
+        self.location_label = Label(
+            label=self.prayer_info_service.location_name or "Fetching location...",
+            name="prayer-info-location",
+        )
+        self.refresh_button = Button(
+            label="󰑐",
+            name="prayer-info-refresh",
+            tooltip_text="Refresh location and prayer times",
+            on_clicked=self.on_refresh,
+        )
+        self.add(
+            CenterBox(
+                name="prayer-info-header",
+                start_children=Label(label=" ", name="prayer-info-location-icon"),
+                center_children=self.location_label,
+                end_children=self.refresh_button,
+            )
+        )
+        self.prayer_info_service.connect(
+            "notify::location-name", self.update_location_label
+        )
+
         self.prayer_labels = {
             k: (
                 Label(name="prayer-info-prayer-label"),
@@ -233,7 +322,9 @@ class PrayerTimes(Box):
         self.on_prayer_update(None, self.prayer_info_service.prayer_data)
         self.prayer_info_service.connect("update", self.on_prayer_update)
         self.add(Box(name="prayer-info-separator"))
-        for prayer in self.prayer_labels:
+        for i, prayer in enumerate(self.prayer_labels):
+            if i > 0:
+                self.add(Box(name="prayer-info-separator"))
             self.add(
                 CenterBox(
                     name="prayer-info-row",
@@ -241,13 +332,20 @@ class PrayerTimes(Box):
                     end_children=self.prayer_labels[prayer][1],
                 )
             )
-            self.add(Box(name="prayer-info-separator"))
         self.prayer_info_service.connect(
             "notify::current-prayer", self.update_prayer_label
         )
         self.update_prayer_label()
 
-    def update_prayer_label(self, *args):
+    def update_location_label(self, *_):
+        name = self.prayer_info_service.location_name
+        self.location_label.set_label(name or "Unknown location")
+
+    def on_refresh(self, *_):
+        self.location_label.set_label("Fetching location...")
+        self.prayer_info_service.force_refresh()
+
+    def update_prayer_label(self, *_):
         for label in self.prayer_labels.values():
             label[0].get_parent().get_parent().get_parent().style_classes = []
         if self.prayer_info_service.current_prayer in self.prayer_labels:
@@ -258,7 +356,7 @@ class PrayerTimes(Box):
     def on_prayer_update(self, _, prayer_info):
         def time_format(time):
             d = datetime.datetime.strptime(time, "%H:%M")
-            return d.strftime("  %I:%M %p")
+            return d.strftime("%I:%M %p")
 
         for info in prayer_info:
             self.prayer_labels[info][0].set_label(info)

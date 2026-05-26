@@ -44,6 +44,7 @@ buildPythonApplication {
     networkmanager
     playerctl
     librsvg
+    geoclue2
     libdbusmenu-gtk3
     gtk-layer-shell
     gnome-bluetooth

@@ -28,6 +28,7 @@ pkgs.mkShell {
       networkmanager
       playerctl
       librsvg
+      geoclue2
 
       (python.withPackages (
         ps:

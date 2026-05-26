@@ -92,7 +92,7 @@ class WifiToggle(QuickSubToggle):
         wifi = self.client.get_wifi()
         if wifi:
             self.action_icon.set_from_icon_name(wifi.get_icon_name() + "-symbolic", 24)
-            self.action_label.set_label(wifi.get_ssid())
+            self.action_label.set_label(wifi.get_ssid() if wifi.get_ssid() else "Not Connected")
             self.set_active_style(wifi.get_enabled())
 
             wifi.connect(
