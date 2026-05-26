@@ -1,36 +1,39 @@
 :vars {
+  /* Base backgrounds */
+  --bg: #041429;
   --bg-test: #041429;
-  --bg-test-light: alpha(var(--bg-test), 0.3);
-  --bg-test-transparent: alpha(var(--bg-test), 0.6);
-  --fg-test: #f4f1f8;
-  --fg-test-transparent: alpha(var(--fg-test), 0.5);
-  --fg-dim: #b8b7ba;
-  --fg-dim-transparent: alpha(var(--fg-dim), 0.5);
+  --bg-test-light: alpha(#0d2240, 0.35);
+  --bg-test-transparent: alpha(#041429, 0.88);
 
-  --fg-dim2: #a89984;
-  --fg-dim2-transparent: alpha(var(--fg-dim2), 0.5);
-  --bg-test-light: alpha(var(--bg-test), 0.3);
-  --bg-test-light: alpha(var(--bg-test), 0.3);
+  /* Foreground */
+  --fg-test: #f5f5f7;
+  --fg-test-transparent: alpha(#f5f5f7, 0.45);
+  --fg-dim: #98989f;
+  --fg-dim-transparent: alpha(#98989f, 0.45);
+  --fg-dim2: #6e6e73;
+  --fg-dim2-transparent: alpha(#6e6e73, 0.45);
 
-  --accent: alpha(#00b7b7, 0.75);
+  /* Accent */
+  --accent: #00b7b7;
 
-  --red: #fb4934;
-  --green: #4bbb26;
-  --yellow: #ffe600;
-  --blue: #83a598;
-  --purple: #d3869b;
-  --aqua: #8ec07c;
-  --gray: #928374;
-  --orange: #fe8019;
+  /* Semantic colors — macOS dark mode palette */
+  --red: #ff453a;
+  --green: #32d74b;
+  --yellow: #ffd60a;
+  --blue: #0a84ff;
+  --purple: #bf5af2;
+  --aqua: #5ac8fa;
+  --gray: #98989f;
+  --orange: #ff9f0a;
 
-  --red-dim: #cc2412;
-  --green-dim: #98971a;
-  --yellow-dim: #d79921;
-  --blue-dim: #458588;
-  --purple-dim: #b16286;
-  --aqua-dim: #689d6a;
-  --gray-dim: #a89984;
-  --orange-dim: #d65d0e;
+  --red-dim: #c0392b;
+  --green-dim: #27ae60;
+  --yellow-dim: #f39c12;
+  --blue-dim: #2471a3;
+  --purple-dim: #8e44ad;
+  --aqua-dim: #1abc9c;
+  --gray-dim: #6e6e73;
+  --orange-dim: #e67e22;
 
-  --placeholder_text_color: rgb(255, 255, 255);
+  --placeholder_text_color: alpha(#f5f5f7, 0.35);
 }

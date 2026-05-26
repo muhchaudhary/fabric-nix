@@ -1,154 +1,158 @@
+/* Frosted-glass panel / tray menus */
 .tray,
 .tray menu,
 .cool-border {
-    border-radius: 20px;
-    border-style: solid;
-    border-width: 0.3px;
-    border-color: alpha(var(--fg-test), 0.5);
+  border-radius: 16px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg-test), 0.1);
 }
 
-.tray menuitem,
+/* Generic bordered button */
 .button-border {
-    border-style: solid;
-    border-width: 1.2px;
-    border-radius: 10px;
-    border-color: transparent;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 10px;
+  border-color: transparent;
 }
 
+/* Transition mixin — apply to button and its children */
 .tray menuitem,
 .button-basic-props label,
 .button-basic-props image,
 .button-basic-props {
-    transition-property: background-color, color, box-shadow;
-    transition-duration: 0.15s;
-    transition-timing-function: ease-in-out;
+  transition-property: background-color, color, box-shadow, border-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
 }
 
 .tray menuitem,
 .button-basic-props {
-    border-radius: 10px;
-    padding: 0px 5px 0px 5px;
+  border-radius: 10px;
+  padding: 0px 8px;
 }
 
 .tray menuitem {
-    padding: 5px;
-    margin: 3px;
+  padding: 6px 8px;
+  margin: 2px 4px;
 }
 
+/* Hover state — subtle lightening like macOS */
 .tray menuitem:hover,
 .button-basic:hover {
-    background-color: alpha(var(--bg-test), 0.2);
-    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.2);
-    border-color: alpha(var(--fg-test), 0.4);
+  background-color: alpha(var(--fg-test), 0.1);
+  border-color: alpha(var(--fg-test), 0.14);
 }
 
 .button-basic:hover * {
-    color: var(--fg-test);
+  color: var(--fg-test);
 }
 
+/* Active / focused state */
 .tray menuitem:active,
 .tray menuitem:focus,
 .button-basic-active,
 .button-basic:focus,
 .button-basic:active {
-    border-color: alpha(var(--fg-test), 0.4);
-
-    background-color: alpha(var(--accent), 0.8);
-    box-shadow: 0 0 5px -3px alpha(var(--accent), 0.5);
+  border-color: alpha(var(--accent), 0.5);
+  background-color: alpha(var(--accent), 0.75);
 }
 
 .button-basic-active *,
 .button-basic:focus *,
 .button-basic:active * {
-    color: alpha(var(--bg-test), 0.8);
+  color: var(--bg);
 }
 
+/* Window surfaces */
 .tray,
 .tray menu,
 .window-basic {
-    background-color: var(--bg-test-transparent);
-    border-radius: 20px;
-    padding: 10px;
+  background-color: var(--bg-test-transparent);
+  border-radius: 16px;
+  padding: 10px;
 }
 
-
+/* Title text */
 .label-title {
-    font-size: 30px;
-    font-weight: bolder;
-    font-family: 'JetBrains Mono';
+  font-size: 28px;
+  font-weight: 700;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
 }
 
-/* APP BAR */
+/* App sidebar */
 #app-bar {
-    padding: 15px;
-    border-radius: 30px;
+  padding: 12px;
+  border-radius: 24px;
 }
 
 #app-bar button {
-    padding: 10px;
-    border-radius: 20px;
-
+  padding: 10px;
+  border-radius: 16px;
+  transition-property: background-color, box-shadow;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
 }
 
 #app-bar button.active {
-    background-color: alpha(var(--fg-dim), 0.4);
-    box-shadow: 0 0 5px -2px alpha(var(--fg-test), 0.5);
-    ;
+  background-color: alpha(var(--fg-dim), 0.25);
+  box-shadow: 0 0 8px -2px alpha(var(--fg-test), 0.25);
 }
 
 #app-bar button:hover {
-    background-color: var(--fg-test-transparent);
+  background-color: var(--fg-test-transparent);
 }
 
 #app-bar-corner {
-    padding-top: 80px;
-    /* background-color: red; */
+  padding-top: 80px;
 }
 
 #app-bar-corner * {
-    background-color: var(--bg-test-transparent);
+  background-color: var(--bg-test-transparent);
 }
 
-/* SYSTRAY specific */
+/* System tray menu decorations */
 .tray menuitem arrow {
-    -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
-    color: var(--fg-test);
-    min-width: 15px;
-    min-height: 15px;
+  -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
+  color: var(--fg-test);
+  min-width: 14px;
+  min-height: 14px;
 }
 
 .tray menuitem radio {
-    -gtk-icon-source: -gtk-icontheme("radio-symbolic");
-    color: var(--fg-test);
-    min-width: 15px;
-    min-height: 15px;
+  -gtk-icon-source: -gtk-icontheme("radio-symbolic");
+  color: var(--fg-test);
+  min-width: 14px;
+  min-height: 14px;
 }
 
 .tray menuitem radio:checked {
-    -gtk-icon-source: -gtk-icontheme("radio-checked-symbolic");
+  -gtk-icon-source: -gtk-icontheme("radio-checked-symbolic");
 }
 
 .tray menuitem check {
-    -gtk-icon-source: -gtk-icontheme("checkbox-symbolic");
-    color: var(--fg-test);
-    min-width: 1em;
-    min-height: 1em;
-    padding-right: 0.5em;
+  -gtk-icon-source: -gtk-icontheme("checkbox-symbolic");
+  color: var(--fg-test);
+  min-width: 1em;
+  min-height: 1em;
+  padding-right: 0.5em;
 }
 
 .tray menuitem check:checked {
-    -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
+  -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic");
 }
 
 .tray menuitem:disabled label {
-    color: var(--fg-dim);
+  color: var(--fg-dim);
 }
 
 .tray menuitem separator {
-    background-color: var(--fg-dim-transparent);
-    padding-top: 1px;
+  background-color: alpha(var(--fg-dim), 0.2);
+  padding-top: 1px;
+  margin: 2px 8px;
 }
 
 .tray menuitem separator:last-child {
-    padding: unset;
+  padding: unset;
+  margin: unset;
 }

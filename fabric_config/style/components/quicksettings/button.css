@@ -1,74 +1,58 @@
+/* Toggle button base */
 #quicksettings-togglebutton button image,
 #quicksettings-togglebutton button label,
 #quicksettings-togglebutton button {
-    color: var(--fg-test);
-    transition-property: background-color, color;
-    transition-duration: 0.2s;
-    transition-timing-function: ease-in-out;
-
-    
-
+  color: var(--fg-test);
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.18s;
+  transition-timing-function: ease;
 }
 
 #quicksettings-togglebutton button {
-    background-color: var(--bg-test-light);
-    
+  background-color: alpha(var(--fg-test), 0.07);
 }
 
+#quicksettings-togglebutton button:hover {
+  background-color: alpha(var(--fg-test), 0.13);
+}
+
+#quicksettings-togglebutton button:active {
+  background-color: alpha(var(--fg-test), 0.18);
+}
+
+/* Active (enabled) state */
 #quicksettings-togglebutton.active button {
-    background-color: var(--accent);
+  background-color: var(--accent);
 }
 
 #quicksettings-togglebutton.active button image,
-#quicksettings-togglebutton.active button label,
-#quicksettings-togglebutton.active button {
-    /* background-color: var(--bg-test-light); */
-    color: var(--bg-test);
-    
+#quicksettings-togglebutton.active button label {
+  color: var(--bg);
 }
 
-/* #quicksettings-togglebutton.active button:hover image, */
-/* #quicksettings-togglebutton.active button:hover label, */
 #quicksettings-togglebutton.active button:hover {
-    background-color: mix(var(--accent),var(--fg-test),0.6);
+  background-color: mix(var(--accent), white, 0.15);
 }
 
-/* #quicksettings-togglebutton.active button:active image, */
-/* #quicksettings-togglebutton.active button:active label, */
 #quicksettings-togglebutton.active button:active {
-    background-color: var(--fg-test);
+  background-color: mix(var(--accent), white, 0.3);
 }
 
-
-/* #quicksettings-togglebutton button:hover image, */
-/* #quicksettings-togglebutton button:hover label, */
-#quicksettings-togglebutton button:hover {
-    background-color: var(--bg2);
-}
-
-/* #quicksettings-togglebutton button:active image, */
-/* #quicksettings-togglebutton button:active label, */
-#quicksettings-togglebutton button:active {
-    background-color: var(--bg3);
-}
-
+/* Left pill: main action */
 #quicksettings-toggle-action {
-    border-radius: 10px 0px 0px 10px;
-    min-width: 200px;
-    min-height: 35px;
-
-    border-style: solid;
-    border-width: 1px 0px 1px 1px;
-    border-color: alpha(var(--fg-test), 0.3);
-
+  border-radius: 12px 0px 0px 12px;
+  min-width: 196px;
+  min-height: 38px;
+  border-style: solid;
+  border-width: 1px 0px 1px 1px;
+  border-color: alpha(var(--fg-test), 0.1);
 }
 
+/* Right pill: chevron/expand */
 #quicksettings-toggle-revealer {
-    border-radius: 0px 10px 10px 0px;
-    padding: 5px;
-
-    border-style: solid;
-    border-width: 1px 1px 1px 0px;
-    border-color: alpha(var(--fg-test), 0.3);
-
+  border-radius: 0px 12px 12px 0px;
+  padding: 6px;
+  border-style: solid;
+  border-width: 1px 1px 1px 0px;
+  border-color: alpha(var(--fg-test), 0.1);
 }

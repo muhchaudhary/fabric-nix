@@ -1,31 +1,29 @@
 #quicksettings-slider {
-  margin-left: 10px;
-  margin-right: 20px;
+  margin-left: 8px;
+  margin-right: 16px;
 }
 
 #quicksettings-slider trough {
-  margin-top: 5px;
-  margin-bottom: 5px;
-  padding-right: 12.5px;
-  min-height: 25px;
-  background-color: var(--bg-test-transparent);
-  transition: background-color 0.1s ease-in-out;
-
+  margin-top: 4px;
+  margin-bottom: 4px;
+  padding-right: 12px;
+  min-height: 22px;
+  background-color: alpha(var(--fg-test), 0.08);
+  transition: background-color 0.15s ease;
   border-radius: 20px;
   border-style: solid;
   border-width: 1px;
-  border-color: alpha(var(--fg-test), 0.3);
+  border-color: alpha(var(--fg-test), 0.1);
 }
 
-
 #quicksettings-slider trough:hover {
-  background-color: var(--bg-test);
+  background-color: alpha(var(--fg-test), 0.13);
 }
 
 #quicksettings-slider trough highlight {
   border-radius: 20px 0px 0px 20px;
   background-color: var(--accent);
-  margin-right: -12.5px;
+  margin-right: -12px;
 }
 
 #quicksettings-slider trough highlight:disabled {
@@ -34,18 +32,18 @@
 
 #quicksettings-slider slider {
   border-radius: 100%;
-  min-width: 25px;
-  min-height: 25px;
-  box-shadow: 0px 0px 5px 0px rgb(94, 94, 94);
-  margin-left: 25px;
-  background-color: mix(var(--accent), var(--fg-test), 0.8);
+  min-width: 22px;
+  min-height: 22px;
+  margin-left: 22px;
+  background-color: mix(var(--accent), white, 0.2);
+  box-shadow: 0px 1px 4px 0px alpha(black, 0.4);
+  transition: background-color 0.15s ease;
 }
 
 #quicksettings-slider slider:hover {
-  background-color:  var(--fg-test);
+  background-color: white;
 }
 
 #quicksettings-slider slider:disabled {
   background-color: var(--fg-dim);
-  /* box-shadow: none; */
 }

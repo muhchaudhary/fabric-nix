@@ -3,41 +3,39 @@
 }
 
 #battery-cairo-icon {
-  min-width: 60px;
-  min-height: 30px;
-  margin: 5px;
+  min-width: 56px;
+  min-height: 28px;
+  margin: 4px;
   border-style: solid;
-  border-width: 2px;
-  border-radius: 7px;
+  border-width: 1px;
+  border-radius: 8px;
   transition-property: min-width, border-color, background-color, color, border-radius;
-  transition-duration: 0.5s;
-  transition-timing-function: cubic-bezier(0, 0, 1, 1);
-  font-family: "league spartan";
+  transition-duration: 0.4s;
+  transition-timing-function: ease;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
 }
 
 #battery-cairo-icon.default {
   color: var(--fg-test);
-  border-color: var(--accent);
-  background-color: var(--accent);
+  border-color: alpha(var(--accent), 0.7);
+  background-color: alpha(var(--accent), 0.18);
 }
 
 #battery-cairo-icon.charging {
   border-radius: 8px;
-  min-width: 60px;
   color: var(--green);
-  border-color: var(--green);
-  background-color: var(--green);
+  border-color: alpha(var(--green), 0.7);
+  background-color: alpha(var(--green), 0.15);
 }
 
 #battery-cairo-icon.low {
   color: var(--yellow);
-  border-color: var(--yellow);
-  background-color: alpha(var(--yellow), 0.4);
+  border-color: alpha(var(--yellow), 0.7);
+  background-color: alpha(var(--yellow), 0.12);
 }
 
 #battery-cairo-icon.critical {
   color: var(--red);
-  border-color: var(--red);
-  background-color: alpha(var(--red), 0.4);
-
+  border-color: alpha(var(--red), 0.7);
+  background-color: alpha(var(--red), 0.12);
 }

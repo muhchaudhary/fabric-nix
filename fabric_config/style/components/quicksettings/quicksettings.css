@@ -4,15 +4,19 @@
 @import "./components/quicksettings/submenu.css";
 
 #quicksettings-box {
-    background-color: var(--bg-test-light);
+  background-color: alpha(var(--fg-test), 0.04);
 }
 
-#quicksettings-box>box>button {
-    margin: 10px -10px 10px 5px;
+#quicksettings-box > box > button {
+  margin: 10px -10px 10px 5px;
 }
 
 #quicksettings {
-    background-color: var(--bg-test-transparent);
-    margin: 5px;
-    padding: 15px;    
+  background-color: var(--bg-test-transparent);
+  margin: 6px;
+  padding: 16px;
+  border-radius: 20px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg-test), 0.1);
 }

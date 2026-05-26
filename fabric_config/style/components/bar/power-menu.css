@@ -1,78 +1,78 @@
 #powermenu-box {
-    background-color: var(--bg-test-transparent);
-    border-radius: 20px;
-    border-style: solid;
-    /* border-width: 5px; */
-    /* border-color: alpha(var(--bg_h), 0.9); */
-    margin: 5px;
-    padding: 15px;
+  background-color: var(--bg-test-transparent);
+  border-radius: 20px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg-test), 0.1);
+  margin: 6px;
+  padding: 14px;
 }
 
-#powermenu-button.warning label,
-#powermenu-button.okay label {
-    color: black;
+#powermenu-button {
+  margin: 4px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  transition-property: background-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
 }
 
-#powermenu-button.warning:focus label,
-#powermenu-button.okay:focus label,
-#powermenu-button.warning:hover label,
-#powermenu-button.okay:hover label {
-    color: white;
+#powermenu-button label {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* Default button */
+#powermenu-button:hover {
+  background-color: alpha(var(--fg-test), 0.12);
+}
+
+#powermenu-button:focus {
+  background-color: alpha(var(--fg-test), 0.2);
+}
+
+#powermenu-button.active,
+#powermenu-button:active {
+  background-color: alpha(var(--fg-test), 0.28);
+}
+
+/* Warning (destructive) */
+#powermenu-button.warning label {
+  color: var(--fg-test);
 }
 
 #powermenu-button.warning {
-    background-color: alpha(var(--red), 0.5);
+  background-color: alpha(var(--red), 0.25);
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--red), 0.35);
 }
 
 #powermenu-button.warning:hover,
 #powermenu-button.warning:focus {
-    background-color: alpha(var(--red), 0.8);
+  background-color: alpha(var(--red), 0.55);
+  border-color: alpha(var(--red), 0.6);
+}
+
+/* Okay (safe) */
+#powermenu-button.okay label {
+  color: var(--bg);
 }
 
 #powermenu-button.okay {
-    background-color: alpha(var(--green), 0.5);
+  background-color: alpha(var(--green), 0.35);
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--green), 0.45);
 }
 
 #powermenu-button.okay:hover,
 #powermenu-button.okay:focus {
-    background-color: alpha(var(--green), 0.8);
+  background-color: alpha(var(--green), 0.6);
+  border-color: alpha(var(--green), 0.7);
 }
 
-#powermenu-button {
-    /* background-color: red; */
-    margin: 5px;
-    padding: 10px;
-    border-radius: 10px;
-}
-
-#powermenu-button label {
-    font-family: "league spartan";
-    font-weight: bold;
-    font-size: 16px;
-}
-
-#powermenu-button:hover {
-    background-color: alpha(#ffffff, 0.25);
-}
-
-#powermenu-button:focus {
-    background-color: alpha(#ffffff, 0.8);
-}
-
-#powermenu-button:focus image,
-#powermenu-button:focus label {
-    color: black;
-}
-
-
-#powermenu-button.active,
-#powermenu-button:active {
-    background-color: alpha(#ffffff, 1);
-}
-
-#powermenu-button.active label,
-#powermenu-button.active image,
-#powermenu-button:active label,
-#powermenu-button:active image {
-    color: black;
+#powermenu-button.okay:focus label,
+#powermenu-button.okay:hover label {
+  color: var(--bg);
 }
