@@ -13,13 +13,10 @@ from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
 
 class BluetoothDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        # TODO: FIX STYLING, make it look better
-        super().__init__(spacing=2, name="panel-button", h_expand=True, **kwargs)
+        super().__init__(h_expand=True, **kwargs)
         self.device: BluetoothDevice = device
 
-        self.connect_button = Button(
-            style_classes=["button-basic", "button-basic-props", "button-border"]
-        )
+        self.connect_button = Button(name="submenu-connect-button")
         self.connect_button.connect(
             "clicked",
             lambda _: self.device.set_property("connecting", not self.device.connected),
@@ -29,27 +26,37 @@ class BluetoothDeviceBox(CenterBox):
         self.device.connect("notify::connected", self.on_device_connect)
 
         self.add_start(
-            Image(
-                icon_name=device.icon_name + "-symbolic",
-                icon_size=24,
-                name="submenu-icon",
+            Box(
+                spacing=10,
+                v_align="center",
+                children=[
+                    Image(
+                        icon_name=device.icon_name + "-symbolic",
+                        icon_size=16,
+                        name="submenu-row-icon",
+                    ),
+                    Label(label=device.name, name="submenu-row-label", ellipsize="end"),
+                ],
             )
         )
-        self.add_start(Label(label=device.name, name="submenu-label"))  # type: ignore
         self.add_end(self.connect_button)
 
+        # Wrap in a named button for hover/row styling
+        self._outer = None
         self.on_device_connect()
 
     def on_device_connecting(self, device, _):
         if self.device.connecting:
-            self.connect_button.set_label("connecting...")
-        elif self.device.connected is False:
-            self.connect_button.set_label("failed to connect")
+            self.connect_button.set_label("Connecting…")
+            self.connect_button.set_style_classes(["connecting"])
 
     def on_device_connect(self, *args):
-        self.connect_button.set_label(
-            "connected",
-        ) if self.device.connected else self.connect_button.set_label("disconnected")
+        if self.device.connected:
+            self.connect_button.set_label("Connected")
+            self.connect_button.set_style_classes(["connected"])
+        else:
+            self.connect_button.set_label("Connect")
+            self.connect_button.set_style_classes(["disconnected"])
 
 
 class BluetoothSubMenu(QuickSubMenu):
@@ -59,68 +66,83 @@ class BluetoothSubMenu(QuickSubMenu):
 
         self.paired_devices = Box(
             orientation="v",
-            spacing=4,
+            spacing=2,
             h_expand=True,
-            children=Label("Paired Devices", h_align="start"),
+            children=[
+                Label(
+                    label="PAIRED DEVICES",
+                    name="submenu-section-header",
+                    h_align="start",
+                )
+            ],
+        )
+
+        self.available_devices = Box(
+            orientation="v",
+            spacing=2,
+            h_expand=True,
+            children=[
+                Label(
+                    label="AVAILABLE DEVICES",
+                    name="submenu-section-header",
+                    h_align="start",
+                )
+            ],
         )
 
         for device in self.client.devices:
             if device.paired:
-                self.paired_devices.add(BluetoothDeviceBox(device))
+                self.paired_devices.add(self._make_device_row(device))
 
-        self.available_devices = Box(
-            orientation="v",
-            spacing=4,
-            h_expand=True,
-            children=Label("Available Devices", h_align="start"),
-        )
-
-        self.scan_image = Image(icon_name="view-refresh-symbolic", icon_size=24)
         self.scan_button = Button(
-            image=self.scan_image,
-            style_classes=["button-basic", "button-basic-props", "button-border"],
+            image=Image(icon_name="view-refresh-symbolic", icon_size=14),
+            name="submenu-title-action",
+            tooltip_text="Scan for devices",
         )
         self.scan_button.connect("clicked", self.on_scan_toggle)
 
+        scroll_content = Box(
+            orientation="v",
+            spacing=8,
+            children=[self.paired_devices, self.available_devices],
+        )
+
         self.child = ScrolledWindow(
-            min_content_size=(-1, 300),
-            max_content_size=(-1, 300),
+            min_content_size=(-1, 260),
+            max_content_size=(-1, 260),
             propagate_width=True,
-            propagate_height=True,
-            child=Box(
-                orientation="v",
-                children=Box(
-                    orientation="v",
-                    children=[self.paired_devices, self.available_devices],
-                ),
-            ),
+            child=scroll_content,
         )
 
         super().__init__(
             title="Bluetooth",
             title_icon="bluetooth-active-symbolic",
-            child=Box(
-                orientation="v",
-                children=[self.scan_button, self.child],
-            ),
+            title_action=self.scan_button,
+            child=self.child,
             **kwargs,
         )
+
+    def _make_device_row(self, device: BluetoothDevice) -> Button:
+        device_box = BluetoothDeviceBox(device)
+        row = Button(name="submenu-row", child=device_box, h_expand=True)
+        return row
 
     def on_scan_toggle(self, btn: Button):
         self.client.toggle_scan()
         if self.client.scanning:
-            btn.add_style_class("button-basic-active")
+            btn.add_style_class("active")
         else:
-            btn.remove_style_class("button-basic-active")
+            btn.remove_style_class("active")
 
     def populate_new_device(self, client: BluetoothClient, address: str):
         device = client.get_device(address)
         if device is None:
             return
+        row = self._make_device_row(device)
         if device.paired:
-            self.paired_devices.add(BluetoothDeviceBox(device))
+            self.paired_devices.add(row)
         else:
-            self.available_devices.add(BluetoothDeviceBox(device))
+            self.available_devices.add(row)
 
 
 class BluetoothToggle(QuickSubToggle):
@@ -131,7 +153,6 @@ class BluetoothToggle(QuickSubToggle):
             submenu=submenu,
             **kwargs,
         )
-        # Client Signals
         self.client = client
         self.client.connect("notify::enabled", self.toggle_bluetooth)
         self.client.connect("device-added", self.new_device)
@@ -144,7 +165,6 @@ class BluetoothToggle(QuickSubToggle):
             self.client.connected_devices[0]
         ) if self.client.connected_devices else None
 
-        # Button Signals
         self.connect("action-clicked", lambda *_: self.client.toggle_power())
 
     def toggle_bluetooth(self, client: BluetoothClient, *_):

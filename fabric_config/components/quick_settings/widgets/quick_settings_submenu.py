@@ -1,8 +1,7 @@
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.revealer import Revealer
-
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.widget import Widget
@@ -16,19 +15,19 @@ class QuickSubMenu(Box):
         child: Widget | None,
         title: str | None = None,
         title_icon: str | None = None,
+        title_action: Widget | None = None,
         **kwargs,
     ):
         self.title = title
         self.title_icon = title_icon
         self.child = child
+        self.title_action = title_action
 
         super().__init__(visible=False, **kwargs)
         self.revealer_child = Box(orientation="v", name="quicksettings-submenu")
 
         self.submenu_title_box = self.make_submenu_box()
-        self.revealer_child.add(
-            self.submenu_title_box
-        ) if self.submenu_title_box else None
+        self.revealer_child.add(self.submenu_title_box) if self.submenu_title_box else None
         self.revealer_child.add(self.child) if child else None
 
         self.revealer = Revealer(
@@ -41,17 +40,27 @@ class QuickSubMenu(Box):
 
         self.add(self.revealer)
 
-        # self.revealer.set_reveal_child(True)
-
-    def make_submenu_box(self) -> Box | None:
+    def make_submenu_box(self) -> Widget | None:
         if not self.title_icon and not self.title:
             return None
-        submenu_box = Box(spacing=4)
+
+        left = Box(spacing=8, v_align="center")
         if self.title_icon:
-            submenu_box.add(Image(icon_name=self.title_icon, icon_size=24))
+            left.add(Image(icon_name=self.title_icon, icon_size=14, name="submenu-title-icon"))
         if self.title:
-            submenu_box.add(Label(name="submenu-title-label", label=self.title))
-        return submenu_box
+            left.add(Label(name="submenu-title-label", label=self.title))
+
+        if self.title_action:
+            header = CenterBox(
+                name="submenu-title",
+                h_expand=True,
+                start_children=[left],
+                end_children=[self.title_action],
+            )
+            return header
+        else:
+            left.set_name("submenu-title")
+            return left
 
     def do_reveal(self, visible: bool):
         self.set_visible(True)
@@ -92,7 +101,6 @@ class QuickSubToggle(Box):
             name="quicksettings-toggle-revealer", image=self.button_image
         )
 
-        # Action button can hold an icon and a label NOTHING MORE
         self.action_icon = Image(
             name="panel-icon",
             icon_name=action_icon,
@@ -144,9 +152,7 @@ class QuickSubToggle(Box):
         invoke_repeater(10, do_animate)
 
     def set_active_style(self, action: bool) -> None:
-        self.set_style_classes([""]) if not action else self.set_style_classes(
-            ["active"]
-        )
+        self.set_style_classes([""]) if not action else self.set_style_classes(["active"])
 
     def set_action_label(self, label: str):
         self.action_label.set_label(label)

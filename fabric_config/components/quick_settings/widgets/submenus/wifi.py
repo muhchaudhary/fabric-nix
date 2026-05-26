@@ -4,6 +4,7 @@ from fabric_config.components.quick_settings.widgets.quick_settings_submenu impo
     QuickSubToggle,
 )
 from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
 from fabric.widgets.label import Label
 from fabric.widgets.image import Image
@@ -22,26 +23,33 @@ class WifiSubMenu(QuickSubMenu):
                 "notify::scanning", lambda *_: self.build_wifi_options()
             )
 
-        self.available_networks_box = Box(orientation="v", spacing=4, h_expand=True)
+        self.available_networks_box = Box(
+            orientation="v", spacing=2, h_expand=True, name="submenu-list"
+        )
         self.seen_networks = set()
 
-        self.scan_button = Button(label="Scan", name="panel-button")
+        self.scan_button = Button(
+            image=Image(icon_name="view-refresh-symbolic", icon_size=14),
+            name="submenu-title-action",
+            tooltip_text="Scan for networks",
+        )
         self.scan_button.connect(
-            "clicked", lambda *_: self.wifi_device.scan() if self.wifi_device else None
+            "clicked",
+            lambda *_: self.wifi_device.scan() if self.wifi_device else None,
         )
 
         self.child = ScrolledWindow(
-            min_content_size=(-1, 300),
-            max_content_size=(-1, 300),
+            min_content_size=(-1, 260),
+            max_content_size=(-1, 260),
             propagate_width=True,
-            propagate_height=True,
             child=self.available_networks_box,
         )
 
         super().__init__(
-            title="Network",
+            title="Wi-Fi",
             title_icon="network-wireless-symbolic",
-            child=Box(orientation="v", children=[self.scan_button, self.child]),
+            title_action=self.scan_button,
+            child=self.child,
             **kwargs,
         )
 
@@ -55,24 +63,44 @@ class WifiSubMenu(QuickSubMenu):
                 ap: an.AccessPoint = ap
                 if ap.get_ssid() and ap.get_ssid() not in self.seen_networks:
                     self.seen_networks.add(ap.get_ssid())
-                    btn = self.make_button_from_ap(ap)
-                    self.available_networks_box.add(btn)
+                    self.available_networks_box.add(self.make_button_from_ap(ap))
 
     def make_button_from_ap(self, ap: an.AccessPoint) -> Button:
-        ap_button = Button(name="panel-button")
-        ap_button.add(
-            Box(
-                children=[
-                    Image(icon_name=ap.get_icon_name(), icon_size=24),
-                    Label(label=ap.get_ssid()),
-                ]
-            )
+        active_ap = self.wifi_device.get_active_access_point() if self.wifi_device else None
+        is_connected = active_ap is not None and active_ap.get_bssid() == ap.get_bssid()
+
+        left = Box(
+            spacing=10,
+            v_align="center",
+            children=[
+                Image(icon_name=ap.get_icon_name(), icon_size=16, name="submenu-row-icon"),
+                Label(
+                    label=ap.get_ssid(),
+                    h_align="start",
+                    name="submenu-row-label",
+                    ellipsize="end",
+                ),
+            ],
         )
-        ap_button.connect(
+
+        row = CenterBox(h_expand=True, v_align="center", start_children=[left])
+        if is_connected:
+            row.add_end(
+                Image(
+                    icon_name="object-select-symbolic",
+                    icon_size=14,
+                    name="submenu-row-check",
+                )
+            )
+
+        btn = Button(name="submenu-row", child=row, h_expand=True)
+        if is_connected:
+            btn.add_style_class("active")
+        btn.connect(
             "clicked",
             lambda _: self.network.get_client().connect_wifi_bssid(ap.get_bssid()),
         )
-        return ap_button
+        return btn
 
 
 class WifiToggle(QuickSubToggle):
@@ -85,14 +113,15 @@ class WifiToggle(QuickSubToggle):
         )
         self.client = client
         self.update_action_button()
-
         self.connect("action-clicked", self.on_action)
 
     def update_action_button(self):
         wifi = self.client.get_wifi()
         if wifi:
             self.action_icon.set_from_icon_name(wifi.get_icon_name() + "-symbolic", 24)
-            self.action_label.set_label(wifi.get_ssid() if wifi.get_ssid() else "Not Connected")
+            self.action_label.set_label(
+                wifi.get_ssid() if wifi.get_ssid() else "Not Connected"
+            )
             self.set_active_style(wifi.get_enabled())
 
             wifi.connect(
@@ -102,7 +131,7 @@ class WifiToggle(QuickSubToggle):
                     self.action_label.set_label("Wifi Disabled")
                     if not wifi.get_enabled()
                     else self.action_label.set_label(wifi.get_ssid()),
-                ],  # type: ignore
+                ],
             )
 
             wifi.bind("icon-name", "icon-name", self.action_icon)

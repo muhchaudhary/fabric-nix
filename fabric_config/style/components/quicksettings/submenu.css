@@ -1,8 +1,152 @@
+/* Submenu container */
 #quicksettings-submenu {
   background-color: alpha(var(--fg-test), 0.04);
-  padding: 10px;
+  padding: 12px;
   border-radius: 16px;
   border-style: solid;
   border-width: 1px;
   border-color: alpha(var(--fg-test), 0.1);
+}
+
+/* Title bar */
+#submenu-title {
+  border-style: solid;
+  border-bottom-width: 1px;
+  border-color: alpha(var(--fg-test), 0.1);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+}
+
+#submenu-title-icon {
+  color: var(--fg-dim);
+}
+
+#submenu-title-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg-test);
+}
+
+/* Scan / action button in the title bar */
+#submenu-title-action {
+  padding: 4px 8px;
+  border-radius: 8px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  color: var(--fg-dim);
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+#submenu-title-action:hover {
+  background-color: alpha(var(--fg-test), 0.1);
+  border-color: alpha(var(--fg-test), 0.12);
+  color: var(--fg-test);
+}
+
+#submenu-title-action:active,
+#submenu-title-action.active {
+  background-color: alpha(var(--accent), 0.18);
+  border-color: alpha(var(--accent), 0.4);
+  color: var(--accent);
+}
+
+/* Section headers (Bluetooth paired / available) */
+#submenu-section-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim2);
+  margin: 6px 4px 2px 4px;
+}
+
+/* List */
+#submenu-list {
+  padding: 2px 0px;
+}
+
+/* Row items (wifi networks, bluetooth devices) */
+#submenu-row {
+  padding: 6px 8px;
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  transition-property: background-color, border-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+#submenu-row:hover {
+  background-color: alpha(var(--fg-test), 0.08);
+  border-color: alpha(var(--fg-test), 0.08);
+}
+
+#submenu-row:active {
+  background-color: alpha(var(--fg-test), 0.14);
+}
+
+#submenu-row.active {
+  background-color: alpha(var(--accent), 0.12);
+  border-color: alpha(var(--accent), 0.25);
+}
+
+#submenu-row.active:hover {
+  background-color: alpha(var(--accent), 0.18);
+}
+
+/* Icons and labels inside rows */
+#submenu-row-icon {
+  color: var(--fg-dim);
+}
+
+#submenu-row.active #submenu-row-icon {
+  color: var(--accent);
+}
+
+#submenu-row-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--fg-test);
+}
+
+#submenu-row-check {
+  color: var(--accent);
+}
+
+/* Bluetooth connect button pill */
+#submenu-connect-button {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 3px 10px;
+  border-radius: 20px;
+  border-style: solid;
+  border-width: 1px;
+  transition-property: background-color, color, border-color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+#submenu-connect-button.connected {
+  color: var(--accent);
+  border-color: alpha(var(--accent), 0.45);
+  background-color: alpha(var(--accent), 0.12);
+}
+
+#submenu-connect-button.connecting {
+  color: var(--fg-dim);
+  border-color: alpha(var(--fg-dim), 0.3);
+  background-color: alpha(var(--fg-dim), 0.08);
+}
+
+#submenu-connect-button.disconnected {
+  color: var(--fg-dim);
+  border-color: alpha(var(--fg-dim), 0.25);
+}
+
+#submenu-connect-button:hover {
+  background-color: alpha(var(--fg-test), 0.1);
+  border-color: alpha(var(--fg-test), 0.2);
+  color: var(--fg-test);
 }
