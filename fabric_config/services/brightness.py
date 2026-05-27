@@ -3,6 +3,7 @@ import os
 from fabric.core.service import Service, Property
 from fabric.utils import exec_shell_command_async, monitor_file
 from gi.repository import GLib
+from loguru import logger
 
 
 def exec_brightnessctl_async(args: str):
@@ -62,7 +63,7 @@ class Brightness(Service):
         try:
             exec_brightnessctl_async(f"--device '{SCREEN}' set {value}")
         except GLib.Error as e:
-            print(e.message)
+            logger.error(f"[Brightness] {e.message}")
 
     @Property(int, "read-write")
     def keyboard_brightness(self) -> int:  # type: ignore
@@ -77,4 +78,4 @@ class Brightness(Service):
         try:
             exec_brightnessctl_async(f"--device '{kbd}' set {value}")
         except GLib.Error as e:
-            print(e.message)
+            logger.error(f"[Brightness] {e.message}")

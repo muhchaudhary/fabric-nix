@@ -100,7 +100,7 @@ scale {
 }
 
 #workspaces > button.active {
-  min-width: 22px;
+  min-width: 35px;
   border-radius: 8px;
   margin: 11px 2px;
   background-color: var(--accent);

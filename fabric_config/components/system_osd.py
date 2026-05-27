@@ -230,7 +230,6 @@ class CairoProgressBar(Gtk.DrawingArea, Widget):
         cr.close_path()
 
     def on_draw(self, widget, cr: cairo.Context):
-        print("DRAWING")
         style_context = self.get_style_context()
 
         width = style_context.get_property("min-width", Gtk.StateFlags.NORMAL)
@@ -288,7 +287,6 @@ class CairoProgressBar(Gtk.DrawingArea, Widget):
                 border_radius,
             )
             cr.fill()
-        print(min(tick_width, tick_height) // 4)
         cr.restore()
 
 

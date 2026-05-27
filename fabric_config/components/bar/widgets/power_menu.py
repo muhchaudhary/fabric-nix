@@ -1,6 +1,7 @@
 from typing import Literal
 
 from fabric.utils import exec_shell_command_async
+from loguru import logger
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -88,7 +89,7 @@ class PowerMenuConfirmMenu(Revealer):
 
     def do_confirm(self, confirmation: bool):
         if confirmation:
-            print(f"Okay lets go, {self.selected_operation}")
+            logger.info(f"[PowerMenu] executing {self.selected_operation}")
             match self.selected_operation:
                 case "shutdown":
                     exec_shell_command_async("shutdown now")
@@ -195,13 +196,15 @@ class PowerMenuButton(Button):
 
         self.powermenu_popup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: [
-                self.add_style_class("button-basic-active"),
-                self.remove_style_class("button-basic"),
-            ]
-            if self.powermenu_popup.popup_visible
-            else [
-                self.remove_style_class("button-basic-active"),
-                self.add_style_class("button-basic"),
-            ],
+            lambda *args: (
+                [
+                    self.add_style_class("button-basic-active"),
+                    self.remove_style_class("button-basic"),
+                ]
+                if self.powermenu_popup.popup_visible
+                else [
+                    self.remove_style_class("button-basic-active"),
+                    self.add_style_class("button-basic"),
+                ]
+            ),
         )

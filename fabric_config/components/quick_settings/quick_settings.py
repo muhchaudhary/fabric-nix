@@ -124,8 +124,6 @@ class QuickSettingsButton(Button):
                 )
                 wifi.bind_property("icon-name", self.network_icon, "icon-name")
 
-                print(wifi.get_icon_name())
-
             else:
                 ethernet = config.network.get_wired()
                 if ethernet:
@@ -143,15 +141,17 @@ class QuickSettingsButton(Button):
 
         QuickSettingsPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *args: [
-                self.add_style_class("button-basic-active"),
-                self.remove_style_class("button-basic"),
-            ]
-            if QuickSettingsPopup.popup_visible
-            else [
-                self.remove_style_class("button-basic-active"),
-                self.add_style_class("button-basic"),
-            ],
+            lambda *args: (
+                [
+                    self.add_style_class("button-basic-active"),
+                    self.remove_style_class("button-basic"),
+                ]
+                if QuickSettingsPopup.popup_visible
+                else [
+                    self.remove_style_class("button-basic-active"),
+                    self.add_style_class("button-basic"),
+                ]
+            ),
         )
 
     def update_audio(self, *args):

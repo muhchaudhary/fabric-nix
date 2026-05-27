@@ -53,6 +53,21 @@
   color: var(--accent);
 }
 
+@keyframes spin {
+  from { -gtk-icon-transform: rotate(0deg); }
+  to { -gtk-icon-transform: rotate(360deg); }
+}
+
+#submenu-title-action.scanning {
+  background-color: alpha(var(--accent), 0.18);
+  border-color: alpha(var(--accent), 0.4);
+  color: var(--accent);
+}
+
+#submenu-title-action.scanning image {
+  animation: spin 1s linear infinite;
+}
+
 /* Section headers (Bluetooth paired / available) */
 #submenu-section-header {
   font-size: 11px;
@@ -117,6 +132,59 @@
 
 #submenu-card-check {
   color: var(--accent);
+}
+
+#submenu-card-sublabel {
+  font-size: 11px;
+  color: var(--fg-dim2);
+}
+
+#submenu-card-lock {
+  color: var(--fg-dim2);
+  margin-left: 2px;
+}
+
+#submenu-card-forget {
+  padding: 4px;
+  border-radius: 6px;
+  border-style: none;
+  background-color: transparent;
+  color: var(--fg-dim2);
+  transition-property: background-color, color;
+  transition-duration: 0.15s;
+  transition-timing-function: ease;
+}
+
+#submenu-card-forget:hover {
+  background-color: alpha(red, 0.15);
+  color: red;
+}
+
+#submenu-card.connecting {
+  opacity: 0.6;
+}
+
+/* Password entry row */
+#submenu-password-row {
+  padding: 4px 2px 6px 2px;
+}
+
+#submenu-password-entry {
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg-test), 0.15);
+  background-color: alpha(var(--fg-test), 0.06);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--fg-test);
+  outline-style: none;
+  min-height: 0;
+}
+
+#submenu-password-entry:focus {
+  border-color: alpha(var(--accent), 0.5);
+  background-color: alpha(var(--accent), 0.06);
 }
 
 /* iOS-style toggle switch (Gtk.Switch) */

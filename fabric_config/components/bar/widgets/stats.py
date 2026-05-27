@@ -1,3 +1,4 @@
+import os
 from time import sleep
 
 import psutil
@@ -15,7 +16,7 @@ class SystemTemps(Button):
             style_classes=["button-basic", "button-basic-props", "button-border"],
             **kwargs,
         )
-        self.has_gpu = True if exec_shell_command("nvidia-smi") else False
+        self.has_gpu = os.path.exists("/dev/nvidiactl")
 
         self.fan_speed_label = Label("-1 RPM")
         self.cpu_temp_label = Label("-1°C")

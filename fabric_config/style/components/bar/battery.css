@@ -4,12 +4,12 @@
 
 #battery-cairo-icon {
   min-width: 56px;
-  min-height: 28px;
-  margin: 4px;
+  min-height: 26px;
+  margin: 4px 2px;
   border-style: solid;
-  border-width: 1px;
-  border-radius: 8px;
-  transition-property: min-width, border-color, background-color, color, border-radius;
+  border-width: 2px;
+  border-radius: 5px;
+  transition-property: border-color, background-color, color;
   transition-duration: 0.4s;
   transition-timing-function: ease;
   font-family: "Roboto", "Helvetica Neue", sans-serif;
@@ -17,25 +17,24 @@
 
 #battery-cairo-icon.default {
   color: var(--fg-test);
-  border-color: alpha(var(--accent), 0.7);
-  background-color: alpha(var(--accent), 0.18);
+  border-color: alpha(var(--accent), 0.9);
+  background-color: alpha(var(--accent), 0.3);
 }
 
 #battery-cairo-icon.charging {
-  border-radius: 8px;
   color: var(--green);
-  border-color: alpha(var(--green), 0.7);
-  background-color: alpha(var(--green), 0.15);
+  border-color: alpha(var(--green), 0.9);
+  background-color: alpha(var(--green), 0.25);
 }
 
 #battery-cairo-icon.low {
   color: var(--yellow);
-  border-color: alpha(var(--yellow), 0.7);
-  background-color: alpha(var(--yellow), 0.12);
+  border-color: alpha(var(--yellow), 0.9);
+  background-color: alpha(var(--yellow), 0.22);
 }
 
 #battery-cairo-icon.critical {
   color: var(--red);
-  border-color: alpha(var(--red), 0.7);
-  background-color: alpha(var(--red), 0.12);
+  border-color: alpha(var(--red), 0.9);
+  background-color: alpha(var(--red), 0.22);
 }

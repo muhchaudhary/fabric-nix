@@ -133,8 +133,9 @@ class ClientOutput(Service):
         frame.destroy()
 
     def on_buffer_failed(self, frame: HyprlandToplevelExportFrameV1Proxy):
-        logger.error(f"[PyWayland] failed to copy buffer for {frame.user_data[0]}")
-        print(frame.user_data)
+        logger.error(
+            f"[PyWayland] failed to copy buffer for {frame.user_data[0]}: {frame.user_data}"
+        )
         frame.user_data[1].destroy() if len(frame.user_data) > 1 else None
         frame.destroy()
         self.display.flush()

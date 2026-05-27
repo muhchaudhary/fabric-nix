@@ -1,11 +1,12 @@
 import datetime
 import json
 import os
+import threading
 
 import gi
 import requests
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import exec_shell_command, invoke_repeater
+from fabric.utils import exec_shell_command_async, invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -43,9 +44,7 @@ def _load_location() -> dict | None:
 def _reverse_geocode(lat: float, lon: float) -> str:
     try:
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
-        resp = requests.get(
-            url, timeout=5, headers={"User-Agent": "fabric-config/1.0"}
-        )
+        resp = requests.get(url, timeout=5, headers={"User-Agent": "fabric-config/1.0"})
         if resp.status_code == 200:
             addr = resp.json().get("address", {})
             city = (
@@ -82,8 +81,9 @@ class PrayerTimesService(Service):
         invoke_repeater(86400 * 1000, lambda: self.refresh())
 
     def notify_next_prayer(self):
-        exec_shell_command(
-            f"notify-send 'Next Prayer' 'Next prayer is {self.next_prayer}'"
+        exec_shell_command_async(
+            f"notify-send 'Next Prayer' 'Next prayer is {self.next_prayer}'",
+            lambda *_: None,
         )
 
     def update_prayer_state(self):
@@ -187,7 +187,8 @@ class PrayerTimesService(Service):
             if response.status_code == 200:
                 with open(PRAYER_TIMES_FILE, "w") as outfile:
                     json.dump(response.json()["data"], outfile, indent=4)
-                self.update_times(self._read_json())
+                data = self._read_json()
+                GLib.idle_add(lambda: self.update_times(data))
         except Exception:
             pass
 
@@ -198,15 +199,26 @@ class PrayerTimesService(Service):
                 loc = simple.get_location()
                 lat = loc.get_property("latitude")
                 lon = loc.get_property("longitude")
-                city = _reverse_geocode(lat, lon)
-                _save_location(lat, lon, city)
-                self.location_name = city
-                self._fetch_with_coords(lat, lon)
             except Exception:
                 cached = _load_location()
                 if cached:
-                    self.location_name = cached.get("city", "")
-                    self._fetch_with_coords(cached["lat"], cached["lon"])
+                    GLib.idle_add(
+                        lambda: setattr(self, "location_name", cached.get("city", ""))
+                    )
+                    threading.Thread(
+                        target=self._fetch_with_coords,
+                        args=(cached["lat"], cached["lon"]),
+                        daemon=True,
+                    ).start()
+                return
+
+            def fetch():
+                city = _reverse_geocode(lat, lon)
+                _save_location(lat, lon, city)
+                GLib.idle_add(lambda: setattr(self, "location_name", city))
+                self._fetch_with_coords(lat, lon)
+
+            threading.Thread(target=fetch, daemon=True).start()
 
         Geoclue.Simple.new(
             "fabric-config",
@@ -247,6 +259,16 @@ class PrayerTimesService(Service):
         self.emit("changed")
 
 
+_prayer_service: "PrayerTimesService | None" = None
+
+
+def _get_prayer_service() -> "PrayerTimesService":
+    global _prayer_service
+    if _prayer_service is None:
+        _prayer_service = PrayerTimesService()
+    return _prayer_service
+
+
 class PrayerTimesButton(Button):
     def __init__(self, **kwargs):
         super().__init__(
@@ -257,21 +279,23 @@ class PrayerTimesButton(Button):
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
-        self.prayer_service = PrayerTimesService()
+        self.prayer_service = _get_prayer_service()
         self.prayer_service.connect("notify::current-prayer", self.update_label)
         self.prayer_service.connect("notify::time-to-next-prayer", self.update_label)
         self.update_label()
         PrayerTimesPopup.reveal_child.revealer.connect(
             "notify::reveal-child",
-            lambda *_: [
-                self.add_style_class("button-basic-active"),
-                self.remove_style_class("button-basic"),
-            ]
-            if PrayerTimesPopup.popup_visible
-            else [
-                self.remove_style_class("button-basic-active"),
-                self.add_style_class("button-basic"),
-            ],
+            lambda *_: (
+                [
+                    self.add_style_class("button-basic-active"),
+                    self.remove_style_class("button-basic"),
+                ]
+                if PrayerTimesPopup.popup_visible
+                else [
+                    self.remove_style_class("button-basic-active"),
+                    self.add_style_class("button-basic"),
+                ]
+            ),
         )
 
     def on_click(self, *_):
@@ -288,7 +312,7 @@ class PrayerTimes(Box):
         super().__init__(
             orientation="v", name="prayer-info", style_classes=["cool-border"], **kwargs
         )
-        self.prayer_info_service = PrayerTimesService()
+        self.prayer_info_service = _get_prayer_service()
 
         self.location_label = Label(
             label=self.prayer_info_service.location_name or "Fetching location...",

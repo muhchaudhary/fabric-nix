@@ -280,9 +280,8 @@ class MprisPlayer(Service):
         try:
             self._proxy.call_finish(res)
         except Exception as e:
-            print(e)
             logger.error(
-                f"[MPRIS-{self.bus_name}] Failed to invoke method: {user_data}"
+                f"[MPRIS-{self.bus_name}] Failed to invoke method: {user_data}: {e}"
             )
 
     def _on_name_owner_change(self, proxy: Gio.DBusProxy, _):

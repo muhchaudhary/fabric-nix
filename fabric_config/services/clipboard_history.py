@@ -107,8 +107,7 @@ class ClipboardHistory(Service):
     def cliphist_copy(self, cliphist_id: str):
         def wl_wait_callback(proc: Gio.Subprocess, task: Gio.Task):
             try:
-                x = proc.wait_finish(task)
-                print(x)
+                proc.wait_finish(task)
             except Exception as e:
                 logger.error(
                     f"[CLIPBOARD] Failed to copy for id: {cliphist_id} when sending file"
@@ -147,10 +146,9 @@ class ClipboardHistory(Service):
                 else:
                     process.communicate_async(stdout, None, wl_copy_callback)
 
-            except Exception as _:
-                print(_)
+            except Exception as e:
                 logger.error(
-                    f"[CLIPBOARD] Failed to copy item with cliphist id: {cliphist_id} after decode"
+                    f"[CLIPBOARD] Failed to copy item with cliphist id: {cliphist_id} after decode: {e}"
                 )
 
         process: Gio.Subprocess = Gio.Subprocess.new(
@@ -216,7 +214,7 @@ class ClipboardHistory(Service):
                 )
                 self.emit("clipboard-data-ready", cliphist_id)
             except Exception as e:
-                print(e)
+                logger.error(f"[CLIPBOARD] Failed to load pixbuf from stream: {e}")
 
         def on_file_read(stream: Gio.InputStream, task: Gio.Task, _):
             try:
@@ -322,7 +320,7 @@ class ClipboardHistory(Service):
                     self.emit("clipboard-data-ready", cliphist_id)
 
             except Exception as e:
-                print(e)
+                logger.error(f"[CLIPBOARD] Failed to decode clipboard item: {e}")
 
         self.cliphist_decode(cliphist_id, callback)
 

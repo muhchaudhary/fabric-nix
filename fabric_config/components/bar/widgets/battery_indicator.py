@@ -35,7 +35,7 @@ class BatteryIndicator(Box):
         self.current_class = ""
 
         self.battery = Fabricator(
-            poll_from=self.poll_batt, interval=1000, on_changed=self.update_battery
+            poll_from=self.poll_batt, interval=10000, on_changed=self.update_battery
         )
         self.battery_button.add(
             Box(
@@ -48,28 +48,26 @@ class BatteryIndicator(Box):
         self.add(self.battery_button)
 
     def update_battery(self, _, value):
-        percent = value.percent
+        percent = int(value.percent)
         secsleft = value.secsleft
         charging = value.power_plugged
 
-        if int(percent) != self.curr_percent or self.is_charging != charging:
-            self.update_battery_class(int(percent), charging)
+        state_changed = percent != self.curr_percent or self.is_charging != charging
+        if not state_changed:
+            return
 
-        if int(percent) != self.curr_percent:
-            self.curr_percent = int(percent)
-            self.battery_body.percentage = int(self.curr_percent)
-
-        self.battery_button.set_tooltip_text(
-            str(round(self.curr_percent))
-            + "% "
-            + str(datetime.timedelta(seconds=secsleft))
-            + " left",
-        ) if not charging else self.battery_button.set_tooltip_text(
-            str(round(self.curr_percent)) + "% " + "Charging",
-        )
-
+        self.update_battery_class(percent, charging)
+        self.curr_percent = percent
+        self.battery_body.percentage = percent
         self.is_charging = charging
         self.battery_body.is_charging = charging
+
+        if charging:
+            self.battery_button.set_tooltip_text(f"{percent}% Charging")
+        else:
+            self.battery_button.set_tooltip_text(
+                f"{percent}% {datetime.timedelta(seconds=secsleft)} left"
+            )
 
     def poll_batt(self, _):
         battery = psutil.sensors_battery()

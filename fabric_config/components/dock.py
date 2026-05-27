@@ -53,7 +53,7 @@ class AppBar(Box):
                         icon_name="view-app-grid-symbolic",
                         icon_size=60,
                     ),
-                    on_button_press_event=lambda *_: print(
+                    on_button_press_event=lambda *_: (
                         self._parent.get_application().actions["toggle-appmenu"][0]()
                     ),
                 )
@@ -65,7 +65,10 @@ class AppBar(Box):
         self._preview_image = Image()
         self._hyp = HyprlandWithMonitors()
 
-        self.connect("notify::visible", lambda *_: print(self.is_visible()))
+        self.connect(
+            "notify::visible",
+            lambda *_: logger.debug(f"[Dock] visible={self.is_visible()}"),
+        )
 
         self.popup_revealer = Revealer(
             child=Box(
@@ -85,9 +88,11 @@ class AppBar(Box):
 
         self.popup_revealer.connect(
             "notify::child-revealed",
-            lambda *_: self.popup.set_visible(False)
-            if not self.popup_revealer.child_revealed
-            else None,
+            lambda *_: (
+                self.popup.set_visible(False)
+                if not self.popup_revealer.child_revealed
+                else None
+            ),
         )
 
     def update_preview_image(self, client, client_button: Button):
@@ -112,9 +117,9 @@ class AppBar(Box):
         client_button = Button(
             style_classes=["button-basic", "button-basic-props"],
             image=client_image,
-            on_button_press_event=lambda _, event: client.activate()
-            if event.button == 1
-            else None,
+            on_button_press_event=lambda _, event: (
+                client.activate() if event.button == 1 else None
+            ),
             on_enter_notify_event=lambda *_: self.update_preview_image(
                 client, client_button
             ),
@@ -144,9 +149,11 @@ class AppBar(Box):
 
         client.connect(
             "notify::activated",
-            lambda *_: client_button.add_style_class("active")
-            if client.get_activated()
-            else client_button.remove_style_class("active"),
+            lambda *_: (
+                client_button.add_style_class("active")
+                if client.get_activated()
+                else client_button.remove_style_class("active")
+            ),
         )
 
         client.connect("close", lambda *_: self.remove(client_button))

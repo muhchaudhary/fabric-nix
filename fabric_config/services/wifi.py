@@ -1,3 +1,4 @@
+import shlex
 from typing import Any, List, Literal
 import gi
 from fabric.core.service import Property, Service, Signal
@@ -243,8 +244,6 @@ class Ethernet(Service):
         ):
             self._device.connect(f"notify::{pn}", lambda *_: self.notifier(pn))
 
-        self._device.connect("notify::speed", lambda *_: print(_))
-
     def notifier(self, pn):
         self.notify(pn)
         self.emit("changed")
@@ -307,11 +306,11 @@ class NetworkClient(Service):
             else None
         )
 
-    def connect_wifi_bssid(self, bssid):
-        # We are using nmcli here, idk im lazy
-        exec_shell_command_async(
-            f"nmcli device wifi connect {bssid}", lambda *args: print(args)
-        )
+    def connect_wifi_bssid(self, bssid: str, password: str | None = None):
+        cmd = f"nmcli device wifi connect {shlex.quote(bssid)}"
+        if password:
+            cmd += f" password {shlex.quote(password)}"
+        exec_shell_command_async(cmd, lambda *_: None)
 
     @Property(str, "readable")
     def primary_device(self) -> Literal["wifi", "wired"] | None:

@@ -10,6 +10,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
+from gi.repository import GLib
 
 
 class BluetoothDeviceBox(CenterBox):
@@ -56,6 +57,9 @@ class BluetoothSubMenu(QuickSubMenu):
     def __init__(self, client: BluetoothClient, **kwargs):
         self.client = client
         self.client.connect("device-added", self.populate_new_device)
+        self.client.connect("device-removed", self.remove_device)
+        self._device_boxes: dict[str, BluetoothDeviceBox] = {}
+        self._scan_timeout_id: int | None = None
 
         self.paired_devices = Box(
             orientation="v",
@@ -115,22 +119,44 @@ class BluetoothSubMenu(QuickSubMenu):
             **kwargs,
         )
 
-    def on_scan_toggle(self, btn: Button):
-        self.client.toggle_scan()
-        if self.client.scanning:
-            btn.add_style_class("active")
+    def on_scan_toggle(self, _btn: Button):
+        if self._scan_timeout_id:
+            self._stop_scan()
         else:
-            btn.remove_style_class("active")
+            self._start_scan()
+
+    def _start_scan(self):
+        self.client.scan()
+        self.scan_button.add_style_class("scanning")
+        self._scan_timeout_id = GLib.timeout_add_seconds(60, self._on_scan_timeout)
+
+    def _stop_scan(self):
+        self.client.scanning = False
+        self.scan_button.remove_style_class("scanning")
+        if self._scan_timeout_id:
+            GLib.source_remove(self._scan_timeout_id)
+            self._scan_timeout_id = None
+
+    def _on_scan_timeout(self):
+        self._scan_timeout_id = None
+        self._stop_scan()
+        return GLib.SOURCE_REMOVE
 
     def populate_new_device(self, client: BluetoothClient, address: str):
         device = client.get_device(address)
         if device is None:
             return
         box = BluetoothDeviceBox(device)
+        self._device_boxes[address] = box
         if device.paired:
             self.paired_devices.add(box)
         else:
             self.available_devices.add(box)
+
+    def remove_device(self, client: BluetoothClient, address: str):
+        box = self._device_boxes.pop(address, None)
+        if box is not None:
+            self.available_devices.remove(box)
 
 
 class BluetoothToggle(QuickSubToggle):
