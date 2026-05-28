@@ -14,10 +14,8 @@ from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.circularprogressbar import CircularProgressBar
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.overlay import Overlay
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
 from loguru import logger
@@ -28,7 +26,8 @@ from fabric_config.widgets.rounded_image import CustomImage
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk
+gi.require_version("Pango", "1.0")
+from gi.repository import Gdk, GdkPixbuf, Gtk, Pango
 
 # TODO: make a notification center
 # TODO: group notifications by type
@@ -125,86 +124,79 @@ class ActionButton(Button):
 
 class NotificationBox(Box):
     def __init__(self, notification: Notification):
-        self.progress_timeout = CircularProgressBar(
-            name="notification-title-circular-progress-bar",
-            size=35,
-            min_value=0,
-            max_value=1,
-            radius_color=True,
+        header = CenterBox(
+            name="notification-header",
+            start_children=[
+                self.get_icon(notification.app_icon),
+                Label(
+                    str(notification.app_name),
+                    name="notification-app-name",
+                    h_align="start",
+                ),
+            ],
+            end_children=[
+                Button(
+                    name="notification-close-btn",
+                    image=Image(icon_name="window-close-symbolic", icon_size=12),
+                    on_clicked=lambda *_: notification.close("dismissed-by-user"),
+                ),
+            ],
         )
-        super().__init__(
-            name="notification-box",
-            orientation="v",
-            children=[
-                CenterBox(
-                    name="notification-title",
-                    spacing=0,
-                    start_children=[
-                        self.get_icon(notification.app_icon),
-                        Label(
-                            str(notification.app_name),
-                            h_align="start",
-                            style="font-weight: 900;",
+
+        summary = Label(
+            label=notification.summary,
+            name="notification-summary",
+            h_align="start",
+            max_chars_width=38,
+        )
+        summary.set_line_wrap(True)
+        summary.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        summary.set_lines(1)
+        summary.set_ellipsize(Pango.EllipsizeMode.END)
+
+        text_children: list = [summary]
+        if notification.body:
+            body_label = Label(
+                label=notification.body,
+                name="notification-body",
+                h_align="start",
+                max_chars_width=38,
+            )
+            body_label.set_line_wrap(True)
+            body_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
+            body_label.set_lines(3)
+            body_label.set_ellipsize(Pango.EllipsizeMode.END)
+            text_children.append(body_label)
+
+        text_box = Box(orientation="v", h_expand=True, children=text_children)
+
+        if notification.image_pixbuf:
+            content = CenterBox(
+                name="notification-content",
+                start_children=[text_box],
+                end_children=[
+                    Box(
+                        name="notification-image",
+                        children=CustomImage(
+                            pixbuf=notification.image_pixbuf.scale_simple(
+                                52, 52, GdkPixbuf.InterpType.BILINEAR
+                            )
                         ),
-                    ],
-                    end_children=[
-                        Overlay(
-                            child=self.progress_timeout,
-                            overlays=Button(
-                                name="notification-title-button",
-                                image=Image(
-                                    icon_name="window-close-symbolic", icon_size=15
-                                ),
-                                on_clicked=lambda *_: notification.close(
-                                    "dismissed-by-user"
-                                ),
-                            ),
-                        ),
-                    ],
-                ),
-                Box(
-                    name="notification-content",
-                    spacing=10,
-                    children=[
-                        Box(
-                            name="notification-image",
-                            children=CustomImage(
-                                pixbuf=notification.image_pixbuf.scale_simple(
-                                    75, 75, GdkPixbuf.InterpType.BILINEAR
-                                )
-                                if notification.image_pixbuf
-                                else None
-                            ),
-                        ),
-                        Box(
-                            orientation="v",
-                            children=[
-                                Label(
-                                    label=(
-                                        notification.summary[:30]
-                                        + (notification.summary[30:] and "...")
-                                    ),
-                                    line_wrap="word-char",
-                                    max_chars_width=40,
-                                    h_align="start",
-                                    style="font-weight: 900",
-                                ),
-                                Label(
-                                    label=(
-                                        notification.body[:120]
-                                        + (notification.body[120:] and "...")
-                                    ),
-                                    line_wrap="word-char",
-                                    max_chars_width=40,
-                                    h_align="start",
-                                ),
-                            ],
-                        ),
-                    ],
-                ),
-                Box(name="notification-seperator", h_expand=True)
-                if notification.actions
-                else Box(),
+                    )
+                ],
+            )
+        else:
+            content = Box(name="notification-content", children=[text_box])
+
+        self.progress_bar = Gtk.ProgressBar()
+        self.progress_bar.set_name("notification-progress-bar")
+        self.progress_bar.set_fraction(1.0)
+        self.progress_bar.show()
+
+        box_children = [header, content]
+        if notification.actions:
+            box_children += [
+                Box(name="notification-separator", h_expand=True),
                 Box(
                     name="notification-action-buttons",
                     children=[
@@ -213,28 +205,26 @@ class NotificationBox(Box):
                     ],
                     h_expand=True,
                 ),
-            ],
+            ]
+        box_children.append(self.progress_bar)
+
+        super().__init__(
+            name="notification-box",
+            orientation="v",
+            children=box_children,
         )
 
     def get_icon(self, app_icon) -> Image:
         match app_icon:
             case str(x) if x.startswith("file://"):
-                return Image(
-                    name="notification-icon",
-                    image_file=app_icon[7:],
-                    size=24,
-                )
+                return Image(name="notification-icon", image_file=app_icon[7:], size=16)
             case str(x) if len(x) > 0 and "/" == x[0]:
-                return Image(
-                    name="notification-icon",
-                    image_file=app_icon,
-                    size=24,
-                )
+                return Image(name="notification-icon", image_file=app_icon, size=16)
             case _:
                 return Image(
                     name="notification-icon",
                     icon_name=app_icon if app_icon else "dialog-information-symbolic",
-                    size=24,
+                    size=16,
                 )
 
 
@@ -246,10 +236,20 @@ class NotificationRevealer(Revealer):
         self.popup_timeout = 5000
         self.not_box = NotificationBox(notification)
         self.notification = notification
-        self.not_box.progress_timeout.max_value = self.popup_timeout
+        self.hovered = False
+
+        # EventBox gives us a GDK window so crossing events actually fire
+        self._event_box = Gtk.EventBox()
+        self._event_box.add_events(
+            Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK
+        )
+        self._event_box.connect("enter-notify-event", self._on_enter)
+        self._event_box.connect("leave-notify-event", self._on_leave)
+        self._event_box.add(self.not_box)
+        self._event_box.show()
 
         super().__init__(
-            child=Box(style="margin: 1px 0px 1px 1px;", children=self.not_box),
+            child=Box(style="margin: 1px 0px 1px 1px;", children=self._event_box),
             transition_duration=0,
             transition_type="crossfade",
         )
@@ -265,18 +265,36 @@ class NotificationRevealer(Revealer):
 
         notification.connect("closed", self.on_resolved)
 
+    def _on_enter(self, *_):
+        self.hovered = True
+        logger.debug(f"[Notification {self.notification.id}] hover enter")
+
+    def _on_leave(self, _, ev):
+        if ev.detail != Gdk.NotifyType.INFERIOR:
+            self.hovered = False
+            logger.debug(f"[Notification {self.notification.id}] hover leave")
+
     def animate_popup_timeout(self):
-        time = self.popup_timeout
+        time_remaining = self.popup_timeout
+        log_counter = 0
 
         def do_animate():
-            nonlocal time
-            self.not_box.progress_timeout.value = time
+            nonlocal time_remaining, log_counter
             if not self.child_revealed:
                 return False
-            if time <= 0:
+            log_counter += 1
+            if log_counter >= 100:  # log ~once per second
+                log_counter = 0
+                logger.debug(
+                    f"[Notification {self.notification.id}] hovered={self.hovered} time_remaining={time_remaining}"
+                )
+            if self.hovered:
+                return True
+            if time_remaining <= 0:
                 self.notification.close("expired")
                 return False
-            time -= 10
+            time_remaining -= 10
+            self.not_box.progress_bar.set_fraction(time_remaining / self.popup_timeout)
             return True
 
         invoke_repeater(10, do_animate)
