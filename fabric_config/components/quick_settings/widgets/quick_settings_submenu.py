@@ -113,7 +113,7 @@ class QuickSubToggle(Box):
             icon_size=pixel_size,
         )
         self.action_label = Label(name="panel-text", label=action_label)
-        self.action_button = Button(name="quicksettings-toggle-action", h_expand=True)
+        self.action_button = Button(name="quicksettings-toggle-action")
         self.action_button.add(
             Box(
                 h_align="start",
@@ -125,9 +125,10 @@ class QuickSubToggle(Box):
         super().__init__(
             name="quicksettings-togglebutton",
             v_align="start",
-            children=[self.action_button, self.reveal_button],
             **kwargs,
         )
+        self.pack_start(self.action_button, True, True, 0)
+        self.pack_start(self.reveal_button, False, False, 0)
 
         self.reveal_button.connect("clicked", self.do_reveal_toggle)
         self.action_button.connect("clicked", self.do_action)

@@ -41,18 +41,16 @@ class QuickSettingsButtonBox(Box):
         self.wifi_toggle = WifiToggle(
             submenu=WifiSubMenu(config.network),
             client=config.network,
-            h_expand=True,
         )
 
         # Bluetooth
         self.bluetooth_toggle = BluetoothToggle(
             submenu=BluetoothSubMenu(config.bluetooth_client),
             client=config.bluetooth_client,
-            h_expand=True,
         )
 
-        self.buttons.add(self.wifi_toggle)
-        self.buttons.add(self.bluetooth_toggle)
+        self.buttons.pack_start(self.wifi_toggle, True, True, 0)
+        self.buttons.pack_start(self.bluetooth_toggle, True, True, 0)
 
         self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
@@ -74,6 +72,7 @@ class QuickSettings(Box):
         super().__init__(
             orientation="v",
             spacing=10,
+            h_expand=True,
             style_classes=["cool-border"],
             name="quicksettings",
             **kwargs,
