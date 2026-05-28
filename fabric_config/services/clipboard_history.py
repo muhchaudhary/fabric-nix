@@ -1,5 +1,6 @@
 import os
 import re
+import shlex
 import threading
 from typing import Callable
 
@@ -9,7 +10,9 @@ from fabric import Fabricator, Property, Service, Signal
 from loguru import logger
 
 gi.require_version("GdkPixbuf", "2.0")
-from gi.repository import GdkPixbuf, Gio, GLib
+from gi.repository import GdkPixbuf, Gio, GLib  # noqa: E402
+
+_BINARY_RE = re.compile(r"\[\[ binary data .* \]\]")
 
 SUPPORTED_MIME_TYPES = [
     mime_type for fmt in GdkPixbuf.Pixbuf.get_formats() for mime_type in fmt.mime_types
@@ -105,58 +108,22 @@ class ClipboardHistory(Service):
         process.communicate_async(None, None, callback)
 
     def cliphist_copy(self, cliphist_id: str):
-        def wl_wait_callback(proc: Gio.Subprocess, task: Gio.Task):
+        def on_done(proc: Gio.Subprocess, task: Gio.Task):
             try:
                 proc.wait_finish(task)
-            except Exception as e:
-                logger.error(
-                    f"[CLIPBOARD] Failed to copy for id: {cliphist_id} when sending file"
-                )
-
-        def wl_copy_callback(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                proc.communicate_finish(task)
                 self.emit("clipboard-copied", cliphist_id)
-            except Exception as _:
-                logger.error(
-                    f"[CLIPBOARD] Failed to copy for id: {cliphist_id} when sending command"
-                )
-
-        def cliphist_decode_callback(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                _, stdout, stderr = proc.communicate_finish(task)
-                decoded_str: str = stdout.get_data().decode("utf8")
-
-                file_uri = (
-                    f"file://{decoded_str}"
-                    if not decoded_str.startswith("file://")
-                    else decoded_str
-                )
-
-                if os.path.exists(file_uri[7:]):
-                    self.cliphist_delete(
-                        cliphist_id
-                    )  # We're going to end up with copies otherwise
-                    proc = Gio.Subprocess.new(
-                        ["wl-copy", "--type", "text/uri-list", file_uri],
-                        Gio.SubprocessFlags.STDIN_PIPE
-                        | Gio.SubprocessFlags.STDERR_PIPE,
-                    )
-                    proc.wait_async(None, wl_wait_callback)
-                else:
-                    process.communicate_async(stdout, None, wl_copy_callback)
-
             except Exception as e:
-                logger.error(
-                    f"[CLIPBOARD] Failed to copy item with cliphist id: {cliphist_id} after decode: {e}"
-                )
+                logger.error(f"[CLIPBOARD] Failed to copy id: {cliphist_id}: {e}")
 
-        process: Gio.Subprocess = Gio.Subprocess.new(
-            ["wl-copy"],
-            Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-        )  # type: ignore
-        # in_pipe: Gio.OutputStream = process.get_stdin_pipe()
-        self.cliphist_decode(cliphist_id, cliphist_decode_callback)
+        process = Gio.Subprocess.new(
+            [
+                "/bin/sh",
+                "-c",
+                f"cliphist decode {shlex.quote(str(cliphist_id))} | wl-copy",
+            ],
+            Gio.SubprocessFlags.STDERR_PIPE,
+        )
+        process.wait_async(None, on_done)
 
     def cliphist_delete(self, cliphist_id: str):
         self.cliphist_id = cliphist_id
@@ -324,17 +291,20 @@ class ClipboardHistory(Service):
 
         self.cliphist_decode(cliphist_id, callback)
 
-    def decode_clipboard(self):
-        pattern = re.compile("\[\[ binary data .* \]\]")
-        for cliphist_id in self._clipboard_history.keys():
-            preview: str = self._clipboard_history[cliphist_id]
+    def decode_item(self, cliphist_id: str):
+        preview = self._clipboard_history.get(cliphist_id)
+        if preview is None:
+            return
+        if _BINARY_RE.match(preview):
+            self.parse_data_binary(cliphist_id)
+        elif preview.startswith("<meta"):
+            self.parse_html_tag(cliphist_id)
+        else:
+            self.parse_string(cliphist_id)
 
-            if pattern.match(preview):
-                self.parse_data_binary(cliphist_id)
-            elif preview.startswith("<meta"):
-                self.parse_html_tag(cliphist_id)
-            else:
-                self.parse_string(cliphist_id)
+    def decode_clipboard(self):
+        for cliphist_id in self._clipboard_history.keys():
+            self.decode_item(cliphist_id)
 
     @Property(dict, "readable")
     def clipboard_history(self) -> dict:

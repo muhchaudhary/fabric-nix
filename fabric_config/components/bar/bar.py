@@ -16,6 +16,9 @@ from fabric_config.components.bar.widgets import (
     SystemTemps,
     SystemTrayRevealer,
 )
+from fabric_config.components.bar.widgets.clipboard_history import (
+    ClipboardHistoryButton,
+)
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
 from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
@@ -84,6 +87,7 @@ class StatusBarSeperated(WaylandWindow):
         self.quick_settings = QuickSettingsButton()
         self.prayer_times = PrayerTimesButton()
         self.wallpaper_button = WallpapperPickerButton()
+        self.clipboard_button = ClipboardHistoryButton()
         self.system_temps = SystemTemps()
         self.system_tray = SystemTrayRevealer(icon_size=25)
 
@@ -111,7 +115,11 @@ class StatusBarSeperated(WaylandWindow):
             # StatusBarCorner("top-right"),
             Box(
                 name="system-bar-group",
-                children=[self.prayer_times, self.wallpaper_button],
+                children=[
+                    self.prayer_times,
+                    self.wallpaper_button,
+                    self.clipboard_button,
+                ],
                 style_classes="left",
             ),
             StatusBarCorner("top-left"),
