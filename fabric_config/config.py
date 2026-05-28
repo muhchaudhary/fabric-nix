@@ -6,6 +6,7 @@ from fabric_config.services.brightness import Brightness
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.screen_record import ScreenRecorder
+from fabric_config.services.theme import ThemeService
 
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as Network  # noqa: E402
@@ -18,6 +19,7 @@ audio = Audio()
 sc = ScreenRecorder()
 brightness = Brightness()
 network = Network.get_default()
+theme = ThemeService()
 
 bluetooth_icons_names = {
     "bluetooth": "bluetooth-active-symbolic",

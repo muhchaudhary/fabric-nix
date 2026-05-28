@@ -19,6 +19,7 @@ from fabric_config.components.quick_settings.widgets.submenus import (
 )
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+from fabric_config.widgets.theme_toggle import ThemeToggle
 
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as an
@@ -83,8 +84,10 @@ class QuickSettings(Box):
         self.screen_bright_slider = BrightnessSlider(config.brightness)
         self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
+        self.theme_toggle = ThemeToggle()
 
         self.add(self.buttons_box)
+        self.add(self.theme_toggle)
         self.add(self.audio_slider_box)
         self.add(self.screen_bright_slider)
         self.add(self.mprisBox)

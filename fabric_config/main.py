@@ -42,11 +42,15 @@ class MyApp(Application):
             self.overview,
             # self.dock,
         )
+        config.theme.connect("notify::is-light", lambda *_: self.apply_style())
         self.apply_style()
 
     def apply_style(self):
         logger.info("[Main] Compiling SCSS and applying style")
-        scss = get_relative_path("style/main.scss")
+        scss_name = (
+            "style/main-light.scss" if config.theme.is_light else "style/main.scss"
+        )
+        scss = get_relative_path(scss_name)
         css = get_relative_path("style/main.css")
         subprocess.run(["sass", str(scss), str(css)], check=True)
         return self.set_stylesheet_from_file(str(css))

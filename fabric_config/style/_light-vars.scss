@@ -1,0 +1,29 @@
+:vars {
+  /* Base backgrounds */
+  --bg:       #f5f5f7;
+  --surface:  alpha(#e8e8ed, 0.70);
+  --bg-glass: alpha(#f5f5f7, 0.92);
+
+  /* Foreground */
+  --fg:                   #1c1c1e;
+  --fg-glass:             alpha(#1c1c1e, 0.45);
+  --fg-dim:               #6e6e73;
+  --fg-dim-transparent:   alpha(#6e6e73, 0.45);
+  --fg-dim2:              #aeaeb2;
+  --fg-dim2-transparent:  alpha(#aeaeb2, 0.45);
+
+  /* Accent */
+  --accent: #0071e3;
+
+  /* Semantic colors - Apple HIG light palette */
+  --red:    #ff3b30;  --red-dim:    #c0392b;
+  --green:  #34c759;  --green-dim:  #27ae60;
+  --yellow: #ffd60a;  --yellow-dim: #f39c12;
+  --blue:   #0071e3;  --blue-dim:   #2471a3;
+  --purple: #af52de;  --purple-dim: #8e44ad;
+  --aqua:   #32ade6;  --aqua-dim:   #1abc9c;
+  --gray:   #8e8e93;  --gray-dim:   #636366;
+  --orange: #ff9500;  --orange-dim: #e67e22;
+
+  --placeholder_text_color: alpha(#1c1c1e, 0.35);
+}
