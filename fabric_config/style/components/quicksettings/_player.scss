@@ -1,0 +1,88 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+/* Player stack dots */
+#player-stack-button {
+  background-color: var(--fg-glass);
+  min-width: $gap-sm;
+  min-height: $gap-sm;
+  border-radius: 50%;
+  margin: 10px 2px;
+
+  &.active {
+    min-width: 20px;
+    border-radius: 6px;
+    background-color: var(--accent);
+    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+}
+
+#inner-player-box {
+  background-color: a(var(--fg), 0.05);
+  border-radius: $radius-lg;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.08);
+}
+
+#seek-bar {
+  border-radius: 10px;
+  margin-top: $gap-sm;
+  margin-bottom: 6px;
+
+  trough {
+    border-radius: 10px;
+    min-height: 5px;
+    background-color: a(var(--fg), 0.15);
+    transition: background-color 0.15s ease;
+
+    &:hover { background-color: a(var(--fg), 0.25); }
+
+    highlight {
+      border-top-left-radius: 10px;
+      border-bottom-left-radius: 10px;
+      background-color: var(--accent);
+    }
+  }
+
+  slider {
+    border-radius: 100%;
+    min-width: 12px;
+    min-height: 12px;
+    background-color: var(--fg);
+  }
+}
+
+#player-box   { margin: 6px; }
+#button-box   { margin-bottom: 6px; margin-right: 6px; }
+
+#player-title  { font-weight: 700; font-size: 16px; color: var(--fg); }
+#player-artist { font-weight: 500; font-size: 13px; color: var(--fg-dim); }
+
+#player-icon {
+  color: var(--fg-dim);
+  @include transition(color);
+
+  &.active {
+    color: var(--accent);
+    border-style: solid;
+    border-color: var(--accent);
+    border-width: 0px 0px 2px 0px;
+    border-radius: 0px 0px $gap-xs $gap-xs;
+  }
+}
+
+#player-button {
+  min-width: 28px;
+  min-height: 28px;
+  padding: $gap-sm;
+  border-radius: 50%;
+  @include transition(background-color color);
+
+  &:hover {
+    background-color: a(var(--accent), 0.18);
+    * { color: var(--fg); }
+  }
+
+  &:active { background-color: a(var(--accent), 0.4); }
+}

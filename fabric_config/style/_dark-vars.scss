@@ -1,0 +1,29 @@
+:vars {
+  /* Base backgrounds */
+  --bg:       #041429;
+  --surface:  alpha(#0d2240, 0.35);
+  --bg-glass: alpha(#041429, 0.88);
+
+  /* Foreground */
+  --fg:                   #f5f5f7;
+  --fg-glass:             alpha(#f5f5f7, 0.45);
+  --fg-dim:               #98989f;
+  --fg-dim-transparent:   alpha(#98989f, 0.45);
+  --fg-dim2:              #6e6e73;
+  --fg-dim2-transparent:  alpha(#6e6e73, 0.45);
+
+  /* Accent */
+  --accent: #00b7b7;
+
+  /* Semantic colors */
+  --red:    #ff453a;  --red-dim:    #c0392b;
+  --green:  #32d74b;  --green-dim:  #27ae60;
+  --yellow: #ffd60a;  --yellow-dim: #f39c12;
+  --blue:   #0a84ff;  --blue-dim:   #2471a3;
+  --purple: #bf5af2;  --purple-dim: #8e44ad;
+  --aqua:   #5ac8fa;  --aqua-dim:   #1abc9c;
+  --gray:   #98989f;  --gray-dim:   #6e6e73;
+  --orange: #ff9f0a;  --orange-dim: #e67e22;
+
+  --placeholder_text_color: alpha(#f5f5f7, 0.35);
+}

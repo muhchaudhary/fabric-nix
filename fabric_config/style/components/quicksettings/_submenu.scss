@@ -1,0 +1,165 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+#submenu-label {
+  margin-left: 6px;
+}
+
+/* Submenu container */
+#quicksettings-submenu {
+  background-color: a(var(--fg), 0.04);
+  padding: $gap-md;
+  @include bordered($radius-lg);
+}
+
+/* Title bar */
+#submenu-title {
+  border-style: solid;
+  border-bottom-width: 1px;
+  border-color: a(var(--fg), 0.1);
+  margin-bottom: $gap-sm;
+  padding-bottom: $gap-sm;
+}
+
+#submenu-title-icon { color: var(--fg-dim); }
+
+#submenu-title-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Scan / action button in the title bar */
+#submenu-title-action {
+  padding: $gap-xs $gap-sm;
+  border-radius: $radius-sm;
+  border-style: solid;
+  border-width: 1px;
+  border-color: transparent;
+  color: var(--fg-dim);
+  @include transition(background-color color border-color);
+
+  &:hover {
+    background-color: a(var(--fg), 0.1);
+    border-color: a(var(--fg), 0.12);
+    color: var(--fg);
+  }
+
+  &:active,
+  &.active {
+    background-color: a(var(--accent), 0.18);
+    border-color: a(var(--accent), 0.4);
+    color: var(--accent);
+  }
+
+  &.scanning {
+    background-color: a(var(--accent), 0.18);
+    border-color: a(var(--accent), 0.4);
+    color: var(--accent);
+
+    image { animation: spin 1s linear infinite; }
+  }
+}
+
+@keyframes spin {
+  from { -gtk-icon-transform: rotate(0deg); }
+  to   { -gtk-icon-transform: rotate(360deg); }
+}
+
+/* Section headers */
+.submenu-section-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim2);
+  margin: 6px $gap-xs 2px $gap-xs;
+}
+
+/* List */
+#submenu-list { padding: 2px 0px; }
+
+/* Reusable submenu item card */
+.submenu-card {
+  padding: 10px $gap-md;
+  border-radius: $radius-md;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.08);
+  background-color: a(var(--fg), 0.05);
+  margin: 2px 0px;
+  @include transition(background-color border-color);
+
+  &:hover {
+    background-color: a(var(--fg), 0.1);
+    border-color: a(var(--fg), 0.14);
+  }
+
+  &:active { background-color: a(var(--fg), 0.16); }
+
+  &.active {
+    background-color: a(var(--accent), 0.12);
+    border-color: a(var(--accent), 0.3);
+
+    &:hover {
+      background-color: a(var(--accent), 0.18);
+      border-color: a(var(--accent), 0.4);
+    }
+
+    .submenu-card-icon { color: var(--accent); }
+  }
+
+  &.joined-left {
+    border-top-right-radius: $gap-xs;
+    border-bottom-right-radius: $gap-xs;
+  }
+
+  &.connecting { opacity: 0.6; }
+}
+
+.submenu-card-icon  { color: var(--fg-dim); }
+.submenu-card-label { font-size: 14px; font-weight: 500; color: var(--fg); }
+.submenu-card-check { color: var(--accent); }
+.submenu-card-sublabel { font-size: 11px; color: var(--fg-dim2); }
+.submenu-card-lock  { color: var(--fg-dim2); margin-left: 2px; }
+
+.submenu-card-forget {
+  padding: 10px $gap-md;
+  border-radius: $radius-md;
+  border-top-left-radius: $gap-xs;
+  border-bottom-left-radius: $gap-xs;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.08);
+  background-color: a(var(--fg), 0.05);
+  margin: 2px 0px;
+  color: var(--fg-dim2);
+  @include transition(background-color border-color color);
+
+  &:hover {
+    background-color: a(red, 0.1);
+    border-color: a(red, 0.2);
+    color: red;
+  }
+
+  &:active { background-color: a(red, 0.16); }
+}
+
+/* Password entry row */
+#submenu-password-row { padding: $gap-xs 2px 6px 2px; }
+
+#submenu-password-entry {
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.15);
+  background-color: a(var(--fg), 0.06);
+  padding: 6px 10px;
+  font-size: 13px;
+  color: var(--fg);
+  outline-style: none;
+  min-height: 0;
+
+  &:focus {
+    border-color: a(var(--accent), 0.5);
+    background-color: a(var(--accent), 0.06);
+  }
+}

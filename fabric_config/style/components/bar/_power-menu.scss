@@ -1,0 +1,53 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+#powermenu-box {
+  @include panel($radius-xl);
+  margin: 6px;
+  padding: 14px;
+}
+
+#powermenu-button {
+  margin: $gap-xs;
+  padding: 10px 14px;
+  border-radius: $radius-md;
+  @include transition(background-color color);
+
+  label { font-weight: 600; font-size: 15px; }
+
+  &:hover  { background-color: a(var(--fg), 0.12); }
+  &:focus  { background-color: a(var(--fg), 0.2);  }
+  &.active,
+  &:active { background-color: a(var(--fg), 0.28); }
+
+  &.warning {
+    background-color: a(var(--red), 0.25);
+    border-style: solid;
+    border-width: 1px;
+    border-color: a(var(--red), 0.35);
+
+    label { color: var(--fg); }
+
+    &:hover,
+    &:focus {
+      background-color: a(var(--red), 0.55);
+      border-color: a(var(--red), 0.6);
+    }
+  }
+
+  &.okay {
+    background-color: a(var(--green), 0.35);
+    border-style: solid;
+    border-width: 1px;
+    border-color: a(var(--green), 0.45);
+
+    label { color: var(--bg); }
+
+    &:hover,
+    &:focus {
+      background-color: a(var(--green), 0.6);
+      border-color: a(var(--green), 0.7);
+      label { color: var(--bg); }
+    }
+  }
+}

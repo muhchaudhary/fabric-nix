@@ -1,0 +1,55 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+#prayer-info {
+  @include panel($radius-xl);
+  margin: 6px;
+}
+
+#prayer-info-location-icon { font-size: 14px; color: var(--fg-dim); margin-right: $gap-xs; }
+#prayer-info-location       { font-size: 13px; font-weight: 500; color: var(--fg-dim); padding: $gap-xs; }
+
+#prayer-info-refresh {
+  padding: 6px $gap-sm;
+  border-radius: 10px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg-dim), 0.2);
+  font-size: 14px;
+  color: var(--fg-dim);
+  @include transition(background-color color border-color);
+
+  &:hover {
+    background-color: a(var(--accent), 0.15);
+    border-color: a(var(--accent), 0.45);
+    color: var(--fg);
+  }
+
+  &:active {
+    background-color: a(var(--accent), 0.35);
+    border-color: a(var(--accent), 0.65);
+    color: var(--fg);
+  }
+}
+
+.prayer-info-row {
+  padding: $gap-xs $gap-sm;
+  border-radius: $radius-sm;
+  @include transition(background-color);
+
+  &.urgent {
+    border-radius: 10px;
+    border-style: solid;
+    border-width: 1px;
+    border-color: a(var(--accent), 0.4);
+    background-color: a(var(--accent), 0.18);
+    padding: 6px $gap-sm;
+
+    .prayer-info-prayer-label { font-weight: 700; color: var(--fg); font-size: 15px; }
+    .prayer-info-time-label   { color: var(--fg); font-size: 15px; }
+  }
+}
+
+.prayer-info-prayer-label { font-size: 14px; font-weight: 500; color: var(--fg); margin: 2px $gap-xs; }
+.prayer-info-time-label   { font-size: 14px; font-weight: 400; color: var(--fg-dim); padding-right: $gap-xs; }
+.prayer-info-separator    { min-height: 1px; background-color: a(var(--fg-dim), 0.18); margin: 2px $gap-xs; }

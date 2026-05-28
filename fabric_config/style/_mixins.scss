@@ -1,0 +1,27 @@
+@use 'sass:list';
+@use 'tokens' as *;
+
+// Standard interactive transition — emits `transition: prop dur ease, ...` shorthand.
+// GTK CSS only accepts a single value for transition-property; shorthand handles multiple.
+@mixin transition($props: background-color color border-color, $dur: 0.15s) {
+  $result: ();
+  @each $prop in $props {
+    $result: list.append($result, $prop $dur ease, $separator: comma);
+  }
+  transition: #{$result};
+}
+
+// Rounded bordered surface
+@mixin bordered($radius, $border-alpha: 0.1) {
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), $border-alpha);
+  border-radius: $radius;
+}
+
+// Frosted window panel
+@mixin panel($radius: $radius-xl) {
+  background-color: var(--bg-glass);
+  @include bordered($radius);
+  padding: $gap-lg;
+}

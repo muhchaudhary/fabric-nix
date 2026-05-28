@@ -1,0 +1,136 @@
+@use 'tokens' as *;
+@use 'mixins' as *;
+
+/* Frosted-glass panel / tray menus */
+.tray,
+.tray menu,
+.cool-border { @include bordered($radius-lg); }
+
+.tray,
+.tray menu,
+.window-basic {
+  background-color: var(--bg-glass);
+  border-radius: $radius-lg;
+  padding: 10px;
+}
+
+/* Generic bordered button */
+.button-border {
+  border-style: solid;
+  border-width: 1px;
+  border-radius: 10px;
+  border-color: transparent;
+}
+
+/* Button transition helpers */
+.tray menuitem,
+.button-basic-props label,
+.button-basic-props image,
+.button-basic-props { @include transition(background-color color border-color); }
+
+.tray menuitem,
+.button-basic-props { border-radius: 10px; padding: 0px $gap-sm; }
+
+.tray menuitem { padding: 6px $gap-sm; margin: 2px $gap-xs; }
+
+.tray menuitem:hover,
+.button-basic:hover {
+  background-color: a(var(--fg), 0.1);
+  border-color: a(var(--fg), 0.14);
+}
+
+.button-basic:hover * { color: var(--fg); }
+
+.tray menuitem:active,
+.tray menuitem:focus,
+.button-basic-active,
+.button-basic:focus,
+.button-basic:active {
+  border-color: a(var(--accent), 0.5);
+  background-color: a(var(--accent), 0.75);
+}
+
+.button-basic-active *,
+.button-basic:focus *,
+.button-basic:active * { color: var(--bg); }
+
+/* Title text */
+.label-title {
+  font-size: 28px;
+  font-weight: 700;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
+}
+
+/* iOS-style toggle switch (Gtk.Switch) */
+switch {
+  border-radius: 14px;
+  min-width: 44px;
+  min-height: 26px;
+  background-color: a(var(--fg-dim), 0.25);
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.1);
+  outline-style: none;
+
+  &:hover   { background-color: a(var(--fg-dim), 0.38); }
+  &:checked {
+    background-color: var(--accent);
+    border-color: transparent;
+    &:hover { background-color: m(var(--accent), white, 0.12); }
+  }
+  &:disabled {
+    background-color: a(var(--fg-dim), 0.12);
+    border-color: a(var(--fg), 0.06);
+  }
+
+  slider {
+    border-radius: 50%;
+    min-width: 20px;
+    min-height: 20px;
+    background-color: white;
+    margin: 2px;
+    box-shadow: 0px 1px 3px a(black, 0.3);
+  }
+
+  &:hover slider    { box-shadow: 0px 2px 6px a(black, 0.4); }
+  &:disabled slider { background-color: a(white, 0.4); box-shadow: none; }
+
+  /* Suppress GTK's built-in check/cross icons in the track */
+  image { min-width: 0; min-height: 0; color: transparent; }
+}
+
+/* System tray menu decorations */
+.tray menuitem {
+  arrow {
+    -gtk-icon-source: -gtk-icontheme("pan-end-symbolic");
+    color: var(--fg);
+    min-width: 14px;
+    min-height: 14px;
+  }
+
+  radio {
+    -gtk-icon-source: -gtk-icontheme("radio-symbolic");
+    color: var(--fg);
+    min-width: 14px;
+    min-height: 14px;
+    &:checked { -gtk-icon-source: -gtk-icontheme("radio-checked-symbolic"); }
+  }
+
+  check {
+    -gtk-icon-source: -gtk-icontheme("checkbox-symbolic");
+    color: var(--fg);
+    min-width: 1em;
+    min-height: 1em;
+    padding-right: 0.5em;
+    &:checked { -gtk-icon-source: -gtk-icontheme("checkbox-checked-symbolic"); }
+  }
+
+  &:disabled label { color: var(--fg-dim); }
+
+  separator {
+    background-color: a(var(--fg-dim), 0.2);
+    padding-top: 1px;
+    margin: 2px $gap-sm;
+    &:last-child { padding: unset; margin: unset; }
+  }
+}

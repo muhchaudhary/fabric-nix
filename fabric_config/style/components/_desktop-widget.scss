@@ -1,0 +1,17 @@
+@use '../tokens' as *;
+
+#date label,
+#clock label {
+  font-family: "Oswald";
+  font-weight: bolder;
+  color: m(var(--accent), white, 0.2);
+}
+
+#clock label {
+  font-size: 10em;
+  text-decoration: solid underline m(var(--accent), white, 0.2);
+}
+
+#date label { font-size: 4em; }
+
+#clockbox { margin-top: 50px; }

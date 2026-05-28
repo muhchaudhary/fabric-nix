@@ -1,0 +1,21 @@
+@use 'slider';
+@use 'button';
+@use 'player';
+@use 'submenu';
+@use '../../tokens' as *;
+
+#quicksettings-box {
+  background-color: a(var(--fg), 0.04);
+
+  > box > button { margin: 10px -10px 10px 5px; }
+}
+
+#quicksettings {
+  background-color: var(--bg-glass);
+  margin: 6px;
+  padding: $gap-lg;
+  border-radius: $radius-xl;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.1);
+}

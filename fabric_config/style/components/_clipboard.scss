@@ -1,0 +1,65 @@
+@use '../tokens' as *;
+@use '../mixins' as *;
+
+#clipboard-panel {
+  @include panel($radius-xl);
+  margin: 6px;
+  min-width: 340px;
+}
+
+#clipboard-panel-title { font-size: 16px; font-weight: 700; }
+
+#clipboard-clear-btn {
+  font-size: 12px;
+  padding: $gap-xs 10px;
+  border-radius: $radius-sm;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.15);
+  color: var(--fg-dim2);
+  @include transition(background-color color border-color);
+
+  &:hover {
+    background-color: a(red, 0.12);
+    color: red;
+    border-color: a(red, 0.3);
+  }
+}
+
+.clipboard-item {
+  border-radius: 10px;
+  padding: 7px 10px;
+  border-style: none;
+  background-color: transparent;
+  @include transition(background-color, 0.12s);
+
+  &:hover { background-color: a(var(--fg), 0.08); }
+}
+
+.clipboard-item-label    { font-size: 13px; }
+.clipboard-item-icon     { color: var(--fg-dim2); min-width: 18px; }
+.clipboard-item-thumbnail { border-radius: $gap-xs; min-width: 20px; }
+
+.clipboard-item-pin,
+.clipboard-item-delete {
+  padding: 5px $gap-sm;
+  border-radius: $radius-sm;
+  border-style: none;
+  background-color: transparent;
+  color: var(--fg-dim2);
+  @include transition(background-color color, 0.12s);
+}
+
+.clipboard-item-pin {
+  &:hover { background-color: a(var(--accent), 0.12); color: var(--accent); }
+
+  &.pinned {
+    color: var(--accent);
+    image { -gtk-icon-transform: rotate(-45deg); }
+  }
+}
+
+.clipboard-item-delete {
+  &:hover    { background-color: a(red, 0.15); color: red; }
+  &:disabled { opacity: 0.3; }
+}

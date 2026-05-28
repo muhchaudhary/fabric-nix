@@ -1,5 +1,7 @@
+import subprocess
+
 from fabric import Application
-from fabric.utils import get_relative_path, monitor_file
+from fabric.utils import get_relative_path
 from loguru import logger
 
 import fabric_config.config as config
@@ -43,8 +45,11 @@ class MyApp(Application):
         self.apply_style()
 
     def apply_style(self):
-        logger.info("[Main] CSS applied")
-        return self.set_stylesheet_from_file(get_relative_path("style/main.css"))
+        logger.info("[Main] Compiling SCSS and applying style")
+        scss = get_relative_path("style/main.scss")
+        css = get_relative_path("style/main.css")
+        subprocess.run(["sass", str(scss), str(css)], check=True)
+        return self.set_stylesheet_from_file(str(css))
 
 
 the_app = MyApp()

@@ -1,0 +1,55 @@
+@use '../tokens' as *;
+@use '../mixins' as *;
+
+#notification-box {
+  @include bordered($radius-lg);
+  background-color: var(--bg-glass);
+  min-width: 400px;
+
+  box label { color: var(--fg); }
+}
+
+#notification-seperator {
+  min-height: 1px;
+  background-color: a(var(--fg), 0.1);
+}
+
+#notification-action-buttons {
+  label { color: var(--fg); }
+
+  button {
+    background-color: a(var(--fg), 0.07);
+    padding: $gap-sm;
+    margin: 0px 1px;
+    @include transition(background-color);
+
+    &.start-action { border-radius: 0px 0px 0px $radius-lg; margin-left: 0px; }
+    &.end-action   { margin-right: 0px; }
+
+    &:hover { background-color: a(var(--fg), 0.14); }
+
+    &:active,
+    &:active label {
+      background-color: a(var(--fg), 0.06);
+      color: var(--fg);
+    }
+  }
+}
+
+#notification-title-button {
+  border-radius: 100%;
+  @include transition(background-color);
+
+  &:hover  { background-color: a(var(--fg), 0.12); }
+  &:active { background-color: a(var(--fg), 0.22); }
+}
+
+#notification-title-circular-progress-bar {
+  border: solid 0px var(--accent);
+  color: transparent;
+}
+
+#notification-image image { border-radius: 10px; }
+#notification-icon        { margin-right: 6px; }
+#notification-title       { margin: 10px 0px 0px $gap-lg; }
+#notification-content     { margin: $gap-xs 14px 14px 14px; }

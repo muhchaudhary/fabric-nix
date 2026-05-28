@@ -1,0 +1,24 @@
+@use 'sass:string';
+
+// GTK-specific alpha() — dart-sass intercepts the 2-arg form as its own built-in.
+@function a($color, $opacity) {
+  @return string.unquote("alpha(#{$color}, #{$opacity})");
+}
+
+// GTK-specific mix() — dart-sass intercepts mix() and rejects CSS custom properties.
+@function m($c1, $c2, $weight) {
+  @return string.unquote("mix(#{$c1}, #{$c2}, #{$weight})");
+}
+
+// Border-radius scale
+$radius-sm:   8px;
+$radius-md:   12px;
+$radius-lg:   16px;
+$radius-xl:   20px;
+$radius-pill: 40px;
+
+// Spacing scale
+$gap-xs: 4px;
+$gap-sm: 8px;
+$gap-md: 12px;
+$gap-lg: 16px;

@@ -1,0 +1,20 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+#battery-icon { min-height: 200px; }
+
+#battery-cairo-icon {
+  min-width: 56px;
+  min-height: 26px;
+  margin: $gap-xs 2px;
+  border-style: solid;
+  border-width: 2px;
+  border-radius: 5px;
+  @include transition(border-color background-color color, 0.4s);
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
+
+  &.default  { color: var(--fg);     border-color: a(var(--accent), 0.9); background-color: a(var(--accent), 0.3);  }
+  &.charging { color: var(--green);  border-color: a(var(--green), 0.9);  background-color: a(var(--green), 0.25); }
+  &.low      { color: var(--yellow); border-color: a(var(--yellow), 0.9); background-color: a(var(--yellow), 0.22); }
+  &.critical { color: var(--red);    border-color: a(var(--red), 0.9);    background-color: a(var(--red), 0.22);   }
+}

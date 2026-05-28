@@ -1,0 +1,42 @@
+@use '../tokens' as *;
+@use '../mixins' as *;
+
+#overview-window {
+  @include panel($radius-xl);
+}
+
+#overview-icon {
+  margin: 6px;
+  background-color: a(var(--fg), 0.06);
+  border-radius: 14px;
+  border-width: 1px;
+  border-style: solid;
+  border-color: a(var(--fg), 0.12);
+  padding: 5px;
+  @include transition(background-color border-color);
+}
+
+#overview-client-box,
+#overview-workspace-bg,
+#overview-frame { border-radius: 10px; }
+
+#overview-client-box {
+  background-color: a(var(--accent), 0.85);
+  @include transition(background-color);
+
+  &:hover  { background-color: a(var(--accent), 0.6); }
+  &:active { background-color: var(--accent); }
+}
+
+#overview-workspace-bg {
+  background-color: a(var(--fg), 0.06);
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.1);
+}
+
+#overview-workspace-box {
+  padding: $gap-md;
+
+  label { margin-top: $gap-md; font-size: 22px; font-weight: 600; }
+}

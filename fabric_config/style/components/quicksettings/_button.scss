@@ -1,0 +1,50 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+/* Toggle button base */
+#quicksettings-togglebutton {
+  button,
+  button image,
+  button label {
+    color: var(--fg);
+    @include transition(background-color color border-color, 0.18s);
+  }
+
+  button {
+    background-color: a(var(--fg), 0.07);
+
+    &:hover  { background-color: a(var(--fg), 0.13); }
+    &:active { background-color: a(var(--fg), 0.18); }
+  }
+
+  &.active {
+    button {
+      background-color: var(--accent);
+
+      &:hover  { background-color: m(var(--accent), white, 0.15); }
+      &:active { background-color: m(var(--accent), white, 0.3); }
+    }
+
+    button image,
+    button label { color: var(--bg); }
+  }
+}
+
+/* Left pill: main action */
+#quicksettings-toggle-action {
+  border-radius: $radius-md 0px 0px $radius-md;
+  min-width: 196px;
+  min-height: 38px;
+  border-style: solid;
+  border-width: 1px 0px 1px 1px;
+  border-color: a(var(--fg), 0.1);
+}
+
+/* Right pill: chevron/expand */
+#quicksettings-toggle-revealer {
+  border-radius: 0px $radius-md $radius-md 0px;
+  padding: 6px;
+  border-style: solid;
+  border-width: 1px 1px 1px 0px;
+  border-color: a(var(--fg), 0.1);
+}

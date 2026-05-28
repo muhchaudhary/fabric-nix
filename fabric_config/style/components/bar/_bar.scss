@@ -1,0 +1,102 @@
+@use 'battery';
+@use 'prayer-time';
+@use 'power-menu';
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+#system-bar { background-color: a(black, 0.005); }
+
+#system-bar-group,
+#system-bar-corner * { background-color: var(--bg-glass); }
+
+#system-bar-group {
+  &.center, &.right {
+    border-bottom-left-radius: 14px;
+    padding-left: $gap-md;
+  }
+
+  &.center, &.left {
+    border-bottom-right-radius: 14px;
+    padding-right: $gap-md;
+  }
+
+  &.center { min-width: 140px; }
+}
+
+/* Bar panel buttons */
+#panel-button-active,
+#date-time,
+#panel-button {
+  margin: 0px 2px;
+  padding: 2px $gap-sm;
+  border-style: solid;
+  border-width: 1px;
+  border-radius: $radius-xl;
+  border-color: transparent;
+  @include transition(background-color border-color color, 0.2s);
+}
+
+#date-time,
+#panel-button {
+  &:hover {
+    background-color: a(var(--fg), 0.1);
+    border-color: a(var(--fg), 0.12);
+  }
+}
+
+#panel-button {
+  label { font-weight: 600; }
+
+  &.activated {
+    background-color: a(var(--fg), 0.12);
+    border-color: a(var(--fg), 0.2);
+  }
+
+  &:active,
+  &:active label,
+  &:active image,
+  &:active > * > * > label,
+  &:active > * > label { background-color: var(--accent); color: var(--bg); }
+}
+
+#date-time {
+  label { font-weight: 700; }
+
+  &:active,
+  &:active label { background-color: var(--accent); color: var(--bg); }
+}
+
+#panel-button-active,
+#panel-button-active image,
+#panel-button-active > box > label { background-color: var(--accent); color: var(--bg); }
+
+/* Workspace indicator pills */
+#workspaces {
+  margin: 0px 6px;
+
+  > button {
+    min-height: 12px;
+    min-width: 12px;
+    padding: 0;
+    border-radius: 50%;
+    margin: 14px 2px;
+    transition-property: min-width, border-radius, background-color;
+    transition-duration: 0.2s;
+    transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+    background-color: a(var(--fg), 0.7);
+
+    &.active {
+      min-width: 35px;
+      border-radius: $radius-sm;
+      margin: 11px 2px;
+      background-color: var(--accent);
+    }
+
+    &.empty  { background-color: var(--fg-dim-transparent); }
+    &.urgent { background-color: var(--red); }
+  }
+}
+
+/* Panel icon/text sizing */
+#panel-icon { margin-left: 2px; margin-right: 2px; font-size: 16px; }
+#panel-text  { margin-top: 1px; font-size: 14px; font-weight: 700; }

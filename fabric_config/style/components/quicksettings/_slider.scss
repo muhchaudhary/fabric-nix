@@ -1,0 +1,48 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+scale {
+  margin-top: $gap-sm;
+  margin-bottom: $gap-sm;
+}
+
+#quicksettings-slider {
+  margin-left: $gap-sm;
+  margin-right: $gap-lg;
+
+  trough {
+    margin-top: $gap-xs;
+    margin-bottom: $gap-xs;
+    padding-right: $gap-md;
+    min-height: 22px;
+    background-color: a(var(--fg), 0.08);
+    transition: background-color 0.15s ease;
+    border-radius: $radius-xl;
+    border-style: solid;
+    border-width: 1px;
+    border-color: a(var(--fg), 0.1);
+
+    &:hover { background-color: a(var(--fg), 0.13); }
+
+    highlight {
+      border-radius: $radius-xl 0px 0px $radius-xl;
+      background-color: var(--accent);
+      margin-right: -12px;
+
+      &:disabled { background-color: var(--fg-dim); }
+    }
+  }
+
+  slider {
+    border-radius: 100%;
+    min-width: 22px;
+    min-height: 22px;
+    margin-left: 22px;
+    background-color: m(var(--accent), white, 0.2);
+    box-shadow: 0px 1px 4px 0px a(black, 0.4);
+    transition: background-color 0.15s ease;
+
+    &:hover    { background-color: white; }
+    &:disabled { background-color: var(--fg-dim); }
+  }
+}
