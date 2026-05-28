@@ -34,7 +34,9 @@ class QuickSettingsButtonBox(Box):
             spacing=4,
             **kwargs,
         )
-        self.buttons = Box(orientation="h", spacing=4, v_align="center")
+        self.buttons = Box(
+            orientation="h", spacing=4, v_align="center", homogeneous=True
+        )
         self.active_submenu = None
 
         # Wifi
