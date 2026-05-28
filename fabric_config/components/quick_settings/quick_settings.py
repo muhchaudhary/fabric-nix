@@ -32,13 +32,9 @@ class QuickSettingsButtonBox(Box):
         super().__init__(
             orientation="v",
             spacing=4,
-            h_align="start",
-            v_align="start",
-            h_expand=True,
-            v_expand=True,
             **kwargs,
         )
-        self.buttons = Box(orientation="h", spacing=4, h_expand=True, v_align="center")
+        self.buttons = Box(orientation="h", spacing=4, v_align="center")
         self.active_submenu = None
 
         # Wifi
