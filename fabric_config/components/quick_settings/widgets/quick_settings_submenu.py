@@ -27,7 +27,9 @@ class QuickSubMenu(Box):
         self.revealer_child = Box(orientation="v", name="quicksettings-submenu")
 
         self.submenu_title_box = self.make_submenu_box()
-        self.revealer_child.add(self.submenu_title_box) if self.submenu_title_box else None
+        self.revealer_child.add(
+            self.submenu_title_box
+        ) if self.submenu_title_box else None
         self.revealer_child.add(self.child) if child else None
 
         self.revealer = Revealer(
@@ -46,7 +48,11 @@ class QuickSubMenu(Box):
 
         left = Box(spacing=8, v_align="center")
         if self.title_icon:
-            left.add(Image(icon_name=self.title_icon, icon_size=14, name="submenu-title-icon"))
+            left.add(
+                Image(
+                    icon_name=self.title_icon, icon_size=14, name="submenu-title-icon"
+                )
+            )
         if self.title:
             left.add(Label(name="submenu-title-label", label=self.title))
 
@@ -107,7 +113,7 @@ class QuickSubToggle(Box):
             icon_size=pixel_size,
         )
         self.action_label = Label(name="panel-text", label=action_label)
-        self.action_button = Button(name="quicksettings-toggle-action")
+        self.action_button = Button(name="quicksettings-toggle-action", h_expand=True)
         self.action_button.add(
             Box(
                 h_align="start",
@@ -118,7 +124,6 @@ class QuickSubToggle(Box):
 
         super().__init__(
             name="quicksettings-togglebutton",
-            h_align="start",
             v_align="start",
             children=[self.action_button, self.reveal_button],
             **kwargs,
@@ -152,7 +157,9 @@ class QuickSubToggle(Box):
         invoke_repeater(10, do_animate)
 
     def set_active_style(self, action: bool) -> None:
-        self.set_style_classes([""]) if not action else self.set_style_classes(["active"])
+        self.set_style_classes([""]) if not action else self.set_style_classes(
+            ["active"]
+        )
 
     def set_action_label(self, label: str):
         self.action_label.set_label(label)

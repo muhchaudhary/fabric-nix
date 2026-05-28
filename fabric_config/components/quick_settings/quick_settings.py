@@ -19,7 +19,9 @@ from fabric_config.components.quick_settings.widgets.submenus import (
 )
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
-from fabric_config.components.quick_settings.widgets.theme_toggle import ThemeToggle
+from fabric_config.components.quick_settings.widgets.buttons.theme_toggle import (
+    ThemeToggle,
+)
 
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as an
@@ -36,21 +38,21 @@ class QuickSettingsButtonBox(Box):
             v_expand=True,
             **kwargs,
         )
-        self.buttons = Box(
-            orientation="h", spacing=4, h_align="center", v_align="center"
-        )
+        self.buttons = Box(orientation="h", spacing=4, h_expand=True, v_align="center")
         self.active_submenu = None
 
         # Wifi
         self.wifi_toggle = WifiToggle(
             submenu=WifiSubMenu(config.network),
             client=config.network,
+            h_expand=True,
         )
 
         # Bluetooth
         self.bluetooth_toggle = BluetoothToggle(
             submenu=BluetoothSubMenu(config.bluetooth_client),
             client=config.bluetooth_client,
+            h_expand=True,
         )
 
         self.buttons.add(self.wifi_toggle)
