@@ -199,16 +199,20 @@ class NotificationPopup(WaylandWindow):
         new_box = NotificationBox(
             notification=self._server.get_notification_from_id(id)
         )
-        rev = Revealer(child=new_box, transition_type="slide-left", transition_duration=1000)
+        rev = Revealer(
+            child=new_box, transition_type="slide-left", transition_duration=1000
+        )
 
         def do_add():
-            self.notifications.add(Box(children=[Box(h_expand=True, style="background-color: blue"), rev]))
+            self.notifications.add(
+                Box(children=[Box(h_expand=True, style="background-color: blue"), rev])
+            )
             # rev.set_reveal_child(True)
+
         do_add()
 
         new_box.connect("size-allocate", lambda *args: rev.set_reveal_child(True))
 
-        
         # self.revealer.set_reveal_child(True)
         # new_box.grab_offscreen(self.notifications.get_allocation())
         # new_box.set_reveal_child(True)

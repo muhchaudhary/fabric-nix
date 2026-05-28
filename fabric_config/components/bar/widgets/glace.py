@@ -37,9 +37,11 @@ class OpenAppsBar(Box):
 
         client.connect(
             "notify::activated",
-            lambda *_: client_button.add_style_class("activated")
-            if client.get_activated()
-            else client_button.remove_style_class("activated"),
+            lambda *_: (
+                client_button.add_style_class("activated")
+                if client.get_activated()
+                else client_button.remove_style_class("activated")
+            ),
         )
         tooltip_image = Image(style="padding-top: 50px;")
 

@@ -7,7 +7,13 @@ from fabric.widgets.label import Label
 from fabric.widgets.wayland import WaylandWindow as Window
 from fabric.widgets.image import Image
 from fabric.widgets.widget import Widget
-from animator import Animator, EaseOutBounce, BezierAnimator, AnimatorFunction, EaseOutElastic
+from animator import (
+    Animator,
+    EaseOutBounce,
+    BezierAnimator,
+    AnimatorFunction,
+    EaseOutElastic,
+)
 
 gi.require_version("Gtk", "3.0")
 from gi.repository import Gtk

@@ -69,11 +69,11 @@ class HyprlandWindowButton(Button):
             tooltip_text=title,
             size=size,
             on_clicked=self.on_button_click,
-            on_button_press_event=lambda _, event: connection.send_command(
-                f"/dispatch closewindow address:{address}"
-            )
-            if event.button == 3
-            else None,
+            on_button_press_event=lambda _, event: (
+                connection.send_command(f"/dispatch closewindow address:{address}")
+                if event.button == 3
+                else None
+            ),
             on_drag_data_get=lambda _s, _c, data, *_: data.set_text(
                 address, len(address)
             ),
@@ -126,13 +126,10 @@ class WorkspaceEventBox(EventBox):
                 .get_default()
                 .load_icon("list-add", 64, Gtk.IconLookupFlags.FORCE_SIZE),
             ),
-            on_drag_data_received=lambda _w,
-            _c,
-            _x,
-            _y,
-            data,
-            *_: connection.send_command(
-                f"/dispatch movetoworkspacesilent {workspace_id},address:{data.get_data().decode()}"
+            on_drag_data_received=lambda _w, _c, _x, _y, data, *_: (
+                connection.send_command(
+                    f"/dispatch movetoworkspacesilent {workspace_id},address:{data.get_data().decode()}"
+                )
             ),
         )
         self.drag_dest_set(

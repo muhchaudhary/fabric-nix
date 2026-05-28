@@ -35,7 +35,10 @@ class QuickSettingsButtonBox(Box):
             **kwargs,
         )
         self.buttons = Box(
-            orientation="h", spacing=4, v_align="center", homogeneous=True
+            orientation="h",
+            spacing=4,
+            v_align="center",
+            homogeneous=True, # Ensures items are the same width
         )
         self.active_submenu = None
 

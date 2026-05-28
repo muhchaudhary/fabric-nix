@@ -565,10 +565,19 @@ scale {
   color: var(--bg);
 }
 
+/* Standalone full-width toggle (no revealer) */
+#quicksettings-toggle-standalone {
+  border-radius: 12px;
+  min-width: 230px;
+  min-height: 38px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: alpha(var(--fg), 0.1);
+}
+
 /* Left pill: main action */
 #quicksettings-toggle-action {
   border-radius: 12px 0px 0px 12px;
-  min-width: 196px;
   min-height: 38px;
   border-style: solid;
   border-width: 1px 0px 1px 1px;
