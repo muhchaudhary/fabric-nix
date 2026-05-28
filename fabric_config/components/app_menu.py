@@ -114,7 +114,8 @@ class AppMenu(PopupWindow):
             get_desktop_applications(),
             key=lambda x: x.name.lower(),
         )
-        self.application_buttons = {}
+        self.application_buttons: dict = {}
+        self._buttons_built = False
         self.buttons_box = Box(orientation="v", h_expand=True, v_expand=True)
 
         # Entry
@@ -139,12 +140,6 @@ class AppMenu(PopupWindow):
             visible=False,
             child=self.buttons_box,
         )
-
-        # Application buttons
-        for app in self.applications:
-            app_button = ApplicationButtonV2(app, on_clicked=self.on_app_launch)
-            self.application_buttons[app.name] = app_button
-            self.buttons_box.add(app_button)
 
         # Recent applications
         self.recent_applications = Box(
@@ -213,8 +208,18 @@ class AppMenu(PopupWindow):
         self.toggle_popup()
         self.update_recent_apps(app_button.add_app_to_json())
 
+    def _build_buttons(self):
+        if self._buttons_built:
+            return
+        for app in self.applications:
+            app_button = ApplicationButtonV2(app, on_clicked=self.on_app_launch)
+            self.application_buttons[app.name] = app_button
+            self.buttons_box.add(app_button)
+        self._buttons_built = True
+
     # Overrides
     def toggle_popup(self, monitor: bool | None = None):
+        self._build_buttons()
         self.search_app_entry.set_text("")
         self.search_app_entry.remove_style_class("active")
         self.scrolled_window.hide()
