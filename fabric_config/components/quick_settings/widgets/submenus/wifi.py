@@ -71,13 +71,13 @@ class WifiNetworkRow(Box):
                 Label(
                     label=ap.get_ssid(),
                     h_align="start",
-                    name="submenu-card-label",
+                    style_classes=["submenu-card-label"],
                     ellipsize="end",
                 ),
                 Label(
                     label=_freq_band(ap.get_frequency()),
                     h_align="start",
-                    name="submenu-card-sublabel",
+                    style_classes=["submenu-card-sublabel"],
                 ),
             ],
         )
@@ -89,7 +89,7 @@ class WifiNetworkRow(Box):
                 Image(
                     icon_name=ap.get_icon_name(),
                     icon_size=16,
-                    name="submenu-card-icon",
+                    style_classes=["submenu-card-icon"],
                 ),
                 ssid_col,
             ],
@@ -99,7 +99,7 @@ class WifiNetworkRow(Box):
                 Image(
                     icon_name="channel-secure-symbolic",
                     icon_size=11,
-                    name="submenu-card-lock",
+                    style_classes=["submenu-card-lock"],
                 )
             )
 
@@ -109,17 +109,9 @@ class WifiNetworkRow(Box):
                 Image(
                     icon_name="object-select-symbolic",
                     icon_size=14,
-                    name="submenu-card-check",
+                    style_classes=["submenu-card-check"],
                 )
             )
-        if self.is_saved:
-            forget_btn = Button(
-                image=Image(icon_name="user-trash-symbolic", icon_size=12),
-                name="submenu-card-forget",
-                tooltip_text="Forget network",
-            )
-            forget_btn.connect("clicked", self._on_forget)
-            end_box.add(forget_btn)
 
         row = CenterBox(
             h_expand=True,
@@ -128,10 +120,22 @@ class WifiNetworkRow(Box):
             end_children=[end_box] if end_box.get_children() else [],
         )
 
-        self.main_btn = Button(name="submenu-card", child=row, h_expand=True)
+        self.main_btn = Button(style_classes=["submenu-card"], child=row, h_expand=True)
         if self.is_connected:
             self.main_btn.add_style_class("active")
-        self.add(self.main_btn)
+
+        btn_row = Box(spacing=4, h_expand=True, children=[self.main_btn])
+        if self.is_saved:
+            self.main_btn.add_style_class("joined-left")
+            forget_btn = Button(
+                image=Image(icon_name="user-trash-symbolic", icon_size=12),
+                style_classes=["submenu-card-forget"],
+                tooltip_text="Forget network",
+            )
+            forget_btn.connect("clicked", self._on_forget)
+            btn_row.add(forget_btn)
+
+        self.add(btn_row)
 
         if self.requires_password and not self.is_saved:
             self.password_entry = Entry(

@@ -4,7 +4,6 @@ import os
 import threading
 
 import gi
-import requests
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import exec_shell_command_async, invoke_repeater
 from fabric.widgets.box import Box
@@ -43,6 +42,8 @@ def _load_location() -> dict | None:
 
 def _reverse_geocode(lat: float, lon: float) -> str:
     try:
+        import requests
+
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
         resp = requests.get(url, timeout=5, headers={"User-Agent": "fabric-config/1.0"})
         if resp.status_code == 200:
@@ -180,6 +181,8 @@ class PrayerTimesService(Service):
         self._request_data()
 
     def _fetch_with_coords(self, lat: float, lon: float):
+        import requests
+
         ts = int(datetime.datetime.now().timestamp())
         url = f"http://api.aladhan.com/v1/timings/{ts}?latitude={lat}&longitude={lon}&method=2"
         try:
@@ -338,20 +341,20 @@ class PrayerTimes(Box):
 
         self.prayer_labels = {
             k: (
-                Label(name="prayer-info-prayer-label"),
-                Label(name="prayer-info-time-label"),
+                Label(style_classes=["prayer-info-prayer-label"]),
+                Label(style_classes=["prayer-info-time-label"]),
             )
             for k in self.prayer_info_service.prayer_data.keys()
         }
         self.on_prayer_update(None, self.prayer_info_service.prayer_data)
         self.prayer_info_service.connect("update", self.on_prayer_update)
-        self.add(Box(name="prayer-info-separator"))
+        self.add(Box(style_classes=["prayer-info-separator"]))
         for i, prayer in enumerate(self.prayer_labels):
             if i > 0:
-                self.add(Box(name="prayer-info-separator"))
+                self.add(Box(style_classes=["prayer-info-separator"]))
             self.add(
                 CenterBox(
-                    name="prayer-info-row",
+                    style_classes=["prayer-info-row"],
                     start_children=self.prayer_labels[prayer][0],
                     end_children=self.prayer_labels[prayer][1],
                 )
@@ -371,11 +374,16 @@ class PrayerTimes(Box):
 
     def update_prayer_label(self, *_):
         for label in self.prayer_labels.values():
-            label[0].get_parent().get_parent().get_parent().style_classes = []
+            label[0].get_parent().get_parent().get_parent().style_classes = [
+                "prayer-info-row"
+            ]
         if self.prayer_info_service.current_prayer in self.prayer_labels:
             self.prayer_labels[self.prayer_info_service.current_prayer][
                 0
-            ].get_parent().get_parent().get_parent().style_classes = ["urgent"]
+            ].get_parent().get_parent().get_parent().style_classes = [
+                "prayer-info-row",
+                "urgent",
+            ]
 
     def on_prayer_update(self, _, prayer_info):
         def time_format(time):

@@ -15,7 +15,7 @@ from gi.repository import GLib
 
 class BluetoothDeviceBox(CenterBox):
     def __init__(self, device: BluetoothDevice, **kwargs):
-        super().__init__(h_expand=True, name="submenu-card", **kwargs)
+        super().__init__(h_expand=True, style_classes=["submenu-card"], **kwargs)
         self.device: BluetoothDevice = device
 
         self.switch = ToggleSwitch(
@@ -34,9 +34,13 @@ class BluetoothDeviceBox(CenterBox):
                     Image(
                         icon_name=device.icon_name + "-symbolic",
                         icon_size=16,
-                        name="submenu-card-icon",
+                        style_classes=["submenu-card-icon"],
                     ),
-                    Label(label=device.name, name="submenu-card-label", ellipsize="end"),
+                    Label(
+                        label=device.name,
+                        style_classes=["submenu-card-label"],
+                        ellipsize="end",
+                    ),
                 ],
             )
         )
@@ -68,7 +72,7 @@ class BluetoothSubMenu(QuickSubMenu):
             children=[
                 Label(
                     label="PAIRED DEVICES",
-                    name="submenu-section-header",
+                    style_classes=["submenu-section-header"],
                     h_align="start",
                 )
             ],
@@ -81,7 +85,7 @@ class BluetoothSubMenu(QuickSubMenu):
             children=[
                 Label(
                     label="AVAILABLE DEVICES",
-                    name="submenu-section-header",
+                    style_classes=["submenu-section-header"],
                     h_align="start",
                 )
             ],
