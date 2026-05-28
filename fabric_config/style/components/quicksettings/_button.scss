@@ -30,6 +30,16 @@
   }
 }
 
+/* Standalone full-width toggle (no revealer) */
+#quicksettings-toggle-standalone {
+  border-radius: $radius-md;
+  min-width: 230px;
+  min-height: 38px;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.1);
+}
+
 /* Left pill: main action */
 #quicksettings-toggle-action {
   border-radius: $radius-md 0px 0px $radius-md;

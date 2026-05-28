@@ -1,40 +1,16 @@
-from fabric.widgets.box import Box
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.image import Image
-from fabric.widgets.label import Label
-
 import fabric_config.config as config
-from fabric_config.widgets.toggle_pill import ToggleSwitch
+from fabric_config.components.quick_settings.widgets.quick_settings_toggle_button import (
+    QuickSettingsToggleButton,
+)
 
 
-class ThemeToggle(CenterBox):
+class ThemeToggle(QuickSettingsToggleButton):
     def __init__(self, **kwargs):
-        self._switch = ToggleSwitch(
-            active=config.theme.is_light,
-            on_toggled=self._on_toggled,
-        )
-
         super().__init__(
-            h_expand=True,
-            style_classes=["submenu-card"],
-            start_children=[
-                Box(
-                    spacing=10,
-                    v_align="center",
-                    children=[
-                        Image(
-                            icon_name="weather-clear-symbolic",
-                            icon_size=16,
-                            style_classes=["submenu-card-icon"],
-                        ),
-                        Label(
-                            label="Light Mode",
-                            style_classes=["submenu-card-label"],
-                        ),
-                    ],
-                )
-            ],
-            end_children=[self._switch],
+            action_label="Light Mode",
+            action_icon="weather-clear-symbolic",
+            active=config.theme.is_light,
+            on_toggle=self._on_toggled,
             **kwargs,
         )
 
