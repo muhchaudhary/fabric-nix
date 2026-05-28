@@ -27,7 +27,7 @@ class QuickSettingsToggleButton(Box):
         self.action_button = Button(
             name="quicksettings-toggle-standalone",
             child=Box(
-                h_align="start",
+                h_expand=True,
                 v_align="center",
                 children=[self.action_icon, self.action_label],
             ),
@@ -36,11 +36,10 @@ class QuickSettingsToggleButton(Box):
 
         super().__init__(
             name="quicksettings-togglebutton",
-            h_align="start",
             v_align="start",
-            children=[self.action_button],
             **kwargs,
         )
+        self.pack_start(self.action_button, True, True, 0)
 
         if active:
             self.add_style_class("active")
