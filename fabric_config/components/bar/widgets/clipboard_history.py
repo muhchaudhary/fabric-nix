@@ -217,15 +217,21 @@ class ClipboardHistoryPanel(Box):
             )
         )
 
+        self._on_refresh_done: Callable | None = None
+
         config.clipboard_history.connect(
             "notify::clipboard-history", self._on_history_changed
         )
 
-    def refresh(self):
+    def refresh(self, on_done=None):
+        self._on_refresh_done = on_done
         config.clipboard_history.cliphist_list()
 
     def _on_history_changed(self, *_):
         self._rebuild_sections()
+        if self._on_refresh_done:
+            cb, self._on_refresh_done = self._on_refresh_done, None
+            cb()
 
     def _rebuild_sections(self):
         for child in self._pinned_list.get_children():
@@ -286,5 +292,7 @@ class ClipboardHistoryButton(Button):
         )
 
     def _on_click(self, *_):
-        _panel.refresh()
-        ClipboardHistoryPopup.toggle_popup()
+        if ClipboardHistoryPopup.popup_visible:
+            ClipboardHistoryPopup.toggle_popup()
+        else:
+            _panel.refresh(on_done=ClipboardHistoryPopup.toggle_popup)
