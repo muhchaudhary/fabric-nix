@@ -78,6 +78,7 @@
           pythonPackages.qrcode
           pythonPackages.ijson
           pythonPackages.debugpy
+          pythonPackages.magic
         ];
 
         astal-depends = [pkgs.astal.network pkgs.dart-sass];
