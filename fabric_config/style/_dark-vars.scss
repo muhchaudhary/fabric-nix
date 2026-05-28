@@ -1,19 +1,19 @@
 :vars {
   /* Base backgrounds */
-  --bg:       #041429;
-  --surface:  alpha(#0d2240, 0.35);
-  --bg-glass: alpha(#041429, 0.88);
+  --bg:       #1e1e2e;
+  --surface:  alpha(#313244, 0.45);
+  --bg-glass: alpha(#1e1e2e, 0.88);
 
   /* Foreground */
-  --fg:                   #f5f5f7;
-  --fg-glass:             alpha(#f5f5f7, 0.45);
-  --fg-dim:               #98989f;
-  --fg-dim-transparent:   alpha(#98989f, 0.45);
-  --fg-dim2:              #6e6e73;
-  --fg-dim2-transparent:  alpha(#6e6e73, 0.45);
+  --fg:                   #cdd6f4;
+  --fg-glass:             alpha(#cdd6f4, 0.45);
+  --fg-dim:               #a6adc8;
+  --fg-dim-transparent:   alpha(#a6adc8, 0.45);
+  --fg-dim2:              #7f849c;
+  --fg-dim2-transparent:  alpha(#7f849c, 0.45);
 
   /* Accent */
-  --accent: #00b7b7;
+  --accent: #74c7ec;
 
   /* Semantic colors */
   --red:    #ff453a;  --red-dim:    #c0392b;
@@ -25,5 +25,5 @@
   --gray:   #98989f;  --gray-dim:   #6e6e73;
   --orange: #ff9f0a;  --orange-dim: #e67e22;
 
-  --placeholder_text_color: alpha(#f5f5f7, 0.35);
+  --placeholder_text_color: alpha(#cdd6f4, 0.35);
 }
