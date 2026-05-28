@@ -19,7 +19,7 @@ from fabric_config.components.quick_settings.widgets.submenus import (
 )
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
-from fabric_config.widgets.theme_toggle import ThemeToggle
+from fabric_config.components.quick_settings.widgets.theme_toggle import ThemeToggle
 
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as an
