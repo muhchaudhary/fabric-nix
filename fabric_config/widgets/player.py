@@ -213,6 +213,7 @@ class PlayerBox(Box):
         self.exit = False
         self.angle_direction = 1
         self.skipped = False
+        self._color_generation = 0
 
         # Exit Logic
         self.player.connect("closed", self.on_player_exit)
@@ -400,12 +401,14 @@ class PlayerBox(Box):
         # self.seek_bar.connect("button-release-event", self.on_button_scale_release)
         self.player.connect(
             "notify::length",
-            lambda _, x: [
-                self.seek_bar.set_range(0, self.player.length),
-                self.seek_bar.set_value(self.player.position),
-            ]  # type: ignore
-            if self.player.length
-            else None,
+            lambda _, x: (
+                [
+                    self.seek_bar.set_range(0, self.player.length),
+                    self.seek_bar.set_value(0),
+                ]  # type: ignore
+                if self.player.length
+                else None
+            ),
         )
         self.player.bind("can-seek", "visible", self.seek_bar)
 
@@ -464,13 +467,15 @@ class PlayerBox(Box):
     def on_player_next(self, _):
         self.angle_direction = 1
         self.art_animator.pause()
-        # self.art_animator.play()
+        self.image_box.angle = 0
+        self.seek_bar.set_value(0)
         self.player.next()
 
     def on_player_prev(self, _):
         self.angle_direction = -1
         self.art_animator.pause()
-        # self.art_animator.play()
+        self.image_box.angle = 0
+        self.seek_bar.set_value(0)
         self.player.previous()
 
     def on_loop_update(self, _, __):
@@ -510,8 +515,11 @@ class PlayerBox(Box):
 
     def update_colors(self):
         colors = (255, 255, 255)
+        generation = self._color_generation
 
         def on_accent_color(color):
+            if generation != self._color_generation:
+                return
             color = f"mix(rgb{colors if not color else color}, #F7EFD1, 0.5)"
             bg = f"background-color: {color};"
             border = f"border-color: {color};"
@@ -537,6 +545,8 @@ class PlayerBox(Box):
             if "file://" != url[0:7]
             else url[7:]
         )
+
+        self._color_generation += 1
 
         if new_cover_path == self.cover_path:
             self.update_image()

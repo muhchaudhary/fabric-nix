@@ -91,14 +91,11 @@ class CircleImage(Gtk.DrawingArea, Widget):
     def set_image_from_file(self, new_image_file):
         if new_image_file == "":
             return
-        self._image = (
-            GdkPixbuf.Pixbuf.new_from_file_at_size(
-                new_image_file,
-                -1,
-                self.size,
-            )
-            if self._image_file is not None
-            else None
+        self._image_file = new_image_file
+        self._image = GdkPixbuf.Pixbuf.new_from_file_at_size(
+            new_image_file,
+            -1,
+            self.size,
         )
         self.queue_draw()
 
