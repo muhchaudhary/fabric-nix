@@ -7,37 +7,26 @@
   padding: 20px;
   border-top-left-radius: $radius-pill;
   border-bottom-left-radius: $radius-pill;
-  border-style: solid;
-  border-width: 1px 0px 1px 1px;
   border-color: a(var(--fg), 0.1);
 }
 
-#osd-corner {
+.osd-corner {
   padding-left: 36px;
   * { background-color: var(--bg-glass); }
 }
 
 #osd-icon image { color: var(--fg); }
 
-#osd-progress-bar {
+levelbar.osd-level-bar {
   margin: $gap-sm $gap-xs;
-  border-radius: 24px;
 
-  * {
+  block {
     border-radius: 24px;
-    background-color: a(var(--fg-dim), 0.25);
+    min-height: 8px;
+    margin: 2px 0;
     @include transition(background-color, 0.2s);
 
-    &.filled {
-      background-color: var(--accent);
-      box-shadow: 0px 0px 6px 1px a(var(--accent), 0.35);
-    }
+    &.filled { background-color: var(--accent); }
+    &.empty  { background-color: a(var(--fg-dim), 0.25); }
   }
-}
-
-#osd-cairo-bar {
-  color: #202020;
-  background-color: white;
-  margin: 5px;
-  border-radius: 6px;
 }

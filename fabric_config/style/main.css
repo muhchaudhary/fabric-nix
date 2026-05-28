@@ -1202,15 +1202,13 @@ scale {
   padding: 20px;
   border-top-left-radius: 40px;
   border-bottom-left-radius: 40px;
-  border-style: solid;
-  border-width: 1px 0px 1px 1px;
   border-color: alpha(var(--fg), 0.1);
 }
 
-#osd-corner {
+.osd-corner {
   padding-left: 36px;
 }
-#osd-corner * {
+.osd-corner * {
   background-color: var(--bg-glass);
 }
 
@@ -1218,25 +1216,20 @@ scale {
   color: var(--fg);
 }
 
-#osd-progress-bar {
+levelbar.osd-level-bar {
   margin: 8px 4px;
-  border-radius: 24px;
 }
-#osd-progress-bar * {
+levelbar.osd-level-bar block {
   border-radius: 24px;
-  background-color: alpha(var(--fg-dim), 0.25);
+  min-height: 8px;
+  margin: 2px 0;
   transition: background-color 0.2s ease;
 }
-#osd-progress-bar *.filled {
+levelbar.osd-level-bar block.filled {
   background-color: var(--accent);
-  box-shadow: 0px 0px 6px 1px alpha(var(--accent), 0.35);
 }
-
-#osd-cairo-bar {
-  color: #202020;
-  background-color: white;
-  margin: 5px;
-  border-radius: 6px;
+levelbar.osd-level-bar block.empty {
+  background-color: alpha(var(--fg-dim), 0.25);
 }
 
 #overview-window {
