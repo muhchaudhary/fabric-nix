@@ -43,6 +43,7 @@ class AppBar(Box):
     def __init__(self, parent: Window):
         self.client_buttons = {}
         self._parent = parent
+        self._hide_timeout_id = None
         super().__init__(
             spacing=10,
             name="app-bar",
@@ -63,7 +64,6 @@ class AppBar(Box):
         self._manager = Glace.Manager()
         self._manager.connect("client-added", self.on_client_added)
         self._preview_image = Image()
-        self._hyp = HyprlandWithMonitors()
 
         self.connect(
             "notify::visible",
@@ -76,7 +76,7 @@ class AppBar(Box):
                 style_classes=["window-basic", "cool-border"],
             ),
             transition_type="slide-up",
-            transition_duration=100,
+            transition_duration=150,
         )
 
         self.popup = PopupWindow(
@@ -95,8 +95,28 @@ class AppBar(Box):
             ),
         )
 
+    def _schedule_hide(self):
+        self._cancel_hide()
+        self._hide_timeout_id = GLib.timeout_add(200, self._do_hide)
+
+    def _cancel_hide(self):
+        if self._hide_timeout_id is not None:
+            GLib.source_remove(self._hide_timeout_id)
+            self._hide_timeout_id = None
+
+    def _do_hide(self):
+        self._hide_timeout_id = None
+        self.popup_revealer.unreveal()
+        return False
+
+    def force_hide(self):
+        self._cancel_hide()
+        self.popup_revealer.unreveal()
+        self.popup.set_visible(False)
+
     def update_preview_image(self, client, client_button: Button):
-        self.popup.set_pointing_to(client_button)
+        self._cancel_hide()
+        self.popup.animate_pointing_to(client_button)
 
         def capture_callback(pbuf, _):
             self._preview_image.set_from_pixbuf(
@@ -123,7 +143,7 @@ class AppBar(Box):
             on_enter_notify_event=lambda *_: self.update_preview_image(
                 client, client_button
             ),
-            on_leave_notify_event=lambda *_: self.popup_revealer.unreveal(),
+            on_leave_notify_event=lambda *_: self._schedule_hide(),
         )
         self.client_buttons[client.get_id()] = client_button
 
@@ -131,19 +151,6 @@ class AppBar(Box):
             "notify::app-id",
             lambda *_: client_image.set_from_pixbuf(
                 self.icon_resolver.get_icon_pixbuf(client.get_app_id(), 60)
-            ),
-        )
-
-        client.connect(
-            "notify::app-id",
-            lambda *_: client_button.set_tooltip_window(
-                Window(
-                    child=Box(
-                        style="background-color: red; min-height: 50px; min-width: 50px;"
-                    ),
-                    visible=False,
-                    all_visible=False,
-                )
             ),
         )
 
@@ -203,8 +210,9 @@ class AppDock(Window):
             layer="top",
             anchor="bottom center",
         )
+        app_bar = AppBar(self)
         self.revealer = Revealer(
-            child=Box(children=[AppBar(self)], style="padding: 20px 50px 5px 50px;"),
+            child=Box(children=[app_bar], style="padding: 20px 50px 5px 50px;"),
             transition_duration=500,
             transition_type="slide-up",
         )
@@ -216,5 +224,8 @@ class AppDock(Window):
                 end_children=Box(style="min-height: 10px; min-width: 5px;"),
             ),
             on_enter_notify_event=lambda *_: self.revealer.set_reveal_child(True),
-            on_leave_notify_event=lambda *_: self.revealer.set_reveal_child(False),
+            on_leave_notify_event=lambda *_: (
+                self.revealer.set_reveal_child(False),
+                app_bar.force_hide(),
+            ),
         )

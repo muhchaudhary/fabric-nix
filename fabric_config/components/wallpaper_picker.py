@@ -1,6 +1,7 @@
 import os
 import mimetypes
 import json
+import subprocess
 
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
@@ -31,6 +32,18 @@ if not os.path.exists(CACHE_DIR):
 
 if not os.path.exists(WALLPAPER_CACHE):
     os.makedirs(WALLPAPER_CACHE)
+
+
+def _set_hyprpaper_wallpaper(wp_path: str):
+    try:
+        monitors = json.loads(subprocess.check_output(["hyprctl", "-j", "monitors"]))
+        for monitor in monitors:
+            exec_shell_command_async(
+                f"hyprctl hyprpaper wallpaper '{monitor['name']},{wp_path}'",
+                lambda *_: None,
+            )
+    except Exception:
+        pass
 
 
 def _save_last_wallpaper(wp_path: str):
@@ -78,10 +91,7 @@ class ImageButton(Button):
     def _set_wallpaper_from_image(self):
         _save_last_wallpaper(self.wp_path)
         self.wallpaper_change(self.wp_path)
-
-        exec_shell_command_async(
-            f"hyprctl hyprpaper wallpaper ', {self.wp_path}'", lambda *_: None
-        )
+        _set_hyprpaper_wallpaper(self.wp_path)
 
     def _generate_wp_thumbnail(self):
         if os.path.exists(self.wp_thumb_path):
@@ -191,11 +201,7 @@ class WallPaperPickerOverlay(PopupWindow):
         last_wallpaper = _get_last_wallpaper()
         if not last_wallpaper:
             return
-
-        exec_shell_command_async(
-            f"hyprctl hyprpaper wallpaper ', {last_wallpaper}'",
-            lambda *_: None,
-        )
+        _set_hyprpaper_wallpaper(last_wallpaper)
 
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor=True)

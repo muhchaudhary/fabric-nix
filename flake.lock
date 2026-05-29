@@ -89,6 +89,22 @@
         "type": "github"
       }
     },
+    "graphify-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1779976425,
+        "narHash": "sha256-onkiklX/TDgDU0uufLk4VyO84U2lmjtvr5lToDXY3XY=",
+        "owner": "safishamsi",
+        "repo": "graphify",
+        "rev": "7c124997834c4811a31e1b3d6e81511e5478df7d",
+        "type": "github"
+      },
+      "original": {
+        "owner": "safishamsi",
+        "repo": "graphify",
+        "type": "github"
+      }
+    },
     "hyprland-overview-rs": {
       "inputs": {
         "crane": "crane",
@@ -192,11 +208,11 @@
     },
     "nixpkgs_6": {
       "locked": {
-        "lastModified": 1777954456,
-        "narHash": "sha256-hGdgeU2Nk87RAuZyYjyDjFL6LK7dAZN5RE9+hrDTkDU=",
+        "lastModified": 1779560665,
+        "narHash": "sha256-tpyBcxPpcQb8ukyNF7DoCwfSY3VPsxHoYwj00Cayv5o=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "549bd84d6279f9852cae6225e372cc67fb91a4c1",
+        "rev": "64c08a7ca051951c8eae34e3e3cb1e202fe36786",
         "type": "github"
       },
       "original": {
@@ -211,6 +227,7 @@
         "fabric": "fabric",
         "fabric-libglace": "fabric-libglace",
         "fabric-libgray": "fabric-libgray",
+        "graphify-src": "graphify-src",
         "hyprland-overview-rs": "hyprland-overview-rs",
         "nixpkgs": "nixpkgs_6",
         "utils": "utils_2"

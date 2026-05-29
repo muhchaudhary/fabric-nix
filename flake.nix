@@ -8,6 +8,10 @@
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
     hyprland-overview-rs.url = "github:muhchaudhary/overview-rs";
+    graphify-src = {
+      url = "github:safishamsi/graphify";
+      flake = false;
+    };
   };
 
   outputs = {
@@ -55,6 +59,56 @@
               tomli = final.${pythonPackagesAttr}.tomli;
               click = final.${pythonPackagesAttr}.click;
             };
+            graphify = final.${pythonPackagesAttr}.buildPythonApplication {
+              pname = "graphify";
+              version = "0.8.23";
+              pyproject = true;
+
+              src = inputs.graphify-src;
+
+              build-system = [final.${pythonPackagesAttr}.setuptools];
+
+              nativeBuildInputs = [final.${pythonPackagesAttr}.pythonRelaxDepsHook];
+
+              pythonRemoveDeps = [
+                "tree-sitter-typescript"
+                "tree-sitter-go"
+                "tree-sitter-java"
+                "tree-sitter-groovy"
+                "tree-sitter-c"
+                "tree-sitter-cpp"
+                "tree-sitter-ruby"
+                "tree-sitter-kotlin"
+                "tree-sitter-scala"
+                "tree-sitter-php"
+                "tree-sitter-swift"
+                "tree-sitter-lua"
+                "tree-sitter-zig"
+                "tree-sitter-powershell"
+                "tree-sitter-elixir"
+                "tree-sitter-objc"
+                "tree-sitter-julia"
+                "tree-sitter-verilog"
+                "tree-sitter-fortran"
+                "tree-sitter-dm"
+              ];
+
+              propagatedBuildInputs = with final.${pythonPackagesAttr}; [
+                networkx
+                datasketch
+                rapidfuzz
+                tree-sitter
+                tree-sitter-python
+                tree-sitter-javascript
+                tree-sitter-json
+                tree-sitter-bash
+                tree-sitter-rust
+                tree-sitter-c-sharp
+                tree-sitter-sql
+              ];
+
+              doCheck = false;
+            };
           })
         ];
 
@@ -79,6 +133,7 @@
           pythonPackages.ijson
           pythonPackages.debugpy
           pythonPackages.magic
+          pkgs.graphify
         ];
 
         astal-depends = [pkgs.astal.network pkgs.dart-sass];
@@ -97,6 +152,7 @@
           thefuzz = pythonPackages.thefuzz;
           colorthief = pythonPackages.colorthief;
           pywayland-custom = pythonPackages.callPackage ./nix/pywayland.nix {};
+          graphify = pkgs.graphify;
         };
         apps.default = {
           type = "app";

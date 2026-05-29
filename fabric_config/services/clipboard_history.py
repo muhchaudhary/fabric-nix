@@ -5,7 +5,6 @@ import threading
 from typing import Callable
 
 import gi
-import magic
 from fabric import Fabricator, Property, Service, Signal
 from loguru import logger
 
@@ -238,12 +237,8 @@ class ClipboardHistory(Service):
                 if decoded_string.startswith("file://"):
                     decoded_string = decoded_string[7:]
 
-                # TODO: find alternative for magic
-                stdout_contents_detect = magic.detect_from_content(stdout.get_data())
-                if (
-                    stdout_contents_detect.mime_type in SUPPORTED_MIME_TYPES
-                    or "xbm image" in stdout_contents_detect.name
-                ):
+                content_type, _ = Gio.content_type_guess(None, stdout.get_data())
+                if content_type in SUPPORTED_MIME_TYPES:
                     get_pixbuf_for_data_threaded(stdout.get_data(), on_pixbuf_ready)
                     return
 

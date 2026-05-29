@@ -16,7 +16,7 @@ from fabric_config.components import (
 from fabric_config.components.bar.bar import ScreenCorners
 from fabric_config.components.overview import Overview
 
-# from fabric_config.components.dock import AppDock
+from fabric_config.components.dock import AppDock
 from fabric_config.components.wallpaper_picker import wallpaper_picker
 
 
@@ -30,7 +30,7 @@ class MyApp(Application):
         self.systemOverlay = SystemOSD()
         self.nc = NotificationPopup()
         self.appMenu = AppMenu()
-        # self.dock = AppDock()
+        self.dock = AppDock()
         self.wallpaper_picker = wallpaper_picker
         super().__init__(
             "fabric-bar",
@@ -40,7 +40,7 @@ class MyApp(Application):
             self.nc,
             self.appMenu,
             self.overview,
-            # self.dock,
+            self.dock,
         )
         config.theme.connect("notify::is-light", lambda *_: self.apply_style())
         self.apply_style()

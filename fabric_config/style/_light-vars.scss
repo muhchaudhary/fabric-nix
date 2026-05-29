@@ -1,8 +1,8 @@
 :vars {
   /* Base backgrounds */
-  --bg:       #eff1f5;
+  --bg:       #e6e9ef;
   --surface:  alpha(#ccd0da, 0.70);
-  --bg-glass: alpha(#eff1f5, 0.92);
+  --bg-glass: alpha(#e6e9ef, 0.92);
 
   /* Foreground */
   --fg:                   #4c4f69;
@@ -15,15 +15,15 @@
   /* Accent */
   --accent: #209fb5;
 
-  /* Semantic colors - Apple HIG light palette */
-  --red:    #ff3b30;  --red-dim:    #c0392b;
-  --green:  #34c759;  --green-dim:  #27ae60;
-  --yellow: #ffd60a;  --yellow-dim: #f39c12;
-  --blue:   #0071e3;  --blue-dim:   #2471a3;
-  --purple: #af52de;  --purple-dim: #8e44ad;
-  --aqua:   #32ade6;  --aqua-dim:   #1abc9c;
-  --gray:   #8e8e93;  --gray-dim:   #636366;
-  --orange: #ff9500;  --orange-dim: #e67e22;
+  /* Semantic colors - Catppuccin Latte palette */
+  --red:    #d20f39;  --red-dim:    #a80c2d;
+  --green:  #40a02b;  --green-dim:  #2f7a20;
+  --yellow: #df8e1d;  --yellow-dim: #b07016;
+  --blue:   #1e66f5;  --blue-dim:   #1750c4;
+  --purple: #8839ef;  --purple-dim: #6c2dc2;
+  --aqua:   #179299;  --aqua-dim:   #10696f;
+  --gray:   #8c8fa1;  --gray-dim:   #6c6f85;
+  --orange: #fe640b;  --orange-dim: #cc4f08;
 
   --placeholder_text_color: alpha(#4c4f69, 0.35);
 }

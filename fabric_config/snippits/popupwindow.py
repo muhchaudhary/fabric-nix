@@ -1,6 +1,6 @@
 import gi
 
-from gi.repository import Gtk, GtkLayerShell, Gdk
+from gi.repository import Gtk, GtkLayerShell, Gdk, GLib
 from fabric.widgets.wayland import WaylandWindow
 from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 
@@ -43,6 +43,64 @@ class PopupWindow(WaylandWindow):
         self._pointing_widget = widget
         return self.do_update_handlers()
 
+    def animate_pointing_to(self, widget: Gtk.Widget, duration_ms: int = 150):
+        if not self.get_visible():
+            self.set_pointing_to(widget)
+            return
+
+        if getattr(self, "_anim_id", None) is not None:
+            GLib.source_remove(self._anim_id)
+            self._anim_id = None
+
+        try:
+            start_margin = tuple(self.margin)
+        except Exception:
+            self.set_pointing_to(widget)
+            return
+
+        # Purge ALL stacked size-allocate handlers (do_update_handlers stacks them)
+        for w in filter(None, [self._pointing_widget, self]):
+            while True:
+                try:
+                    w.disconnect_by_func(self.do_handle_size_allocate)
+                except Exception:
+                    break
+
+        self._pointing_widget = widget
+        self._animating = True
+        self.do_reposition(self.do_calculate_edges())
+        target_margin = tuple(self.margin)
+
+        if start_margin == target_margin:
+            self._animating = False
+            widget.connect("size-allocate", self.do_handle_size_allocate)
+            self.connect("size-allocate", self.do_handle_size_allocate)
+            return
+
+        self.margin = start_margin
+        start_us = GLib.get_monotonic_time()
+        duration_us = duration_ms * 1000
+
+        def tick():
+            t = min((GLib.get_monotonic_time() - start_us) / duration_us, 1.0)
+            ease = 1.0 - (1.0 - t) ** 2  # ease-out quad
+            # Recompute target each tick so popup size changes (new image loading)
+            # are tracked — at t=1.0 ease=1.0 so we land exactly on live_target.
+            self.do_reposition(self.do_calculate_edges())
+            live_target = tuple(self.margin)
+            self.margin = tuple(
+                round(a + (b - a) * ease) for a, b in zip(start_margin, live_target)
+            )
+            if t >= 1.0:
+                self._anim_id = None
+                self._animating = False
+                widget.connect("size-allocate", self.do_handle_size_allocate)
+                self.connect("size-allocate", self.do_handle_size_allocate)
+                return False
+            return True
+
+        self._anim_id = GLib.timeout_add(16, tick)
+
     def do_update_handlers(self, *_):
         if not self._pointing_widget:
             return
@@ -61,40 +119,39 @@ class PopupWindow(WaylandWindow):
         return self.do_handle_size_allocate()
 
     def do_handle_size_allocate(self, *_):
+        if getattr(self, "_animating", False):
+            return
         return self.do_reposition(self.do_calculate_edges())
 
     def do_calculate_edges(self):
-        move_axe = "x"
         parent_anchor = self._parent.anchor
+        has_left = GtkLayerShell.Edge.LEFT in parent_anchor
+        has_right = GtkLayerShell.Edge.RIGHT in parent_anchor
+        has_top = GtkLayerShell.Edge.TOP in parent_anchor
+        has_bottom = GtkLayerShell.Edge.BOTTOM in parent_anchor
 
-        if len(parent_anchor) != 3:
-            self.anchor = "left bottom"
-            self._is_centered = True
-            return move_axe
+        if has_left and has_right:
+            # Full-width horizontal bar
+            self.anchor = "left top" if has_top else "left bottom"
+            self._is_centered = False
+            return "x"
 
-        if (
-            GtkLayerShell.Edge.LEFT in parent_anchor
-            and GtkLayerShell.Edge.RIGHT in parent_anchor
-        ):
-            # horizontal -> move on x-axies
-            move_axe = "x"
-            if GtkLayerShell.Edge.TOP in parent_anchor:
-                self.anchor = "left top"
-            else:
-                self.anchor = "left bottom"
-        elif (
-            GtkLayerShell.Edge.TOP in parent_anchor
-            and GtkLayerShell.Edge.BOTTOM in parent_anchor
-        ):
-            # vertical -> move on y-axies
-            move_axe = "y"
-            if GtkLayerShell.Edge.RIGHT in parent_anchor:
-                self.anchor = "top right"
-            else:
-                self.anchor = "top left"
+        if has_top and has_bottom:
+            # Full-height vertical bar
+            self.anchor = "top right" if has_right else "top left"
+            self._is_centered = False
+            return "y"
 
-        self._is_centered = False
-        return move_axe
+        if has_left or has_right:
+            # Partial-width dock anchored to one side (e.g. bottom-left, bottom-right)
+            self.anchor = "left top" if has_top else "left bottom"
+            self._is_centered = False
+            return "x"
+
+        # Floating / no explicit x-anchor → center over the widget
+        self.anchor = "left bottom"
+        self._is_centered = True
+        return "x"
 
     def do_reposition(self, move_axe: str):
         parent_margin = self._parent.margin
