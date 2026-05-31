@@ -3,6 +3,8 @@ import time
 
 import cairo
 import gi
+
+from fabric_config.utils.play_audio import play_sound
 from fabric import Signal
 from fabric.notifications.service import (
     Notification,
@@ -10,7 +12,7 @@ from fabric.notifications.service import (
     NotificationCloseReason,
     Notifications,
 )
-from fabric.utils import invoke_repeater
+from fabric.utils import (invoke_repeater, get_relative_path)
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
@@ -276,18 +278,11 @@ class NotificationRevealer(Revealer):
 
     def animate_popup_timeout(self):
         time_remaining = self.popup_timeout
-        log_counter = 0
 
         def do_animate():
-            nonlocal time_remaining, log_counter
+            nonlocal time_remaining
             if not self.child_revealed:
                 return False
-            log_counter += 1
-            if log_counter >= 100:  # log ~once per second
-                log_counter = 0
-                logger.debug(
-                    f"[Notification {self.notification.id}] hovered={self.hovered} time_remaining={time_remaining}"
-                )
             if self.hovered:
                 return True
             if time_remaining <= 0:
@@ -430,6 +425,7 @@ class NotificationPopup(WaylandWindow):
         pass
 
     def on_new_notification(self, fabric_notif, id):
+        play_sound(get_relative_path("../assets/sounds/notification.mp3"))
         new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
         self.notifications.add(new_box)
         new_box.grab_offscreen(self.notifications.get_allocation())

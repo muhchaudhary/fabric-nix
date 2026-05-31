@@ -29,7 +29,7 @@ pkgs.mkShell {
       playerctl
       librsvg
       geoclue2
-      graphify
+      sox
 
       (python.withPackages (
         ps:

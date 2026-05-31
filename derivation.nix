@@ -1,6 +1,7 @@
 {
   lib,
   pkgs,
+  sox,
   buildPythonApplication,
   gtk3,
   gtk-layer-shell,
@@ -62,6 +63,7 @@ buildPythonApplication {
     pywayland-custom
     setuptools
     colorthief
+    sox
   ];
 
   doCheck = false;

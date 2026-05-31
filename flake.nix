@@ -8,10 +8,6 @@
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
     hyprland-overview-rs.url = "github:muhchaudhary/overview-rs";
-    graphify-src = {
-      url = "github:safishamsi/graphify";
-      flake = false;
-    };
   };
 
   outputs = {
@@ -33,7 +29,7 @@
             "${pythonPackagesAttr}" = prev.${pythonPackagesAttr}.overrideScope (
               pyfinal: pyprev: {
                 pygobject3 = pyprev.pygobject3.overridePythonAttrs (_: {
-                  version = "3.50.0";
+                  version = "3.50.0"; # pygobject is STILL broken
                   src = final.fetchurl {
                     url = "mirror://gnome/sources/pygobject/3.50/pygobject-3.50.0.tar.xz";
                     hash = "sha256-jYNudbWogdRX7hYiyuSjK826KKC6ViGTrbO7tHJHIhI=";
@@ -59,56 +55,6 @@
               tomli = final.${pythonPackagesAttr}.tomli;
               click = final.${pythonPackagesAttr}.click;
             };
-            graphify = final.${pythonPackagesAttr}.buildPythonApplication {
-              pname = "graphify";
-              version = "0.8.23";
-              pyproject = true;
-
-              src = inputs.graphify-src;
-
-              build-system = [final.${pythonPackagesAttr}.setuptools];
-
-              nativeBuildInputs = [final.${pythonPackagesAttr}.pythonRelaxDepsHook];
-
-              pythonRemoveDeps = [
-                "tree-sitter-typescript"
-                "tree-sitter-go"
-                "tree-sitter-java"
-                "tree-sitter-groovy"
-                "tree-sitter-c"
-                "tree-sitter-cpp"
-                "tree-sitter-ruby"
-                "tree-sitter-kotlin"
-                "tree-sitter-scala"
-                "tree-sitter-php"
-                "tree-sitter-swift"
-                "tree-sitter-lua"
-                "tree-sitter-zig"
-                "tree-sitter-powershell"
-                "tree-sitter-elixir"
-                "tree-sitter-objc"
-                "tree-sitter-julia"
-                "tree-sitter-verilog"
-                "tree-sitter-fortran"
-                "tree-sitter-dm"
-              ];
-
-              propagatedBuildInputs = with final.${pythonPackagesAttr}; [
-                networkx
-                datasketch
-                rapidfuzz
-                tree-sitter
-                tree-sitter-python
-                tree-sitter-javascript
-                tree-sitter-json
-                tree-sitter-bash
-                tree-sitter-rust
-                tree-sitter-c-sharp
-                tree-sitter-sql
-              ];
-
-              doCheck = false;
-            };
           })
         ];
 
@@ -118,23 +64,25 @@
         python = pkgs.${pythonAttr};
         pythonPackages = pkgs.${pythonPackagesAttr};
 
-        python-depends = [
-          pythonPackages.pyinstrument
-          pythonPackages.lxml
-          pythonPackages.psutil
-          pythonPackages.requests
-          pythonPackages.python-pam
-          pythonPackages.colorthief
-          pythonPackages.thefuzz
-          pkgs.gengir
-          pythonPackages.python-fabric
-          (pythonPackages.callPackage ./nix/pywayland.nix {})
-          pythonPackages.qrcode
-          pythonPackages.ijson
-          pythonPackages.debugpy
-          pythonPackages.magic
-          pkgs.graphify
-        ];
+        python-depends = with pythonPackages;
+          [
+            pyinstrument
+            lxml
+            psutil
+            requests
+            python-pam
+            colorthief
+            thefuzz
+            python-fabric
+            (callPackage ./nix/pywayland.nix {})
+            qrcode
+            ijson
+            debugpy
+            magic
+          ]
+          ++ [
+            pkgs.gengir
+          ];
 
         astal-depends = [pkgs.astal.network pkgs.dart-sass];
       in {
@@ -143,7 +91,7 @@
           inherit pkgs python pythonPackages python-depends astal-depends;
         };
         packages.default = pythonPackages.callPackage ./derivation.nix {
-          inherit (pkgs) lib;
+          inherit (pkgs) lib astal-depends;
           python-fabric = pythonPackages.python-fabric;
           psutil = pythonPackages.psutil;
           requests = pythonPackages.requests;
@@ -152,7 +100,6 @@
           thefuzz = pythonPackages.thefuzz;
           colorthief = pythonPackages.colorthief;
           pywayland-custom = pythonPackages.callPackage ./nix/pywayland.nix {};
-          graphify = pkgs.graphify;
         };
         apps.default = {
           type = "app";
