@@ -1,5 +1,5 @@
 import subprocess
-
+import os
 from fabric import Application
 from fabric.utils import get_relative_path
 from loguru import logger
@@ -18,6 +18,16 @@ from fabric_config.components.overview import Overview
 
 from fabric_config.components.dock import AppDock
 from fabric_config.components.wallpaper_picker import wallpaper_picker
+
+from gi.repository import GLib
+
+CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
+CSS_CACHE = CACHE_DIR + "/css"
+CSS_PATH = CSS_CACHE + "/main.css"
+if not os.path.exists(CACHE_DIR):
+    os.makedirs(CACHE_DIR)
+if not os.path.exists(CSS_CACHE):
+    os.makedirs(CSS_CACHE)
 
 
 class MyApp(Application):
@@ -51,9 +61,8 @@ class MyApp(Application):
             "style/main-light.scss" if config.theme.is_light else "style/main.scss"
         )
         scss = get_relative_path(scss_name)
-        css = get_relative_path("style/main.css")
-        subprocess.run(["sass", str(scss), str(css)], check=True)
-        return self.set_stylesheet_from_file(str(css))
+        subprocess.run(["sass", str(scss), CSS_PATH], check=True)
+        return self.set_stylesheet_from_file(CSS_PATH)
 
 
 the_app = MyApp()

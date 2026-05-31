@@ -12,7 +12,7 @@ from fabric.notifications.service import (
     NotificationCloseReason,
     Notifications,
 )
-from fabric.utils import (invoke_repeater, get_relative_path)
+from fabric.utils import invoke_repeater, get_relative_path
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
