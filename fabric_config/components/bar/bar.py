@@ -232,7 +232,7 @@ class ScreenCorners(WaylandWindow):
             name="system-bar-corner",
             children=Corner(
                 orientation=orientation,
-                size=10,
+                size=20,
             ),
         )
 

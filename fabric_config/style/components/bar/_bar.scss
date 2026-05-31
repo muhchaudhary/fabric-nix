@@ -4,7 +4,7 @@
 @use '../../tokens' as *;
 @use '../../mixins' as *;
 
-#system-bar { background-color: a(black, 0.005); }
+// #system-bar { background-color: a(black, 0.005); }
 
 #system-bar-group,
 #system-bar-corner * { background-color: var(--bg-glass); }
