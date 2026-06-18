@@ -90,7 +90,7 @@ class ApplicationButtonV2(Button):
         )
         logger.info(f"Attempting to launch {self.app_info.name} with command {command}")
         exec_shell_command_async(
-            f"hyprctl dispatch 'hl.dsp.exec_cmd(\"{command}\")'",
+            f"uwsm app -- {command}",
             lambda *_: logger.info(f"Launched {self.app_info.name}"),
         ) if command else None
 
