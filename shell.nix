@@ -47,9 +47,8 @@ pkgs.mkShell {
     ]
     ++ astal-depends;
 
-  shellHook = ''
-    # ${python.interpreter} ./nix/tt.py
-    # cp -rn "${pythonPackages.pygobject-stubs}/lib/${python.sitePackages}/gi-stubs/repository/." "/home/$USER/.local/lib/${python.sitePackages}/gi/repository/"
-    export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
-  '';
+  # shellHook = ''
+  #   ${python.interpreter} ${./nix/tt.py}
+  #   export GDK_PIXBUF_MODULEDIR=${pkgs.librsvg}/lib/gdk-pixbuf-2.0/2.10.0/loaders
+  # '';
 }
