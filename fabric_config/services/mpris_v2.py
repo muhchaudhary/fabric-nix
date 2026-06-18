@@ -43,7 +43,7 @@ class MprisPlayer(Service):
     # TODO: why??? object
     # TypeError: can't convert return value to desired type
     @Signal
-    def seeked(self, position: int) -> object: ...
+    def seeked(self, position: float) -> object: ...
 
     @Property(str, "readable")
     def player_name(self):
@@ -128,12 +128,12 @@ class MprisPlayer(Service):
 
     @position.setter
     def position(self, new_pos: int) -> None:
+        self.seek_to(new_pos)
+
+    def seek_to(self, position: int) -> None:
         self._proxy_call(
             "SetPosition",
-            GLib.Variant(
-                "(ox)",
-                (self.metadata["mpris:trackid"], new_pos),
-            ),
+            GLib.Variant("(ox)", (self.metadata["mpris:trackid"], position)),
         )
 
     # TODO: consider MinimumRate, MaximumRate
@@ -263,7 +263,7 @@ class MprisPlayer(Service):
     ):
         # Only One Signal for Mpris
         if signal_name == "Seeked":
-            self.seeked(params[0])
+            self.seeked(float(params[0]))
 
     def _proxy_call(self, method_name: str, parameter: Optional[GLib.Variant]):
         self._proxy.call(
