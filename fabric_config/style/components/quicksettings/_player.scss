@@ -25,6 +25,12 @@
   border-color: a(var(--fg), 0.08);
 }
 
+#player-time {
+  font-size: 10px;
+  font-weight: bold;
+  color: var(--fg-dim);
+}
+
 #seek-bar {
   border-radius: 10px;
   margin-top: $gap-sm;

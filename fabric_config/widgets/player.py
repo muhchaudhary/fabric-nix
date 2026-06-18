@@ -1,5 +1,7 @@
 import math
 import os
+import threading
+import urllib.request
 from typing import List
 
 from fabric.utils import (
@@ -14,7 +16,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
-from gi.repository import Gio, GLib
+from gi.repository import GLib
 from loguru import logger
 
 from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
@@ -170,6 +172,13 @@ class PlayerBoxStack(Box):
         self.buttons_box.add_center(self.player_buttons[-1])
 
 
+def format_time(microseconds: int) -> str:
+    seconds = microseconds // 1_000_000
+    minutes = seconds // 60
+    seconds = seconds % 60
+    return f"{minutes}:{seconds:02d}"
+
+
 def easeOutBounce(t: float) -> float:
     if t < 4 / 11:
         return 121 * t * t / 16
@@ -214,23 +223,34 @@ class PlayerBox(Box):
         self.angle_direction = 1
         self.skipped = False
         self._color_generation = 0
+        self._user_seeking = False
+        self._seek_timeout_id = 0
 
         # Exit Logic
         self.player.connect("closed", self.on_player_exit)
 
-        self.image_box = CircleImage(size=self.image_size, image_file=self.cover_path)
+        self.image_box = CircleImage(
+            size=self.image_size,
+            image_file=self.cover_path,
+            style="background-color: red",
+        )
         self.image_stack = Box(
-            style_classes=["cool-border"],
+            children=self.image_box,
             h_align="start",
             v_align="start",
-            style="border-radius: 100%; box-shadow: 0px 0 4px 0px black;",
+            style_classes=["cool-border"],
+            style="border-radius: 100%;border-width: 2px;",
         )
-        self.image_stack.children = self.image_stack.children + [self.image_box]
 
         self.player.connect("notify::arturl", self.set_image)
 
         self.player.connect(
-            "seeked", lambda _, position: self.seek_bar.set_value(position)
+            "seeked",
+            lambda _, position: (
+                self.seek_bar.set_value(position / self.player.length * 100)
+                if self.player.length and not self._user_seeking
+                else None
+            ),
         )
 
         def do_anim(p: Animator, *_):
@@ -396,21 +416,33 @@ class PlayerBox(Box):
         )
         self.seek_bar.connect("change-value", self.on_scale_move)
         self.player.connect(
-            "notify::position", lambda *_: self.seek_bar.set_value(self.player.position)
-        )
-        # self.seek_bar.connect("button-release-event", self.on_button_scale_release)
-        self.player.connect(
-            "notify::length",
-            lambda _, x: (
-                [
-                    self.seek_bar.set_range(0, self.player.length),
-                    self.seek_bar.set_value(0),
-                ]  # type: ignore
-                if self.player.length
+            "notify::position",
+            lambda *_: (
+                self.seek_bar.set_value(self.player.position / self.player.length * 100)
+                if self.player.length and not self._user_seeking
                 else None
             ),
         )
+        self.player.connect(
+            "notify::position",
+            lambda *_: self.update_time_label(),
+        )
+        self.player.connect(
+            "notify::length",
+            lambda *_: self.seek_bar.set_value(0) if self.player.length else None,
+        )
+        self.player.connect(
+            "notify::length",
+            lambda *_: self.update_time_label(),
+        )
         self.player.bind("can-seek", "visible", self.seek_bar)
+
+        self.time_label = Label(
+            label="0:00 / 0:00",
+            name="player-time",
+            h_align="end",
+        )
+        self.player.bind("can-seek", "visible", self.time_label)
 
         self.player_info_box = Box(
             style=f"margin-left: {self.image_size + 10}px;"
@@ -418,7 +450,7 @@ class PlayerBox(Box):
             v_align="center",
             h_align="start",
             orientation="v",
-            children=[self.track_info, self.seek_bar, self.button_box],
+            children=[self.track_info, self.seek_bar, self.time_label, self.button_box],
         )
 
         self.inner_box = Box(
@@ -457,8 +489,19 @@ class PlayerBox(Box):
 
         invoke_repeater(1000, self.move_seekbar)
 
-    def on_scale_move(self, scale: Scale, event, moved_pos: int):
-        self.player.position = moved_pos
+    def on_scale_move(self, scale: Scale, event, moved_pos: float):
+        if not self.player.length:
+            return
+        self._user_seeking = True
+        if self._seek_timeout_id:
+            GLib.source_remove(self._seek_timeout_id)
+        self._seek_timeout_id = GLib.timeout_add(500, self._clear_seeking_flag)
+        self.player.seek_to(int(moved_pos / 100 * self.player.length))
+
+    def _clear_seeking_flag(self) -> bool:
+        self._user_seeking = False
+        self._seek_timeout_id = 0
+        return False
 
     def on_player_exit(self, _, value):
         self.exit = value
@@ -497,16 +540,6 @@ class PlayerBox(Box):
             self.play_pause_button.get_child().set_visible_child_name("play")  # type: ignore
         if status == "Playing":
             self.play_pause_button.get_child().set_visible_child_name("pause")  # type: ignore
-
-    def img_callback(self, source: Gio.File, result: Gio.AsyncResult):
-        try:
-            logger.info(f"[PLAYER] saving cover photo to {self.cover_path}")
-            os.path.isfile(self.cover_path)
-            # source.copy_finish(result)
-            if os.path.isfile(self.cover_path):
-                self.update_image()
-        except ValueError:
-            logger.error("[PLAYER] Failed to grab artUrl")
 
     def update_image(self):
         logger.info(f"[PLAYER] updating cover image to {self.cover_path}")
@@ -549,7 +582,6 @@ class PlayerBox(Box):
         self._color_generation += 1
 
         if new_cover_path == self.cover_path:
-            self.update_image()
             return
 
         self.cover_path = new_cover_path
@@ -558,18 +590,31 @@ class PlayerBox(Box):
             self.update_image()
             return
 
-        Gio.File.new_for_uri(uri=url).copy_async(
-            Gio.File.new_for_path(self.cover_path),
-            Gio.FileCopyFlags.OVERWRITE,
-            GLib.PRIORITY_DEFAULT,
-            None,
-            None,
-            self.img_callback,
-        )
+        logger.info(f"[PLAYER] downloading art from {url} to {self.cover_path}")
+
+        def download():
+            try:
+                urllib.request.urlretrieve(url, self.cover_path)
+                GLib.idle_add(self.update_image)
+            except Exception as e:
+                logger.error(f"[PLAYER] Failed to download art: {e}")
+
+        threading.Thread(target=download, daemon=True).start()
+
+    def update_time_label(self):
+        length = self.player.length or 0
+        pos = int(self.seek_bar.get_value() / 100 * length) if length else 0
+        self.time_label.set_label(f"{format_time(pos)} / {format_time(length)}")
 
     def move_seekbar(self) -> bool:
-        if not self.player.can_seek:
-            return False
-        if self.player.playback_status == "Playing":
-            self.seek_bar.set_value(value=self.seek_bar.get_value() + 1000000)
+        if (
+            self.player.can_seek
+            and self.player.playback_status == "Playing"
+            and self.player.length
+            and not self._user_seeking
+        ):
+            self.seek_bar.set_value(
+                self.seek_bar.get_value() + 1_000_000 / self.player.length * 100
+            )
+        self.update_time_label()
         return True
