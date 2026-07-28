@@ -7,7 +7,7 @@
     fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
-    hyprland-overview-rs.url = "github:muhchaudhary/overview-rs";
+    toplevel-streamer-rs.url = "github:muhchaudhary/toplevel-streamer-rs";
   };
 
   outputs = {
@@ -41,9 +41,7 @@
               }
             );
             fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
-            basedpyright = nixpkgs.legacyPackages.${system}.basedpyright;
             fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
-            hyprland-overview-rs = inputs.hyprland-overview-rs.packages.${system}.default;
             gengir = final.${pythonPackagesAttr}.callPackage ./nix/gengir.nix {
               typer = final.${pythonPackagesAttr}.typer;
               astor = final.${pythonPackagesAttr}.astor;
@@ -82,6 +80,9 @@
           ]
           ++ [
             pkgs.gengir
+            # Hyprland window frame capture (Rust/pyo3 extension). abi3 wheel, so
+            # this prebuilt module imports under whatever Python this flake uses.
+            (inputs.toplevel-streamer-rs.lib.${system}.pythonPackage pythonPackages)
           ];
 
         astal-depends = [pkgs.astal.network pkgs.dart-sass];

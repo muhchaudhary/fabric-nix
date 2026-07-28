@@ -1,5 +1,6 @@
 import json
 import os
+import subprocess
 
 import gi
 from fabric.widgets.box import Box
@@ -16,7 +17,9 @@ from fabric_config.utils.icon_resolver import IconResolver
 from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
 
 gi.require_version("Glace", "0.1")
-from gi.repository import Glace, GLib
+from gi.repository import GdkPixbuf, Glace, GLib
+
+from hyprland_toplevel_streamer import HyprlandFrameCapture
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 APP_CACHE = CACHE_DIR + "/dock"
@@ -63,6 +66,7 @@ class AppBar(Box):
         self.icon_resolver = IconResolver()
         self._manager = Glace.Manager()
         self._manager.connect("client-added", self.on_client_added)
+        self._capture = HyprlandFrameCapture()
         self._preview_image = Image()
 
         self.connect(
@@ -114,23 +118,58 @@ class AppBar(Box):
         self.popup_revealer.unreveal()
         self.popup.set_visible(False)
 
+    def _resolve_address(self, client: Glace.Client) -> int | None:
+        """Map a Glace client to its Hyprland window address.
+
+        Glace clients don't expose the address the capture package needs, so
+        match against `hyprctl clients` by title (and class as a tiebreaker).
+        """
+        title = client.get_title()
+        app_id = client.get_app_id()
+        try:
+            clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"]))
+        except Exception as e:
+            logger.error(f"[Dock] hyprctl clients failed: {e}")
+            return None
+
+        candidates = [
+            c for c in clients if c.get("title") == title and c.get("class") == app_id
+        ] or [c for c in clients if c.get("title") == title]
+        if not candidates:
+            return None
+        return int(candidates[0]["address"], 16)
+
     def update_preview_image(self, client, client_button: Button):
         self._cancel_hide()
         self.popup.animate_pointing_to(client_button)
 
-        def capture_callback(pbuf, _):
-            self._preview_image.set_from_pixbuf(
-                pbuf.scale_simple(pbuf.get_width() * 0.2, pbuf.get_height() * 0.2, 2)
-            )
-            self.popup.set_visible(True)
-            self.popup_revealer.reveal()
+        address = self._resolve_address(client)
+        if address is None:
+            logger.error(f"[Dock] could not resolve address for '{client.get_title()}'")
+            return
 
-        self._manager.capture_client(
-            client=client,
-            overlay_cursor=False,
-            callback=capture_callback,
-            user_data=None,
+        try:
+            frame = self._capture.capture(address, overlay_cursor=False, rgba=True)
+        except Exception as e:
+            logger.error(f"[Dock] capture failed for '{client.get_title()}': {e}")
+            return
+
+        pbuf = GdkPixbuf.Pixbuf.new_from_bytes(
+            GLib.Bytes.new(frame.data),
+            GdkPixbuf.Colorspace.RGB,
+            True,  # has_alpha
+            8,  # bits per sample
+            frame.width,
+            frame.height,
+            frame.rowstride,
         )
+        self._preview_image.set_from_pixbuf(
+            pbuf.scale_simple(
+                int(pbuf.get_width() * 0.2), int(pbuf.get_height() * 0.2), 2
+            )
+        )
+        self.popup.set_visible(True)
+        self.popup_revealer.reveal()
 
     def on_client_added(self, _, client: Glace.Client):
         client_image = Image()

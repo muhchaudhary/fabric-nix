@@ -1,27 +1,24 @@
-from ast import Tuple
-from cProfile import label
 import json
 
 import cairo
-from fabric.utils import invoke_repeater
 import gi
 from fabric.hyprland.service import Hyprland
+from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
+from hyprland_toplevel_streamer import HyprlandFrameCapture
 from loguru import logger
 
 from fabric_config.utils.icon_resolver import IconResolver
-from fabric.widgets.eventbox import EventBox
-from fabric_config.utils.pywayland_export_toplevel import ClientOutput
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Glace, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
 icon_resolver = IconResolver()
 connection = Hyprland()
@@ -143,7 +140,7 @@ class WorkspaceEventBox(EventBox):
 # TODO update with monitors for later....
 class Overview(PopupWindow):
     def __init__(self):
-        self.glace_manager = Glace.Manager()
+        self._capture = HyprlandFrameCapture()
         # self.client_output = ClientOutput()
         self.overview_box = Box(
             name="overview-window",
@@ -262,8 +259,20 @@ class Overview(PopupWindow):
 
         for client_addr in self.clients.keys():
             try:
-                self.glace_manager.capture_client_handle(
-                    int(client_addr, 16), False, update_pixbuf, client_addr
+                frame = self._capture.capture(
+                    int(client_addr, 16), overlay_cursor=False, rgba=True
+                )
+                update_pixbuf(
+                    GdkPixbuf.Pixbuf.new_from_bytes(
+                        GLib.Bytes.new(frame.data),
+                        GdkPixbuf.Colorspace.RGB,
+                        True,  # has_alpha
+                        8,  # bits per sample
+                        frame.width,
+                        frame.height,
+                        frame.rowstride,
+                    ),
+                    client_addr,
                 )
             except Exception as e:
                 logger.error(f"Error capturing client {client_addr}: {e}")

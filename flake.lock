@@ -89,27 +89,6 @@
         "type": "github"
       }
     },
-    "hyprland-overview-rs": {
-      "inputs": {
-        "crane": "crane",
-        "flake-utils": "flake-utils",
-        "nixpkgs": "nixpkgs_4",
-        "rust-overlay": "rust-overlay"
-      },
-      "locked": {
-        "lastModified": 1762718515,
-        "narHash": "sha256-M04uVGsE4TatD3DYqy8dqihFJr5ILWveRZvsj1nc9Io=",
-        "owner": "muhchaudhary",
-        "repo": "overview-rs",
-        "rev": "1432f220fec740ca8d102e754f076c1c5d68e78f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "muhchaudhary",
-        "repo": "overview-rs",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1733261153,
@@ -160,6 +139,22 @@
     },
     "nixpkgs_4": {
       "locked": {
+        "lastModified": 1781577229,
+        "narHash": "sha256-lrp67w8AulE9Ks53n27I45ADSzbOCn4H+CNW1Ck8B+8=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_5": {
+      "locked": {
         "lastModified": 1762363567,
         "narHash": "sha256-YRqMDEtSMbitIMj+JLpheSz0pwEr0Rmy5mC7myl17xs=",
         "owner": "NixOS",
@@ -174,7 +169,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_5": {
+    "nixpkgs_6": {
       "locked": {
         "lastModified": 1744536153,
         "narHash": "sha256-awS2zRgF4uTwrOKwwiJcByDzDOdo3Q1rPZbiHQg/N38=",
@@ -190,35 +185,19 @@
         "type": "github"
       }
     },
-    "nixpkgs_6": {
-      "locked": {
-        "lastModified": 1781577229,
-        "narHash": "sha256-lrp67w8AulE9Ks53n27I45ADSzbOCn4H+CNW1Ck8B+8=",
-        "owner": "NixOS",
-        "repo": "nixpkgs",
-        "rev": "567a49d1913ce81ac6e9582e3553dd90a955875f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "NixOS",
-        "ref": "nixos-unstable",
-        "repo": "nixpkgs",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "fabric": "fabric",
         "fabric-libglace": "fabric-libglace",
         "fabric-libgray": "fabric-libgray",
-        "hyprland-overview-rs": "hyprland-overview-rs",
-        "nixpkgs": "nixpkgs_6",
+        "nixpkgs": "nixpkgs_4",
+        "toplevel-streamer-rs": "toplevel-streamer-rs",
         "utils": "utils_2"
       }
     },
     "rust-overlay": {
       "inputs": {
-        "nixpkgs": "nixpkgs_5"
+        "nixpkgs": "nixpkgs_6"
       },
       "locked": {
         "lastModified": 1762655942,
@@ -276,6 +255,27 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "toplevel-streamer-rs": {
+      "inputs": {
+        "crane": "crane",
+        "flake-utils": "flake-utils",
+        "nixpkgs": "nixpkgs_5",
+        "rust-overlay": "rust-overlay"
+      },
+      "locked": {
+        "lastModified": 1785251166,
+        "narHash": "sha256-OQNrb3bOuEWsCq3tBg9QiMjRdU0jKBdxpiM9VOngbOw=",
+        "owner": "muhchaudhary",
+        "repo": "toplevel-streamer-rs",
+        "rev": "0542b31e993392ad5dab500bdfaf1a4784ca1419",
+        "type": "github"
+      },
+      "original": {
+        "owner": "muhchaudhary",
+        "repo": "toplevel-streamer-rs",
         "type": "github"
       }
     },
