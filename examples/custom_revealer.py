@@ -9,14 +9,12 @@ from fabric.widgets.image import Image
 from fabric.widgets.widget import Widget
 from animator import (
     Animator,
-    EaseOutBounce,
-    BezierAnimator,
     AnimatorFunction,
     EaseOutElastic,
 )
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk
+from gi.repository import Gtk  # noqa: E402
 
 
 class TestWidget(Box):

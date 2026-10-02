@@ -13,7 +13,7 @@ from animator import Animator
 from fabric.core import Signal
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, Gtk
+from gi.repository import Gdk, Gtk  # noqa: E402
 
 
 def polar_to_cartesian(x, y, angle, r):

@@ -14,7 +14,7 @@ from fabric.widgets.wayland import WaylandWindow
 
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gtk, Gdk, GLib
+from gi.repository import Gtk, Gdk, GLib  # noqa: E402
 
 
 VERT_SHADER = """

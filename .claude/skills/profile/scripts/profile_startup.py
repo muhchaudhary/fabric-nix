@@ -14,7 +14,7 @@ _start_wall = time.monotonic()
 _profile.enable()
 
 # Monkey-patch to capture the moment run() is called
-import fabric  # noqa: E402
+import fabric  # noqa: E402, F401  (imported for its side effects before patching)
 
 _original_run = None
 
