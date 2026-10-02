@@ -3,13 +3,10 @@
 
 // Modelled on the macOS lock-screen clock: the date small above, the time
 // large and semibold in Inter Display (SF Pro's closest open relative), no
-// backdrop or outline, just a soft shadow. The colour is near-white with a
-// hint of the wallpaper (near-black on light wallpapers, .on-light), set
-// inline on #desktop-clock; every part inherits it. Sizes are per monitor,
-// generated in desktop_widget.py.
-// Keep shadows faint: GTK draws strong blurs behind big text as smudges.
-$clock-shadow: 0 1px 8px a(black, 0.18);
-$clock-shadow-light: 0 1px 8px a(white, 0.25);
+// backdrop, outline or shadow (GTK renders blurred text shadows as smudges).
+// The colour is near-white with a hint of the wallpaper (near-black on light
+// wallpapers), set inline on #desktop-clock; every part inherits it. Sizes
+// are per monitor, generated in desktop_widget.py.
 
 #desktop-clock {
   color: white;
@@ -22,12 +19,9 @@ $clock-shadow-light: 0 1px 8px a(white, 0.25);
     color: inherit;
     font-family: inherit;
     font-size: inherit;
+    text-shadow: none;
   }
-
-  label { text-shadow: $clock-shadow; }
 }
-
-#desktop-clock.on-light label { text-shadow: $clock-shadow-light; }
 
 #clock-time {
   font-family: "Inter Display", "Inter", "Roboto", sans-serif;
@@ -43,12 +37,7 @@ $clock-shadow-light: 0 1px 8px a(white, 0.25);
   font-weight: 600;
   letter-spacing: 1px;
   opacity: 0.28;
-  text-shadow: none;
   @include transition(opacity, 0.6s);
 
-  &.lit { opacity: 0.95; text-shadow: $clock-shadow; }
-}
-
-#desktop-clock.on-light #clock-words .clock-word.lit {
-  text-shadow: $clock-shadow-light;
+  &.lit { opacity: 0.95; }
 }

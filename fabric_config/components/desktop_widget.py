@@ -172,8 +172,6 @@ class AnalogFace(Gtk.DrawingArea):
         self.set_halign(Gtk.Align.CENTER)
         self.get_style_context().add_class("clock-analog")
         self._now = datetime.datetime.now()
-        # dial fill and hand shadows contrast with the wallpaper
-        self.on_light = False
         self.connect("draw", self._on_draw)
 
     def update(self, now: datetime.datetime, _use_24h: bool):
@@ -186,23 +184,9 @@ class AnalogFace(Gtk.DrawingArea):
         cx, cy, radius = w / 2, h / 2, min(w, h) / 2 - 6
         cr.set_line_cap(1)  # round
 
-        # a faint offset shadow lifts the strokes off the wallpaper
-        o = 1.0 if self.on_light else 0.0
-        shadow = (o, o, o, 0.2)
         ink = (color.red, color.green, color.blue)
 
         def stroke(width: float, alpha: float = 1.0):
-            path = cr.copy_path()
-            cr.save()
-            cr.translate(0, max(1.5, width * 0.3))
-            cr.new_path()
-            cr.append_path(path)
-            cr.set_source_rgba(*shadow)
-            cr.set_line_width(width + 1)
-            cr.stroke()
-            cr.restore()
-            cr.new_path()
-            cr.append_path(path)
             cr.set_source_rgba(*ink, alpha)
             cr.set_line_width(width)
             cr.stroke()
@@ -409,10 +393,8 @@ class ClockWidget(WaylandWindow):
             self.root.add_style_class("on-light")
         else:
             self.root.remove_style_class("on-light")
-        analog = self.faces["analog"]
-        assert isinstance(analog, AnalogFace)
-        analog.on_light = on_light
-        analog.queue_draw()
+        # the dial draws in the inherited colour
+        self.faces["analog"].queue_draw()
 
     def _on_scroll(self, _widget, event: Gdk.EventScroll):
         match event.direction:
