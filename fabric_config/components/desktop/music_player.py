@@ -31,7 +31,7 @@ DRAG_THRESHOLD = 6
 LYRIC_TRANSITION_S = 0.45
 SEEK_BAR_W = 3  # px per level bar in the seek bar (at the 1440p reference)
 SEEK_BAR_GAP = 2.4
-SEEK_BAR_MAX = 14  # half-height of the tallest level bar
+SEEK_BAR_MAX = 7.5  # half-height of the tallest level bar
 
 # text: Pango, for real weights (cairo's toy text API only has regular/bold);
 # the variable font lets a lyric's weight glide as it becomes current
@@ -615,7 +615,7 @@ class MusicPlayer(Gtk.EventBox):
         # the playhead: a slim line standing a little taller than the bars,
         # thicker while scrubbing
         head_x = tx + played
-        head_half = (SEEK_BAR_MAX + 4) * u
+        head_half = (SEEK_BAR_MAX + 3) * u
         cr.set_line_width((3.2 if self._scrub is not None else 2.2) * u)
         cr.set_source_rgba(*ink, 1)
         cr.move_to(head_x, bar_y - head_half)
