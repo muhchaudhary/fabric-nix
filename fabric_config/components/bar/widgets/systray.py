@@ -19,6 +19,7 @@ class SystemTrayWidget(Box):
         super().__init__(name="system-tray", style_classes=["cool-border"])
         self.pixel_size = pixel_size
         self.watcher = Gray.Watcher()
+        self.buttons_by_identifier: dict[str, Button] = {}
         self.watcher.connect("item-added", self.on_item_added)
 
     def on_item_added(self, _, identifier: str):
@@ -26,8 +27,23 @@ class SystemTrayWidget(Box):
         if item.get_status() is None:
             return
 
+        # some tray items re-register themselves on the same bus name/path
+        # instead of emitting NewIcon, which makes the watcher fire
+        # "item-added" again for an identifier we already have a button for.
+        # Drop the stale button so we don't end up with duplicates.
+        old_button = self.buttons_by_identifier.get(identifier)
+        if old_button is not None:
+            old_button.destroy()
+
         item_button = self.do_bake_item_button(item)
-        item.connect("removed", lambda *args: item_button.destroy())
+        self.buttons_by_identifier[identifier] = item_button
+
+        def on_removed(*args):
+            item_button.destroy()
+            if self.buttons_by_identifier.get(identifier) is item_button:
+                del self.buttons_by_identifier[identifier]
+
+        item.connect("removed", on_removed)
         item.connect(
             "icon-changed",
             lambda icon_item: self.do_update_item_button(icon_item, item_button),
