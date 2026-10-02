@@ -12,11 +12,14 @@ import urllib.request
 from collections.abc import Callable
 
 import cairo
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+import gi
 from fabric.widgets.wayland import WaylandWindow
 from loguru import logger
 
 from fabric_config.utils.uri import file_uri_to_path
+
+gi.require_version("PangoCairo", "1.0")
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk, Pango, PangoCairo  # noqa: E402
 
 THEMES = ("mp3", "cassette", "vinyl")
 THEME_LABELS = {"mp3": "MP3 player", "cassette": "Cassette", "vinyl": "Turntable"}
@@ -59,28 +62,30 @@ def fit(cr: cairo.Context, text: str, max_width: float) -> str:
     return text.rstrip() + "…"
 
 
-def wrap(cr: cairo.Context, text: str, max_width: float) -> list[str]:
-    """Break `text` into rows no wider than `max_width` (current font)."""
-    rows: list[str] = []
-    row = ""
-    for word in text.split():
-        candidate = f"{row} {word}" if row else word
-        if cr.text_extents(candidate).x_advance <= max_width:
-            row = candidate
-            continue
-        if row:
-            rows.append(row)
-        # a single word wider than the row: split it by characters
-        while cr.text_extents(word).x_advance > max_width and len(word) > 1:
-            cut = len(word)
-            while cut > 1 and cr.text_extents(word[:cut]).x_advance > max_width:
-                cut -= 1
-            rows.append(word[:cut])
-            word = word[cut:]
-        row = word
-    if row:
-        rows.append(row)
-    return rows or [""]
+# lyrics: real weights need Pango (cairo's toy text API only has regular and
+# bold, which reads chunky at these sizes)
+LYRIC_FONT_CURRENT = "Inter Display, Roboto Medium"
+LYRIC_WEIGHT_CURRENT = Pango.Weight.MEDIUM
+LYRIC_FONT_OTHER = "Inter, Roboto"
+LYRIC_WEIGHT_OTHER = Pango.Weight.LIGHT
+
+
+def lyric_layout(
+    cr: cairo.Context, text: str, size: float, width: float, current: bool
+) -> Pango.Layout:
+    """A centred, word-wrapped Pango layout for one lyric line."""
+    layout = PangoCairo.create_layout(cr)
+    description = Pango.FontDescription.from_string(
+        LYRIC_FONT_CURRENT if current else LYRIC_FONT_OTHER
+    )
+    description.set_weight(LYRIC_WEIGHT_CURRENT if current else LYRIC_WEIGHT_OTHER)
+    description.set_absolute_size(size * Pango.SCALE)
+    layout.set_font_description(description)
+    layout.set_width(int(width * Pango.SCALE))
+    layout.set_wrap(Pango.WrapMode.WORD_CHAR)
+    layout.set_alignment(Pango.Alignment.CENTER)
+    layout.set_text(text, -1)
+    return layout
 
 
 def font(cr: cairo.Context, size: float, bold: bool = False, family: str = "Inter"):
@@ -604,59 +609,49 @@ class RetroPlayer(Gtk.EventBox):
         # lay the lines out at full length, wrapped onto as many rows as
         # they need, stacked around the current line
         index = self._lyric_index
-        blocks: dict[int, tuple[list[str], float, float]] = {}
+        blocks: dict[int, tuple[Pango.Layout, float]] = {}
         for delta in (-2, -1, 0, 1, 2):
             text = self.media.lyric_at(index + delta)
             if delta == 0 and not text:
                 text = "♪"
             if not text:
                 continue
-            size = line_h * (0.5 if delta == 0 else 0.38)
-            font(cr, size, bold=delta == 0)
-            rows = wrap(cr, text, width)
-            row_h = size * 1.25
-            blocks[delta] = (rows, size, row_h * len(rows))
+            size = line_h * (0.42 if delta == 0 else 0.32)
+            layout = lyric_layout(cr, text, size, width, current=delta == 0)
+            blocks[delta] = (layout, float(layout.get_pixel_size()[1]))
         gap = line_h * 0.18
 
         # the current block is centred; neighbours stack above and below
         tops: dict[int, float] = {}
         if 0 in blocks:
-            tops[0] = center - blocks[0][2] / 2
+            tops[0] = center - blocks[0][1] / 2
         y = tops.get(0, center)
         for delta in (-1, -2):
             if delta in blocks:
-                y -= gap + blocks[delta][2]
+                y -= gap + blocks[delta][1]
                 tops[delta] = y
-        y = tops.get(0, center) + (blocks[0][2] if 0 in blocks else 0)
+        y = tops.get(0, center) + (blocks[0][1] if 0 in blocks else 0)
         for delta in (1, 2):
             if delta in blocks:
                 tops[delta] = y + gap
-                y += gap + blocks[delta][2]
+                y += gap + blocks[delta][1]
 
         # a new line slides up by the height of the one that just finished
         eased = self._lyric_slide * self._lyric_slide * (3 - 2 * self._lyric_slide)
-        previous_h = blocks[-1][2] + gap if -1 in blocks else line_h
+        previous_h = blocks[-1][1] + gap if -1 in blocks else line_h
         offset = eased * previous_h
 
-        for delta, (rows, size, block_h) in blocks.items():
+        for delta, (layout, block_h) in blocks.items():
             block_top = tops[delta] + offset
             distance = abs((block_top + block_h / 2 - center) / line_h)
             current = delta == 0
-            font(cr, size, bold=current)
             alpha = max(0.0, 1 - distance * 0.45) * (1 if current else 0.75)
             if current:
                 cr.set_source_rgba(*self.accent, alpha)
             else:
-                cr.set_source_rgba(*self.ink, alpha * 0.7)
-            row_h = block_h / len(rows)
-            for i, row in enumerate(rows):
-                text_at(
-                    cr,
-                    row,
-                    self.card_w / 2,
-                    block_top + row_h * i + size * 0.95,
-                    "center",
-                )
+                cr.set_source_rgba(*self.ink, alpha * 0.8)
+            cr.move_to(x0, block_top)
+            PangoCairo.show_layout(cr, layout)
         cr.pop_group_to_source()
         fade = cairo.LinearGradient(0, top, 0, top + h)
         fade.add_color_stop_rgba(0, 0, 0, 0, 0)
