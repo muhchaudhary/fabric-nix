@@ -31,6 +31,7 @@ DRAG_THRESHOLD = 6
 LYRIC_TRANSITION_S = 0.45
 SEEK_BAR_W = 3  # px per level bar in the seek bar (at the 1440p reference)
 SEEK_BAR_GAP = 2.4
+HOVER_S = 0.15  # hover highlights ease in and out over this long
 SEEK_BAR_MAX = 7.5  # half-height of the tallest level bar
 
 # text: Pango, for real weights (cairo's toy text API only has regular/bold);
@@ -204,6 +205,7 @@ class MusicPlayer(Gtk.EventBox):
             | Gdk.EventMask.POINTER_MOTION_MASK
             | Gdk.EventMask.SCROLL_MASK
             | Gdk.EventMask.SMOOTH_SCROLL_MASK
+            | Gdk.EventMask.LEAVE_NOTIFY_MASK
         )
         self.media = media
         self.cava = cava
@@ -219,6 +221,7 @@ class MusicPlayer(Gtk.EventBox):
         self.connect("motion-notify-event", self._on_motion)
         self.connect("button-release-event", self._on_release)
         self.connect("scroll-event", self._on_scroll)
+        self.connect("leave-notify-event", self._on_leave)
 
         # sizes, from a 1440px-tall reference screen
         u = monitor_height / 1440
@@ -264,6 +267,11 @@ class MusicPlayer(Gtk.EventBox):
         self._scrub: float | None = None  # fraction while dragging the seek bar
         self._seek_rect = (0.0, 0.0, 0.0, 0.0)
         self._levels: list[float] = []  # eased cava levels, one per seek bar
+        # hover: what's under the pointer, and each control's eased highlight
+        self._hover: str | None = None
+        self._hover_x = 0.0
+        self._hover_amount: dict[str, float] = {}
+        self._cursor_name: str | None = None
 
         self._layout()
         GLib.timeout_add_seconds(1, self._second)
@@ -393,10 +401,22 @@ class MusicPlayer(Gtk.EventBox):
     def _levels_settling(self) -> bool:
         return any(level > 0.01 for level in self._levels)
 
-    def _ensure_tick(self):
-        wanted = self.visible_on_desktop and (
-            self._lyric_slide > 0 or self._levels_live() or self._levels_settling()
+    def _hover_settling(self) -> bool:
+        return any(
+            abs((1.0 if name == self._hover else 0.0) - amount) > 0.01
+            for name, amount in self._hover_amount.items()
+        ) or (self._hover is not None and self._hover not in self._hover_amount)
+
+    def _animating(self) -> bool:
+        return (
+            self._lyric_slide > 0
+            or self._levels_live()
+            or self._levels_settling()
+            or self._hover_settling()
         )
+
+    def _ensure_tick(self):
+        wanted = self.visible_on_desktop and self._animating()
         if wanted and self._tick_id is None:
             self._last_tick = None
             self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
@@ -407,13 +427,30 @@ class MusicPlayer(Gtk.EventBox):
         self._last_tick = now
         self._lyric_slide = max(0.0, self._lyric_slide - dt / LYRIC_TRANSITION_S)
         self._step_levels()
+        self._step_hover(dt)
         self.queue_draw()
-        if not self.visible_on_desktop or not (
-            self._lyric_slide > 0 or self._levels_live() or self._levels_settling()
-        ):
+        if not self.visible_on_desktop or not self._animating():
             self._tick_id = None
             return False
         return True
+
+    def _step_hover(self, dt: float):
+        if self._hover is not None:
+            self._hover_amount.setdefault(self._hover, 0.0)
+        step = dt / HOVER_S
+        for name in list(self._hover_amount):
+            target = 1.0 if name == self._hover else 0.0
+            amount = self._hover_amount[name]
+            amount += max(-step, min(step, target - amount))
+            if amount <= 0 and target == 0:
+                del self._hover_amount[name]
+            else:
+                self._hover_amount[name] = amount
+
+    def _hovered(self, name: str) -> float:
+        """How highlighted `name` is right now, 0-1, eased."""
+        t = self._hover_amount.get(name, 0.0)
+        return t * t * (3 - 2 * t)
 
     def _step_levels(self):
         count = len(self._levels)
@@ -468,8 +505,43 @@ class MusicPlayer(Gtk.EventBox):
         sx, _sy, sw, _sh = self._seek_rect
         return max(0.0, min(1.0, (x - sx) / sw)) if sw else 0.0
 
+    def _set_cursor(self, name: str | None):
+        if name == self._cursor_name:
+            return
+        self._cursor_name = name
+        window = self.get_window()
+        if window is None:
+            return
+        display = window.get_display()
+        window.set_cursor(Gdk.Cursor.new_from_name(display, name) if name else None)
+
+    def _hit_at(self, x: float, y: float) -> str | None:
+        if self._in_seek_bar(x, y) and self.length:
+            return "seek"
+        for action, (hx, hy, hw, hh) in self._hits:
+            if hx <= x <= hx + hw and hy <= y <= hy + hh:
+                return action
+        return None
+
+    def _on_leave(self, _widget, event: Gdk.EventCrossing):
+        # moving onto a child isn't leaving
+        if event.detail == Gdk.NotifyType.INFERIOR or self._press is not None:
+            return False
+        self._hover = None
+        self._set_cursor(None)
+        self._ensure_tick()
+        return False
+
     def _on_motion(self, _widget, event: Gdk.EventMotion):
         if self._press is None:
+            hover = self._hit_at(event.x, event.y)
+            self._hover_x = event.x
+            if hover != self._hover:
+                self._hover = hover
+                self._set_cursor("pointer" if hover else None)
+                self._ensure_tick()
+            elif hover == "seek":
+                self.queue_draw()  # the ghost playhead follows the pointer
             return False
         if self._scrub is not None:
             self._scrub = self._seek_fraction(event.x)
@@ -479,6 +551,8 @@ class MusicPlayer(Gtk.EventBox):
         self._dragged += math.hypot(dx, dy)
         if not self._dragging and self._dragged > DRAG_THRESHOLD:
             self._dragging = True
+            self._hover = None
+            self._set_cursor("grabbing")
         if self._dragging and (dx or dy):
             # the window moves under the pointer, so the press point stays
             # put in window coordinates (Wayland has no global position)
@@ -496,6 +570,7 @@ class MusicPlayer(Gtk.EventBox):
             return True
         if self._dragging:
             self._dragging = False
+            self._set_cursor(None)
             self._on_moved()
             return True
         for action, (x, y, w, h) in self._hits:
@@ -546,6 +621,15 @@ class MusicPlayer(Gtk.EventBox):
         # side strip: switch player, toggle lyrics
         cx = self.strip_w / 2
         mid = top + self.info_h / 2
+        for name, icon_y in (
+            ("switch", mid - self.info_h * 0.2),
+            ("lyrics", mid + self.info_h * 0.2),
+        ):
+            if glow := self._hovered(name):
+                size = 36 * u
+                rounded_rect(cr, cx - size / 2, icon_y - size / 2, size, size, 10 * u)
+                cr.set_source_rgba(*ink, 0.09 * glow)
+                cr.fill()
         self._draw_switch_icon(cr, cx, mid - self.info_h * 0.2, 18 * u)
         self._hits.append(
             ("switch", (0, mid - self.info_h * 0.42, self.strip_w, self.info_h * 0.4))
@@ -622,6 +706,26 @@ class MusicPlayer(Gtk.EventBox):
         cr.line_to(head_x, bar_y + head_half)
         cr.stroke()
         self._seek_rect = (tx, bar_y - 16 * u, tw, 32 * u)
+        if (glow := self._hovered("seek")) and self._scrub is None and self.length:
+            # where a click would land, and when that is
+            ghost_x = max(tx, min(tx + tw, self._hover_x))
+            cr.set_line_width(1.6 * u)
+            cr.set_source_rgba(*ink, 0.45 * glow)
+            cr.move_to(ghost_x, bar_y - head_half)
+            cr.line_to(ghost_x, bar_y + head_half)
+            cr.stroke()
+            label = format_time(self._seek_fraction(ghost_x) * self.length)
+            layout = text_layout(cr, label, 10.5 * u, 600)
+            lw, lh = layout.get_pixel_size()
+            bx = max(tx, min(tx + tw - lw - 10 * u, ghost_x - lw / 2 - 5 * u))
+            # in the times row, clear of the artist line above
+            by = bar_y + 12 * u
+            rounded_rect(cr, bx, by, lw + 10 * u, lh + 4 * u, (lh + 4 * u) / 2)
+            cr.set_source_rgba(*ink, 0.9 * glow)
+            cr.fill()
+            cr.set_source_rgba(*self.surface[:3], glow)
+            cr.move_to(bx + 5 * u, by + 2 * u)
+            PangoCairo.show_layout(cr, layout)
 
         # times
         cr.set_source_rgba(*ink, 0.75)
@@ -641,7 +745,7 @@ class MusicPlayer(Gtk.EventBox):
         cy = top + self.info_h * 0.85
         center = tx + tw / 2
         spacing = 46 * u
-        play_r = 17 * u
+        play_r = (17 + 2.5 * self._hovered("play_pause")) * u
         cr.arc(center, cy, play_r, 0, 2 * math.pi)
         cr.set_source_rgba(*ink, 1)
         cr.fill()
@@ -656,8 +760,12 @@ class MusicPlayer(Gtk.EventBox):
         self._hits.append(
             ("play_pause", (center - play_r, cy - play_r, play_r * 2, play_r * 2))
         )
-        cr.set_source_rgba(*ink, 1)
         for action, x in (("previous", center - spacing), ("next", center + spacing)):
+            if glow := self._hovered(action):
+                cr.arc(x, cy, 17 * u, 0, 2 * math.pi)
+                cr.set_source_rgba(*ink, 0.1 * glow)
+                cr.fill()
+            cr.set_source_rgba(*ink, 1)
             icon(cr, action, x, cy, 15 * u)
             self._hits.append((action, (x - 16 * u, cy - 16 * u, 32 * u, 32 * u)))
 
