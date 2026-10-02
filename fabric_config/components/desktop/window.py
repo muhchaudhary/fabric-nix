@@ -310,10 +310,14 @@ class DesktopWindow(WaylandWindow):
 
     # Settings and layout
 
+    def enabled(self, widget: str) -> bool:
+        """Whether `widget` shows on this monitor."""
+        return self.manager.settings.enabled(widget, self.monitor_name)
+
     def apply_settings(self):
         settings = self.manager.settings
         self.face_stack.set_visible_child_name(settings.face)
-        self.notes.set_visible(settings.enabled("notes"))
+        self.notes.set_visible(self.enabled("notes"))
         self._place_column()
         self.refresh()
 
@@ -340,7 +344,7 @@ class DesktopWindow(WaylandWindow):
         settings = self.manager.settings
         prayer_times = self.manager.prayer_times()
 
-        on_the_hour = now.minute == 0 and settings.enabled("moods")
+        on_the_hour = now.minute == 0 and self.enabled("moods")
         self.digital.update(now, settings.use_24h)
         self.faces["analog"].update(now, settings.use_24h)  # type: ignore[attr-defined]
         self.words.update(now, settings.use_24h, sweep=on_the_hour)
@@ -357,7 +361,7 @@ class DesktopWindow(WaylandWindow):
         service = _prayer_service()
         name, remaining = service.next_prayer, service.time_to_next_prayer
         if (
-            not self.manager.settings.enabled("prayer")
+            not self.enabled("prayer")
             or name in (None, "None")
             or remaining in (None, "None")
         ):
@@ -367,18 +371,17 @@ class DesktopWindow(WaylandWindow):
         self.prayer_label.show()
 
     def update_meta(self):
-        settings = self.manager.settings
         parts = []
-        if settings.enabled("weather") and self.manager.weather.text:
+        if self.enabled("weather") and self.manager.weather.text:
             parts.append(self.manager.weather.text)
-        if settings.enabled("hijri") and (hijri := hijri_date()):
+        if self.enabled("hijri") and (hijri := hijri_date()):
             parts.append(hijri)
         self.meta_label.set_label("  ·  ".join(parts))
         self.meta_label.set_visible(bool(parts))
 
     def update_memory(self):
         memory = self.manager.on_this_day.current
-        if not self.manager.settings.enabled("on_this_day") or memory is None:
+        if not self.enabled("on_this_day") or memory is None:
             self.memory.hide()
             return
         self.memory_label.set_label(memory.text)
@@ -409,9 +412,7 @@ class DesktopWindow(WaylandWindow):
 
     def update_color(self, now: datetime.datetime, prayer_times: dict[str, str]):
         color = self.accent or (240, 240, 245)
-        if self.manager.settings.enabled("moods") and (
-            mood := mood_color(now, prayer_times)
-        ):
+        if self.enabled("moods") and (mood := mood_color(now, prayer_times)):
             color = _blend(color, mood, 0.55 if not self.on_light else 0.35)
         self.column.set_style(f"color: rgb({color[0]}, {color[1]}, {color[2]});")
         if self.on_light:
@@ -432,15 +433,15 @@ class DesktopWindow(WaylandWindow):
         if mode == "auto":
             mode = season_mode(now, is_night(now, self.manager.prayer_times()))
         self.fx.configure_particles(mode)
-        self.fx.show_arc = settings.enabled("prayer_arc")
-        self.fx.show_bars = settings.enabled("visualizer") and self.manager.cava.running
+        self.fx.show_arc = self.enabled("prayer_arc")
+        self.fx.show_bars = self.enabled("visualizer") and self.manager.cava.running
         self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
         self.fx.queue_draw()
 
     # Greeting
 
     def show_greeting(self):
-        if not self.manager.settings.enabled("greeting") or self.manager.focus.running:
+        if not self.enabled("greeting") or self.manager.focus.running:
             return
         self.greeting_label.set_label(greeting())
         self.date_stack.set_visible_child_name("greeting")
@@ -508,7 +509,7 @@ class DesktopWindow(WaylandWindow):
             menu.append(entry)
             return sub
 
-        if settings.enabled("notes"):
+        if self.enabled("notes"):
             # where the click landed, in this window's coordinates
             coords = _widget_coords(event, self)
             item("New note", lambda: self.notes.add_note(*coords))
@@ -560,14 +561,22 @@ class DesktopWindow(WaylandWindow):
                 radio=True,
             )
 
-        widgets = submenu("Widgets")
+        # widgets are chosen per display; the menu edits this one
+        widgets = submenu(f"Widgets on {self.monitor_name}")
         for name, (label, _default) in WIDGETS.items():
             if name == "visualizer" and not manager.cava.available:
                 label += " (needs cava)"
             check(
                 label,
-                settings.enabled(name),
-                lambda n=name: manager.toggle_widget(n),
+                self.enabled(name),
+                lambda n=name: manager.toggle_widget(n, self.monitor_name),
+                widgets,
+            )
+        if len(manager.windows) > 1:
+            widgets.append(Gtk.SeparatorMenuItem())
+            item(
+                "Use these on all displays",
+                lambda: manager.widgets_everywhere(self.monitor_name),
                 widgets,
             )
 
@@ -723,9 +732,10 @@ class DesktopManager:
         for window in self.player_windows:
             if window.player.theme != self.settings.player_theme:
                 window.set_theme(self.settings.player_theme)
-            window.player.show_lyrics = self.settings.enabled("lyrics")
+            name = window.monitor_name
+            window.player.show_lyrics = self.settings.enabled("lyrics", name)
             window.player.lyrics_changed()
-            window.set_visible(self.settings.enabled("retro_player"))
+            window.set_visible(self.settings.enabled("retro_player", name))
         self.update_player_palette()
 
     def update_player_palette(self):
@@ -773,8 +783,14 @@ class DesktopManager:
         )
         self.set_player_theme(THEMES[(index + 1) % len(THEMES)])
 
-    def toggle_widget(self, name: str):
-        self.settings.widgets[name] = not self.settings.enabled(name)
+    def toggle_widget(self, name: str, monitor: str):
+        self.settings.set_widget(
+            name, monitor, not self.settings.enabled(name, monitor)
+        )
+        self._changed()
+
+    def widgets_everywhere(self, monitor: str):
+        self.settings.use_everywhere(monitor)
         self._changed()
 
     # Focus
@@ -821,11 +837,15 @@ class DesktopManager:
 
     def _update_cava(self):
         player = self.current_player()
+        # wanted while something plays and a desktop that shows bars is visible
         wanted = (
-            self.settings.enabled("visualizer")
-            and player is not None
+            player is not None
             and player.playback_status == "Playing"
-            and self.visibility.any_visible()
+            and any(
+                self.settings.enabled("visualizer", w.monitor_name)
+                and self.visibility.visible(w.monitor_name)
+                for w in self.windows
+            )
         )
         if wanted and not self.cava.running:
             self.cava.start()
