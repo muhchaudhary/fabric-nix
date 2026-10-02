@@ -612,16 +612,15 @@ class MusicPlayer(Gtk.EventBox):
             cr.line_to(x, bar_y + half)
             cr.set_source_rgba(*ink, 0.9 if x <= tx + played else 0.2)
             cr.stroke()
-        # the playhead, a little larger while scrubbing
+        # the playhead: a slim line standing a little taller than the bars,
+        # thicker while scrubbing
+        head_x = tx + played
+        head_half = (SEEK_BAR_MAX + 4) * u
+        cr.set_line_width((3.2 if self._scrub is not None else 2.2) * u)
         cr.set_source_rgba(*ink, 1)
-        cr.arc(
-            tx + played,
-            bar_y,
-            (7 if self._scrub is not None else 5.5) * u,
-            0,
-            2 * math.pi,
-        )
-        cr.fill()
+        cr.move_to(head_x, bar_y - head_half)
+        cr.line_to(head_x, bar_y + head_half)
+        cr.stroke()
         self._seek_rect = (tx, bar_y - 16 * u, tw, 32 * u)
 
         # times
