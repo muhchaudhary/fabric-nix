@@ -1,0 +1,29 @@
+// Shared rules for main.scss (dark) and main-light.scss; those files only pick the palette.
+@use 'tokens' as *;
+@use 'global-classes';
+@use 'components/components';
+
+* {
+  all: unset;
+  font-family: "Roboto", "Helvetica Neue", sans-serif;
+  font-weight: 500;
+  font-size: 15px;
+  color: var(--fg);
+}
+
+#system-tray { background-color: var(--bg-glass); }
+
+tooltip {
+  padding: 8px 12px;
+  border-radius: 10px;
+  background-color: var(--bg-glass);
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.1);
+
+  label {
+    font-family: "Roboto", "Helvetica Neue", sans-serif;
+    font-weight: 500;
+    font-size: 13px;
+  }
+}
