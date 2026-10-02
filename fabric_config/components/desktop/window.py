@@ -27,7 +27,7 @@ from gi.repository import Gdk, GLib, Gtk
 import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
-from fabric_config.components.desktop.fx import Cava, FxLayer
+from fabric_config.components.desktop.fx import FxLayer
 from fabric_config.components.desktop.media import MediaState
 from fabric_config.components.desktop.info import (
     OnThisDay,
@@ -36,13 +36,10 @@ from fabric_config.components.desktop.info import (
     hijri_date,
 )
 from fabric_config.components.desktop.notes import NotesLayer, NotesStore
-from fabric_config.components.desktop.retro_player import (
-    THEME_LABELS,
-    THEMES,
-    RetroPlayerWindow,
-)
+from fabric_config.components.desktop.music_player import MusicPlayerWindow
 from fabric_config.components.desktop.settings import (
     FACES,
+    PLAYER_SIZES,
     POSITIONS,
     WIDGETS,
     DesktopSettings,
@@ -527,13 +524,14 @@ class DesktopWindow(WaylandWindow):
                 radio=True,
             )
 
-        player = submenu("Retro player")
-        for theme in THEMES:
+        player_size = submenu("Music player size")
+        current_size = settings.player_size(self.monitor_name)
+        for size in PLAYER_SIZES:
             check(
-                THEME_LABELS[theme],
-                settings.player_theme == theme,
-                lambda t=theme: manager.set_player_theme(t),
-                player,
+                size.capitalize(),
+                current_size == size,
+                lambda z=size: manager.set_player_size(self.monitor_name, z),
+                player_size,
                 radio=True,
             )
 
@@ -580,13 +578,13 @@ class DesktopManager:
         self.settings = DesktopSettings()
         self.visibility = DesktopVisibility()
         self.focus = FocusTimer()
-        self.cava = Cava()
+        self.cava = config.cava
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
         self.media = MediaState()
         self.windows: list[DesktopWindow] = []
-        self.player_windows: list[RetroPlayerWindow] = []
+        self.player_windows: list[MusicPlayerWindow] = []
         self._hidden_since: dict[str, float] = {}
 
         display = Gdk.Display.get_default()
@@ -655,15 +653,17 @@ class DesktopManager:
             self.windows.append(DesktopWindow(self, i, name, height))
             if monitor is not None:
                 self.player_windows.append(
-                    RetroPlayerWindow(
+                    MusicPlayerWindow(
                         i,
                         name,
                         monitor.get_geometry(),
-                        self.settings.player_theme,
                         self.media,
+                        self.cava,
                         self.settings.player_positions.get(name),
                         on_moved=self._save_player_position,
-                        on_cycle_theme=self.cycle_player_theme,
+                        on_toggle_lyrics=lambda w: self.toggle_widget(
+                            "lyrics", w.monitor_name
+                        ),
                     )
                 )
         self.apply_player_settings()
@@ -702,16 +702,14 @@ class DesktopManager:
         self._each(DesktopWindow.apply_settings)
         self.apply_player_settings()
 
-    # Retro player
+    # Music player
 
     def apply_player_settings(self):
         for window in self.player_windows:
-            if window.player.theme != self.settings.player_theme:
-                window.set_theme(self.settings.player_theme)
             name = window.monitor_name
-            window.player.show_lyrics = self.settings.enabled("lyrics", name)
-            window.player.lyrics_changed()
-            window.set_visible(self.settings.enabled("retro_player", name))
+            window.player.set_show_lyrics(self.settings.enabled("lyrics", name))
+            window.player.set_scale(PLAYER_SIZES[self.settings.player_size(name)])
+            window.set_visible(self.settings.enabled("music_player", name))
         self.update_player_palette()
 
     def update_player_palette(self):
@@ -723,7 +721,7 @@ class DesktopManager:
         for window in self.player_windows:
             window.player.set_palette(is_light, accent)
 
-    def _save_player_position(self, window: RetroPlayerWindow):
+    def _save_player_position(self, window: MusicPlayerWindow):
         self.settings.player_positions[window.monitor_name] = [window.x, window.y]
         self.settings.save()
 
@@ -743,17 +741,9 @@ class DesktopManager:
         self.settings.position = position
         self._changed()
 
-    def set_player_theme(self, theme: str):
-        self.settings.player_theme = theme
+    def set_player_size(self, monitor: str, size: str):
+        self.settings.player_sizes[monitor] = size
         self._changed()
-
-    def cycle_player_theme(self):
-        index = (
-            THEMES.index(self.settings.player_theme)
-            if self.settings.player_theme in THEMES
-            else -1
-        )
-        self.set_player_theme(THEMES[(index + 1) % len(THEMES)])
 
     def toggle_widget(self, name: str, monitor: str):
         self.settings.set_widget(
@@ -809,20 +799,21 @@ class DesktopManager:
 
     def _update_cava(self):
         player = self.current_player()
-        # wanted while something plays and a desktop that shows bars is visible
+        # wanted while something plays and a visible desktop shows levels:
+        # the visualizer, or the music card's seek bar
         wanted = (
             player is not None
             and player.playback_status == "Playing"
             and any(
-                self.settings.enabled("visualizer", w.monitor_name)
+                (
+                    self.settings.enabled("visualizer", w.monitor_name)
+                    or self.settings.enabled("music_player", w.monitor_name)
+                )
                 and self.visibility.visible(w.monitor_name)
                 for w in self.windows
             )
         )
-        if wanted and not self.cava.running:
-            self.cava.start()
-        elif not wanted and self.cava.running:
-            self.cava.stop()
+        self.cava.set_wanted("desktop", wanted)
 
 
 class _MinuteTicker:

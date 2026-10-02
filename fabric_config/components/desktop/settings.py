@@ -18,12 +18,14 @@ SETTINGS_FILE = os.path.join(GLib.get_user_cache_dir(), "fabric", "desktop_clock
 FACES = ("digital", "analog", "words")
 Position = Literal["top", "center", "bottom-left", "bottom-right"]
 POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right")
+# music player sizes, chosen per display
+PLAYER_SIZES = {"small": 0.85, "medium": 1.0, "large": 1.2}
 
 # widget id -> (menu label, on by default)
 WIDGETS: dict[str, tuple[str, bool]] = {
     "prayer": ("Next prayer", True),
     "lyrics": ("Lyrics", True),
-    "retro_player": ("Retro player", True),
+    "music_player": ("Music player", True),
     "weather": ("Weather", True),
     "hijri": ("Hijri date", True),
     "greeting": ("Greeting", True),
@@ -43,9 +45,9 @@ class DesktopSettings:
         # shared defaults, and per-monitor choices that override them
         self.widgets = {name: default for name, (_, default) in WIDGETS.items()}
         self.monitor_widgets: dict[str, dict[str, bool]] = {}
-        self.player_theme = "mp3"
-        # monitor name -> [x, y] of the retro player
+        # monitor name -> [x, y] of the music player, and its size
         self.player_positions: dict[str, list[int]] = {}
+        self.player_sizes: dict[str, str] = {}
         try:
             with open(SETTINGS_FILE) as f:
                 data = json.load(f)
@@ -58,14 +60,17 @@ class DesktopSettings:
             self.face = data["face"]
         if data.get("position") in POSITIONS:
             self.position = data["position"]
-        if isinstance(data.get("player_theme"), str):
-            self.player_theme = data["player_theme"]
         positions = data.get("player_positions")
         if isinstance(positions, dict):
             self.player_positions = {
                 str(k): [int(v[0]), int(v[1])]
                 for k, v in positions.items()
                 if isinstance(v, list) and len(v) == 2
+            }
+        sizes = data.get("player_sizes")
+        if isinstance(sizes, dict):
+            self.player_sizes = {
+                str(k): v for k, v in sizes.items() if v in PLAYER_SIZES
             }
         per_monitor = data.get("monitor_widgets")
         if isinstance(per_monitor, dict):
@@ -92,6 +97,9 @@ class DesktopSettings:
                 return choice
         return self.widgets.get(widget, False)
 
+    def player_size(self, monitor: str) -> str:
+        return self.player_sizes.get(monitor, "medium")
+
     def set_widget(self, widget: str, monitor: str, value: bool):
         self.monitor_widgets.setdefault(monitor, {})[widget] = value
 
@@ -112,8 +120,8 @@ class DesktopSettings:
                         "position": self.position,
                         "widgets": self.widgets,
                         "monitor_widgets": self.monitor_widgets,
-                        "player_theme": self.player_theme,
                         "player_positions": self.player_positions,
+                        "player_sizes": self.player_sizes,
                     },
                     f,
                 )

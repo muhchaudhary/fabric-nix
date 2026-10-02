@@ -3,6 +3,7 @@ from fabric.bluetooth.service import BluetoothClient
 import gi
 
 from fabric_config.services.brightness import Brightness
+from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.screen_record import ScreenRecorder
@@ -23,6 +24,7 @@ sc = ScreenRecorder()
 brightness = Brightness()
 network = Network.get_default()
 theme = ThemeService()
+cava = Cava()  # audio levels, shared by whoever draws them
 wallpaper_accent = WallpaperAccent()
 
 

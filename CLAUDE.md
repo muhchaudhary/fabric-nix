@@ -63,7 +63,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
 | `system_osd.py` | On-screen display for volume, mic mute, brightness and keyboard backlight; pops up on service changes (the `toggle_system_osd` action still works), hover to keep open, scroll to adjust, click to mute |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
-| `desktop/` | The desktop: `DesktopManager` makes one full-screen bottom-layer `DesktopWindow` per monitor with a macOS-style clock (digital/analog/word faces, click for a focus timer), info lines (next prayer, weather via Open-Meteo, Hijri date, greeting, "on this day"), and a music player card in its own window per monitor (`retro_player.py`: drawn in cairo as an MP3 player, cassette or turntable, with synced lyrics from LRCLIB and a switchable MPRIS player from `media.py`; dragging moves the window via its layer-shell margins), sticky notes, and a drawn layer (prayer arc, cava visualizer) that only animates while that monitor's desktop is showing (`visibility.py`). Each piece is its own overlay child (no full-screen click-through layers: GTK passes clicks through their children too). Right-click it for the menu; choices persist via `settings.py`. Sized from each monitor's height |
+| `desktop/` | The desktop: `DesktopManager` makes one full-screen bottom-layer `DesktopWindow` per monitor with a macOS-style clock (digital/analog/word faces, click for a focus timer), info lines (next prayer, weather via Open-Meteo, Hijri date, greeting, "on this day"), and a music player card in its own window per monitor (`music_player.py`: a simple card drawn in cairo after the "Elegant Music Player" Rainmeter skin, with synced lyrics from LRCLIB and a switchable, seekable MPRIS player from `media.py`; dragging moves the window via its layer-shell margins), sticky notes, and a drawn layer (prayer arc, cava visualizer) that only animates while that monitor's desktop is showing (`visibility.py`). Each piece is its own overlay child (no full-screen click-through layers: GTK passes clicks through their children too). Right-click it for the menu; choices persist via `settings.py`. Sized from each monitor's height |
 
 ### Popup windows (`fabric_config/widgets/popup_window_v2.py`)
 
@@ -81,6 +81,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `mpris_v2.py` — `MprisPlayerManager` for media player control. `play_pause()` reports the expected status at once until the player confirms it; `fetch_position()` reads the live position (the cached `Position` goes stale)
 - `screen_record.py` — Screen recording/screenshot via wf-recorder/slurp/hyprshot
 - `clipboard_history.py` — cliphist-backed clipboard history
+- `cava.py` — shared cava audio levels (`config.cava`); callers `set_wanted(owner, bool)` and it runs while anyone wants it
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)
 - `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 
@@ -98,6 +99,8 @@ SCSS, compiled with `sass` (dart-sass) at startup into `~/.cache/fabric/css/main
 - `components/` — per-component partials, registered in `components/_components.scss`
 
 Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables). Fabric compiles them to `@define-color`/`@name`, and GTK takes a named colour from the highest-priority provider that defines it: `config.wallpaper_accent` overrides `@accent` that way, so the accent follows the wallpaper without recompiling SCSS. Between providers GTK goes by priority, not selector specificity.
+
+Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-sass emit `@charset "UTF-8"`, which GTK rejects as an unknown @ rule (`//` comments are stripped, so they're fine).
 
 `apply_style` DBus action recompiles and hot-reloads CSS without restarting; Python changes need a restart.
 

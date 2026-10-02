@@ -119,7 +119,30 @@ class MediaState(Service):
 
     def _watch(self, player):
         player.connect("changed", lambda *_: self._on_change())
+        player.connect("seeked", lambda p, *_: self._on_seeked(p))
         self._on_change()
+
+    def _on_seeked(self, player):
+        if player is self.current_player():
+            self._resync(player, reset=False, reached=self.position)
+            self.changed()
+
+    def seek(self, fraction: float):
+        """Jump to `fraction` (0-1) of the current track."""
+        player = self.current_player()
+        if player is None or not player.length or not player.can_seek:
+            return
+        target = int(max(0.0, min(1.0, fraction)) * player.length)
+        before = self.position
+        self._last_interaction = GLib.get_monotonic_time() / 1e6
+        # show the new position at once; Seeked (or the next read) confirms it
+        self._pos_base, self._pos_time = float(target), self._last_interaction
+        if player.metadata.get("mpris:trackid"):
+            player.seek_to(target)
+        else:
+            # SetPosition needs the track id; without one, seek relatively
+            player.seek(target - int(before))
+        self.changed()
 
     def _on_change(self):
         self._choose_player()

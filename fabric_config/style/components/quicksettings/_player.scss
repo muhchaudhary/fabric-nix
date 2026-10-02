@@ -1,20 +1,30 @@
 @use '../../tokens' as *;
 @use '../../mixins' as *;
 
-/* Player stack dots */
-#player-stack-button {
-  background-color: var(--fg-glass);
-  min-width: $gap-sm;
-  min-height: $gap-sm;
-  border-radius: 50%;
-  margin: 10px 2px;
+/* The player's source chip, at the end of the title row: icon, name, and
+   arrows to switch players when there are several */
+#player-source {
+  margin-right: 12px;
+  padding: 1px 6px;
+  border-radius: $radius-pill;
+  background-color: a(var(--fg), 0.07);
+}
 
-  &.active {
-    min-width: 20px;
-    border-radius: 6px;
-    background-color: var(--accent);
-    transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-  }
+#player-source-name {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim);
+}
+
+#player-source-arrow {
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
+  border-radius: 50%;
+  @include transition(background-color);
+
+  image { color: var(--fg-dim); }
+  &:hover { background-color: a(var(--fg), 0.12); }
 }
 
 #inner-player-box {
@@ -31,57 +41,40 @@
   color: var(--fg-dim);
 }
 
+/* Seek bar (widgets/level_seek_bar.py): drawn level bars; `color` is the
+   text and unplayed colour, the album art tints the played part */
 #seek-bar {
-  border-radius: 10px;
-  margin-top: $gap-sm;
-  margin-bottom: 6px;
-
-  trough {
-    border-radius: 10px;
-    min-height: 5px;
-    background-color: a(var(--fg), 0.15);
-    transition: background-color 0.15s ease;
-
-    &:hover { background-color: a(var(--fg), 0.25); }
-
-    highlight {
-      border-top-left-radius: 10px;
-      border-bottom-left-radius: 10px;
-      background-color: var(--accent);
-    }
-  }
-
-  slider {
-    border-radius: 100%;
-    min-width: 12px;
-    min-height: 12px;
-    background-color: var(--fg);
-  }
+  color: var(--fg);
+  margin-top: 2px;
 }
 
 #player-box   { margin: 6px; }
-#button-box   { margin-bottom: 6px; margin-right: 6px; }
+#button-box   { margin: 2px 0 8px; }
 
-#player-title  { font-weight: 700; font-size: 16px; color: var(--fg); }
+// breathing room between the card's top edge and the title
+#player-info   { margin-top: 16px; }
+#player-title  { font-weight: 700; font-size: 16px; color: var(--fg); margin-bottom: 2px; }
 #player-artist { font-weight: 500; font-size: 13px; color: var(--fg-dim); }
 
 #player-icon {
   color: var(--fg-dim);
   @include transition(color);
 
-  &.active {
-    color: var(--accent);
-    border-style: solid;
-    border-color: var(--accent);
-    border-width: 0px 0px 2px 0px;
-    border-radius: 0px 0px $gap-xs $gap-xs;
-  }
+  &.active { color: var(--accent); }
 }
 
+// the player's app, tinted like the rest of the theme
+#player-app-icon {
+  color: var(--fg-dim);
+  -gtk-icon-style: symbolic;
+  opacity: 0.8;
+}
+
+// square buttons with no padding, so circles stay circles
 #player-button {
-  min-width: 28px;
-  min-height: 28px;
-  padding: $gap-sm;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
   border-radius: 50%;
   @include transition(background-color color);
 
@@ -91,4 +84,19 @@
   }
 
   &:active { background-color: a(var(--accent), 0.4); }
+
+  // shuffle / repeat: smaller, and a soft accent tint while on
+  &.minor { min-width: 30px; min-height: 30px; }
+  &.minor.on { background-color: a(var(--accent), 0.16); }
+
+  // play / pause: a filled circle, the main control
+  &.play {
+    min-width: 44px;
+    min-height: 44px;
+    background-color: var(--fg);
+
+    #player-icon { color: var(--bg); }
+    &:hover { background-color: m(var(--fg), var(--accent), 0.75); }
+    &:hover * { color: var(--bg); }
+  }
 }
