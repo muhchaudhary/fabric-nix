@@ -22,6 +22,7 @@ from loguru import logger
 from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
 from fabric_config.snippits.animator import Animator
 from fabric_config.utils.accent import grab_accent_color_threaded
+from fabric_config.utils.uri import file_uri_to_path
 from fabric_config.widgets.circleimage import CircleImage
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
@@ -83,7 +84,7 @@ class PlayerBoxStack(Box):
         self.mpris_manager = mpris_manager
         self.mpris_manager.connect("player-appeared", self.on_new_player)
         self.mpris_manager.connect("player-vanished", self.on_lost_player)
-        for player in self.mpris_manager.players:  # type: ignore
+        for player in self.mpris_manager.players.values():  # type: ignore
             logger.info(
                 f"[PLAYER MANAGER] player found: {player.player_name}",
             )
@@ -128,15 +129,21 @@ class PlayerBoxStack(Box):
             "cool-border",
         ]
 
-    def on_lost_player(self, mpris_manager, player_name):
+    def on_lost_player(self, mpris_manager, bus_name):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
-        logger.info(f"[PLAYER_MANAGER] Player Removed {player_name}")
+        # (player-vanished carries the full bus name, not the short player_name)
+        logger.info(f"[PLAYER_MANAGER] Player Removed {bus_name}")
         players: List[PlayerBox] = self.player_stack.get_children()
-        if len(players) == 1 and player_name == players[0].player.player_name:
+        if not players:
             self.hide()
             self.current_stack_pos = 0
             return
-        if players[self.current_stack_pos].player.player_name == player_name:
+        if len(players) == 1 and bus_name == players[0].player.bus_name:
+            self.hide()
+            self.current_stack_pos = 0
+            return
+        self.current_stack_pos = min(self.current_stack_pos, len(players) - 1)
+        if players[self.current_stack_pos].player.bus_name == bus_name:
             self.current_stack_pos = max(0, self.current_stack_pos - 1)
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
@@ -487,7 +494,14 @@ class PlayerBox(Box):
         self.children = self.children + [self.overlay_box]
         self.set_style(f"min-height:{self.image_size + 4}px")
 
-        invoke_repeater(1000, self.move_seekbar)
+        self._seekbar_timer_id = invoke_repeater(1000, self.move_seekbar)
+        self.connect("destroy", self._on_destroy)
+
+    def _on_destroy(self, *_):
+        # stop polling a player that has gone away
+        if self._seekbar_timer_id:
+            GLib.source_remove(self._seekbar_timer_id)
+            self._seekbar_timer_id = 0
 
     def on_scale_move(self, scale: Scale, event, moved_pos: float):
         if not self.player.length:
@@ -575,8 +589,8 @@ class PlayerBox(Box):
                 + "/"
                 + GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)  # type: ignore
             )
-            if "file://" != url[0:7]
-            else url[7:]
+            if not url.startswith("file://")
+            else file_uri_to_path(url)
         )
 
         self._color_generation += 1
