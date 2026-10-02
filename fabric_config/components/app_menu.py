@@ -7,7 +7,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.widgets.shapes import Corner
-from gi.repository import Gdk, Gio, Gtk
+from gi.repository import Gdk, Gio, GLib, Gtk
 from loguru import logger
 
 from fabric_config.utils.app_search import (
@@ -27,6 +27,9 @@ MAX_RESULTS = 30
 FREQUENT_COUNT = 6
 # size of the flares joining the panel to the screen edge; keep in step
 # with $appmenu-radius in _appmenu.scss
+# search results glimmer in turn, this far apart
+SHINE_STAGGER_MS = 20
+SHINE_ROWS = 10
 CORNER_SIZE = 32
 
 HINTS = "=  calculate    >  run    :  emoji    !  hidden apps"
@@ -101,6 +104,8 @@ class AppMenu(PopupWindow):
         # rows built for a single view, destroyed on the next refresh
         self._transient: list[Gtk.Widget] = []
         self.default_row: ResultRow | None = None
+        self._shine_ids: list[int] = []
+        self._shining: list[ResultRow] = []
         self._menu: Gtk.Menu | None = None
 
         # new or removed .desktop files
@@ -226,6 +231,7 @@ class AppMenu(PopupWindow):
     # Views
 
     def refresh(self):
+        self._stop_shine()
         self.results_box.children = []
         for widget in self._transient:
             widget.destroy()
@@ -258,6 +264,28 @@ class AppMenu(PopupWindow):
         )
         self._mark_default()
         self.scrolled_window.get_vadjustment().set_value(0)
+        if query:
+            self._start_shine([w for w in widgets if isinstance(w, ResultRow)])
+
+    def _start_shine(self, rows: list[ResultRow]):
+        for i, row in enumerate(rows[:SHINE_ROWS]):
+            self._shine_ids.append(
+                GLib.timeout_add((i + 1) * SHINE_STAGGER_MS, self._shine, row)
+            )
+
+    def _shine(self, row: ResultRow):
+        row.add_style_class("shine")
+        self._shining.append(row)
+        return False
+
+    def _stop_shine(self):
+        # each keystroke restarts the glimmer instead of stacking timers
+        for source_id in self._shine_ids:
+            GLib.source_remove(source_id)
+        self._shine_ids = []
+        for row in self._shining:
+            row.remove_style_class("shine")
+        self._shining = []
 
     def _home_view(self) -> list[Gtk.Widget]:
         widgets: list[Gtk.Widget] = []
