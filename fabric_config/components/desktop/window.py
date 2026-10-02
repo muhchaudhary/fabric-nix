@@ -1,0 +1,820 @@
+"""
+The desktop: one full-screen window per monitor on the bottom layer (behind
+windows, above the wallpaper). It stacks, from the bottom up:
+
+- the drawn layer (particles, prayer arc, audio visualizer),
+- sticky notes,
+- the clock with its information lines.
+
+Right-click anywhere on it for the menu that switches each piece on or off,
+picks the clock face and position, and adds notes. Sizes follow each
+monitor's height, so screens of different resolutions look alike.
+"""
+
+import colorsys
+import datetime
+import warnings
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from fabric.widgets.box import Box
+from fabric.widgets.eventbox import EventBox
+from fabric.widgets.label import Label
+from fabric.widgets.stack import Stack
+from fabric.widgets.wayland import WaylandWindow
+from gi.repository import Gdk, GLib, Gtk
+
+import fabric_config.config as config
+from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
+from fabric_config.components.desktop.focus import FocusTimer
+from fabric_config.components.desktop.fx import Cava, FxLayer, season_mode
+from fabric_config.components.desktop.info import (
+    OnThisDay,
+    WeatherService,
+    greeting,
+    hijri_date,
+)
+from fabric_config.components.desktop.notes import NotesLayer, NotesStore
+from fabric_config.components.desktop.settings import (
+    FACES,
+    PARTICLE_MODES,
+    POSITIONS,
+    WIDGETS,
+    DesktopSettings,
+)
+from fabric_config.components.desktop.visibility import DesktopVisibility
+from fabric_config.utils.process import run_command_async
+
+SCALE = 1.0  # grows or shrinks the clock on every monitor
+GREETING_MS = 5000
+# only greet after the desktop has been covered for a while
+GREET_AFTER_HIDDEN_S = 120
+MOOD_MINUTES = 20
+
+RGB = tuple[int, int, int]
+
+
+@dataclass(frozen=True)
+class ClockSizes:
+    """Pixel sizes for one monitor, all derived from its height."""
+
+    time: int
+    date: int
+    info: int
+    memory: int
+    words: int
+    analog: int
+    margin: int
+
+    @classmethod
+    def for_height(cls, height: int) -> "ClockSizes":
+        time = round(height * 0.2 * SCALE)
+        return cls(
+            time=time,
+            date=round(time * 0.17),
+            info=round(time * 0.105),
+            memory=round(time * 0.085),
+            words=round(height * 0.04 * SCALE),
+            analog=round(height * 0.32 * SCALE),
+            margin=round(height * 0.06),
+        )
+
+
+def _sizes_css(cls: str, sizes: ClockSizes) -> str:
+    """Per-monitor size rules, scoped by the window's class."""
+    root = f"#desktop-clock.{cls}"
+    # Inter Display's line box is taller than its digits; pull the lines
+    # around it in close, like the macOS lock screen
+    return f"""
+{root} #clock-time {{
+  font-size: {sizes.time}px;
+  letter-spacing: -{round(sizes.time * 0.025)}px;
+  margin-top: -{round(sizes.time * 0.12)}px;
+  margin-bottom: -{round(sizes.time * 0.14)}px;
+}}
+{root} .clock-date {{ font-size: {sizes.date}px; }}
+{root} .clock-info {{ font-size: {sizes.info}px; }}
+{root} #clock-memory {{ font-size: {sizes.memory}px; }}
+{root} #clock-words .clock-word {{ font-size: {sizes.words}px; }}
+"""
+
+
+def readable_accent(rgb: RGB) -> tuple[RGB, bool]:
+    """
+    A tint of a wallpaper's dominant colour that reads against it, and
+    whether the wallpaper is light: near-white with a hint of colour on dark
+    wallpapers, near-black on light ones.
+    """
+    red, green, blue = (c / 255 for c in rgb)
+    on_light = 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.55
+    h, _light, s = colorsys.rgb_to_hls(red, green, blue)
+    r, g, b = colorsys.hls_to_rgb(h, 0.2 if on_light else 0.93, min(s, 0.4))
+    return (round(r * 255), round(g * 255), round(b * 255)), on_light
+
+
+def _blend(a: RGB, b: RGB, amount: float) -> RGB:
+    return (
+        round(a[0] + (b[0] - a[0]) * amount),
+        round(a[1] + (b[1] - a[1]) * amount),
+        round(a[2] + (b[2] - a[2]) * amount),
+    )
+
+
+def _minutes(hhmm: str) -> int | None:
+    try:
+        hours, minutes = hhmm.split(":")[:2]
+        return int(hours) * 60 + int(minutes)
+    except (ValueError, AttributeError):
+        return None
+
+
+# moods: a colour the clock drifts toward just after these moments
+_MOODS: dict[str, RGB] = {
+    "Fajr": (170, 200, 255),  # dawn blue
+    "Maghrib": (255, 175, 115),  # sunset amber
+    "midnight": (200, 175, 255),  # violet
+}
+
+
+def mood_color(now: datetime.datetime, prayer_times: dict[str, str]) -> RGB | None:
+    minute = now.hour * 60 + now.minute
+    if minute < MOOD_MINUTES:
+        return _MOODS["midnight"]
+    for name in ("Fajr", "Maghrib"):
+        start = _minutes(prayer_times.get(name, ""))
+        if start is not None and 0 <= minute - start < MOOD_MINUTES:
+            return _MOODS[name]
+    return None
+
+
+def is_night(now: datetime.datetime, prayer_times: dict[str, str]) -> bool:
+    minute = now.hour * 60 + now.minute
+    fajr = _minutes(prayer_times.get("Fajr", "")) or 6 * 60
+    maghrib = _minutes(prayer_times.get("Maghrib", "")) or 19 * 60
+    return minute < fajr or minute >= maghrib
+
+
+def _prayer_service():
+    from fabric_config.components.bar.widgets.prayer_times import (
+        _get_prayer_service,
+    )
+
+    return _get_prayer_service()
+
+
+def _scroll_step(event: Gdk.EventScroll) -> int:
+    match event.direction:
+        case Gdk.ScrollDirection.UP:
+            return -1
+        case Gdk.ScrollDirection.DOWN:
+            return 1
+        case Gdk.ScrollDirection.SMOOTH:
+            return 1 if event.delta_y > 0 else -1 if event.delta_y < 0 else 0
+    return 0
+
+
+class DesktopWindow(WaylandWindow):
+    def __init__(
+        self,
+        manager: "DesktopManager",
+        monitor: int,
+        monitor_name: str,
+        monitor_height: int,
+    ):
+        self.manager = manager
+        self.monitor_name = monitor_name
+        self.sizes = ClockSizes.for_height(monitor_height)
+        self.accent: RGB | None = None
+        self.on_light = False
+        self._greeting_id: int | None = None
+
+        # a screen-wide provider whose rules only match this monitor's clock;
+        # above the app stylesheet, since GTK picks between providers by
+        # priority, not selector specificity
+        size_class = "clock-" + "".join(c if c.isalnum() else "-" for c in monitor_name)
+        self._size_provider = Gtk.CssProvider()
+        self._size_provider.load_from_data(_sizes_css(size_class, self.sizes).encode())
+        screen = Gdk.Screen.get_default()
+        if screen is not None:
+            Gtk.StyleContext.add_provider_for_screen(
+                screen, self._size_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 10
+            )
+
+        # drawn layer, which also catches right-clicks on the bare desktop
+        self.fx = FxLayer(manager.cava)
+        self.background = EventBox(
+            events=["button-press"], child=self.fx, h_expand=True, v_expand=True
+        )
+        self.background.connect("button-press-event", self._on_background_press)
+        self.fx.connect("size-allocate", lambda *_: self.update_fx())
+
+        self.notes = NotesLayer(manager.notes, monitor_name)
+
+        # clock
+        self.digital = DigitalFace(manager.focus.toggle, self.show_menu)
+        self.words = WordFace()
+        self.faces: dict[str, Gtk.Widget] = {
+            "digital": self.digital,
+            "analog": AnalogFace(self.sizes.analog),
+            "words": self.words,
+        }
+        self.face_stack = Stack(
+            transition_type="crossfade",
+            transition_duration=250,
+            children=list(self.faces.values()),
+        )
+        for name, face in self.faces.items():
+            self.face_stack.child_set_property(face, "name", name)
+        # size to the visible face, not the tallest one
+        self.face_stack.set_homogeneous(False)
+        self.face_stack.set_interpolate_size(True)
+        face_events = EventBox(
+            events=["scroll", "smooth-scroll", "button-press"], child=self.face_stack
+        )
+        face_events.connect("scroll-event", self._on_face_scroll)
+        face_events.connect("button-press-event", self._on_background_press)
+
+        self.date_label = Label(style_classes=["clock-date"])
+        self.greeting_label = Label(style_classes=["clock-date"])
+        self.date_stack = Stack(
+            transition_type="crossfade",
+            transition_duration=600,
+            children=[self.date_label, self.greeting_label],
+        )
+        self.date_stack.child_set_property(self.date_label, "name", "date")
+        self.date_stack.child_set_property(self.greeting_label, "name", "greeting")
+
+        self.prayer_label = Label(name="clock-prayer", style_classes=["clock-info"])
+        self.playing_label = Label(
+            name="clock-playing",
+            style_classes=["clock-info"],
+            max_chars_width=48,
+            ellipsization="end",
+        )
+        self.playing = EventBox(
+            events=["button-press", "scroll", "smooth-scroll"],
+            child=self.playing_label,
+            h_align="center",
+            tooltip_text="Click to play/pause, scroll to skip",
+        )
+        self.playing.connect("button-press-event", self._on_playing_press)
+        self.playing.connect("scroll-event", self._on_playing_scroll)
+        self.meta_label = Label(name="clock-meta", style_classes=["clock-info"])
+        self.memory_label = Label(
+            name="clock-memory", max_chars_width=70, ellipsization="end"
+        )
+        self.memory = EventBox(
+            events=["button-press"], child=self.memory_label, h_align="center"
+        )
+        self.memory.connect("button-press-event", self._on_memory_press)
+
+        self.column = Box(
+            name="desktop-clock",
+            style_classes=[size_class],
+            orientation="v",
+            children=[
+                self.date_stack,
+                face_events,
+                Box(
+                    name="clock-lines",
+                    orientation="v",
+                    spacing=4,
+                    children=[
+                        self.prayer_label,
+                        self.playing,
+                        self.meta_label,
+                        self.memory,
+                    ],
+                ),
+            ],
+        )
+
+        overlay = Gtk.Overlay()
+        overlay.add(self.background)
+        for layer in (self.notes, self.column):
+            overlay.add_overlay(layer)
+            # the layer's own window lets clicks through; its widgets still
+            # take them
+            overlay.set_overlay_pass_through(layer, True)
+
+        super().__init__(
+            layer="bottom",
+            anchor="top bottom left right",
+            exclusivity="normal",
+            # notes need typing; the desktop only takes the keyboard on click
+            keyboard_mode="on-demand",
+            monitor=monitor,
+            child=overlay,
+        )
+        self.show_all()
+        self.apply_settings()
+
+    def do_destroy(self):
+        self.fx.set_animating(False)
+        screen = Gdk.Screen.get_default()
+        if screen is not None:
+            Gtk.StyleContext.remove_provider_for_screen(screen, self._size_provider)
+        WaylandWindow.do_destroy(self)
+
+    # Settings and layout
+
+    def apply_settings(self):
+        settings = self.manager.settings
+        self.face_stack.set_visible_child_name(settings.face)
+        self.notes.set_visible(settings.enabled("notes"))
+        self._place_column()
+        self.refresh()
+
+    def _place_column(self):
+        margin = self.sizes.margin
+        h_align, v_align = {
+            "top": (Gtk.Align.CENTER, Gtk.Align.START),
+            "center": (Gtk.Align.CENTER, Gtk.Align.CENTER),
+            "bottom-left": (Gtk.Align.START, Gtk.Align.END),
+            "bottom-right": (Gtk.Align.END, Gtk.Align.END),
+        }[self.manager.settings.position]
+        self.column.set_halign(h_align)
+        self.column.set_valign(v_align)
+        self.column.set_margin_top(margin if v_align == Gtk.Align.START else 0)
+        # clear the visualizer along the bottom edge
+        self.column.set_margin_bottom(margin * 2 if v_align == Gtk.Align.END else 0)
+        self.column.set_margin_start(margin if h_align == Gtk.Align.START else 0)
+        self.column.set_margin_end(margin if h_align == Gtk.Align.END else 0)
+
+    # Minute updates
+
+    def refresh(self):
+        now = datetime.datetime.now()
+        settings = self.manager.settings
+        prayer_times = self.manager.prayer_times()
+
+        on_the_hour = now.minute == 0 and settings.enabled("moods")
+        self.digital.update(now, settings.use_24h)
+        self.faces["analog"].update(now, settings.use_24h)  # type: ignore[attr-defined]
+        self.words.update(now, settings.use_24h, sweep=on_the_hour)
+        self.date_label.set_label(now.strftime("%A, %B %-d"))
+        self.update_focus()
+        self.update_prayer()
+        self.update_playing()
+        self.update_meta()
+        self.update_memory()
+        self.update_color(now, prayer_times)
+        self.fx.prayer_times = prayer_times
+        self.update_fx()
+
+    def update_prayer(self):
+        service = _prayer_service()
+        name, remaining = service.next_prayer, service.time_to_next_prayer
+        if (
+            not self.manager.settings.enabled("prayer")
+            or name in (None, "None")
+            or remaining in (None, "None")
+        ):
+            self.prayer_label.hide()
+            return
+        self.prayer_label.set_label(f"{name} in {str(remaining).removeprefix('0h ')}")
+        self.prayer_label.show()
+
+    def update_playing(self):
+        text = self.manager.now_playing_text()
+        if not self.manager.settings.enabled("now_playing") or not text:
+            self.playing.hide()
+            return
+        self.playing_label.set_label(text)
+        self.playing.show()
+
+    def update_meta(self):
+        settings = self.manager.settings
+        parts = []
+        if settings.enabled("weather") and self.manager.weather.text:
+            parts.append(self.manager.weather.text)
+        if settings.enabled("hijri") and (hijri := hijri_date()):
+            parts.append(hijri)
+        self.meta_label.set_label("  ·  ".join(parts))
+        self.meta_label.set_visible(bool(parts))
+
+    def update_memory(self):
+        memory = self.manager.on_this_day.current
+        if not self.manager.settings.enabled("on_this_day") or memory is None:
+            self.memory.hide()
+            return
+        self.memory_label.set_label(memory.text)
+        self.memory.set_tooltip_text(
+            "Click to open the photo" if memory.path else memory.text
+        )
+        self.memory.show()
+
+    def update_focus(self):
+        focus = self.manager.focus
+        if focus.running:
+            self.digital.show_countdown(focus.remaining)
+            ends = datetime.datetime.fromtimestamp(focus.ends_at_clock or 0)
+            hour = ends.hour if self.manager.settings.use_24h else ends.hour % 12 or 12
+            self.date_label.set_label(f"Focus  ·  until {hour}:{ends:%M}")
+            self.column.add_style_class("focus")
+        else:
+            self.column.remove_style_class("focus")
+
+    # Colour
+
+    def set_accent(self, rgb: RGB | None):
+        if rgb is None:
+            self.accent, self.on_light = None, False
+        else:
+            self.accent, self.on_light = readable_accent(rgb)
+        self.update_color(datetime.datetime.now(), self.manager.prayer_times())
+
+    def update_color(self, now: datetime.datetime, prayer_times: dict[str, str]):
+        color = self.accent or (240, 240, 245)
+        if self.manager.settings.enabled("moods") and (
+            mood := mood_color(now, prayer_times)
+        ):
+            color = _blend(color, mood, 0.55 if not self.on_light else 0.35)
+        self.column.set_style(f"color: rgb({color[0]}, {color[1]}, {color[2]});")
+        if self.on_light:
+            self.column.add_style_class("on-light")
+        else:
+            self.column.remove_style_class("on-light")
+        self.faces["analog"].queue_draw()
+        self.fx.ink = (color[0] / 255, color[1] / 255, color[2] / 255)
+        self.fx.queue_draw()
+
+    # Drawn layer
+
+    def update_fx(self):
+        settings = self.manager.settings
+        visible = self.manager.visibility.visible(self.monitor_name)
+        now = datetime.datetime.now()
+        mode = settings.particles
+        if mode == "auto":
+            mode = season_mode(now, is_night(now, self.manager.prayer_times()))
+        self.fx.configure_particles(mode)
+        self.fx.show_arc = settings.enabled("prayer_arc")
+        self.fx.show_bars = settings.enabled("visualizer") and self.manager.cava.running
+        self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
+        self.fx.queue_draw()
+
+    # Greeting
+
+    def show_greeting(self):
+        if not self.manager.settings.enabled("greeting") or self.manager.focus.running:
+            return
+        self.greeting_label.set_label(greeting())
+        self.date_stack.set_visible_child_name("greeting")
+        if self._greeting_id is not None:
+            GLib.source_remove(self._greeting_id)
+
+        def back():
+            self._greeting_id = None
+            self.date_stack.set_visible_child_name("date")
+            return False
+
+        self._greeting_id = GLib.timeout_add(GREETING_MS, back)
+
+    # Input
+
+    def _on_face_scroll(self, _widget, event: Gdk.EventScroll):
+        if step := _scroll_step(event):
+            self.manager.cycle_face(step)
+        return True
+
+    def _on_playing_press(self, _widget, event: Gdk.EventButton):
+        if event.button == 1 and (player := self.manager.current_player()):
+            player.play_pause()
+            return True
+        return False
+
+    def _on_playing_scroll(self, _widget, event: Gdk.EventScroll):
+        player = self.manager.current_player()
+        step = _scroll_step(event)
+        if player and step:
+            player.next() if step > 0 else player.previous()
+        return True
+
+    def _on_memory_press(self, _widget, event: Gdk.EventButton):
+        memory = self.manager.on_this_day.current
+        if event.button == 1 and memory and memory.path:
+            run_command_async(["xdg-open", memory.path])
+            return True
+        return False
+
+    def _on_background_press(self, _widget, event: Gdk.EventButton):
+        if event.button == 3:
+            self.show_menu(event)
+            return True
+        return False
+
+    # Menu
+
+    def show_menu(self, event: Gdk.EventButton):
+        manager = self.manager
+        settings = manager.settings
+        menu = Gtk.Menu()
+        menu.get_style_context().add_class("tray")  # shared menu styling
+
+        def item(label: str, callback: Callable[[], None], parent: Gtk.Menu = menu):
+            entry = Gtk.MenuItem(label=label)
+            entry.connect("activate", lambda *_: callback())
+            parent.append(entry)
+
+        def check(
+            label: str,
+            active: bool,
+            callback: Callable[[], None],
+            parent: Gtk.Menu,
+            radio: bool = False,
+        ):
+            entry = Gtk.CheckMenuItem(label=label)
+            entry.set_draw_as_radio(radio)
+            entry.set_active(active)
+            entry.connect("toggled", lambda *_: callback())
+            parent.append(entry)
+
+        def submenu(label: str) -> Gtk.Menu:
+            sub = Gtk.Menu()
+            sub.get_style_context().add_class("tray")
+            entry = Gtk.MenuItem(label=label)
+            entry.set_submenu(sub)
+            menu.append(entry)
+            return sub
+
+        if settings.enabled("notes"):
+            # where the click landed, in this window's coordinates
+            coords = _widget_coords(event, self)
+            item("New note", lambda: self.notes.add_note(*coords))
+        if manager.focus.running:
+            item("Stop focus timer", manager.focus.cancel)
+        else:
+            item("Focus for 25 minutes", lambda: manager.focus.start(25))
+            item("Focus for 50 minutes", lambda: manager.focus.start(50))
+        menu.append(Gtk.SeparatorMenuItem())
+
+        clock = submenu("Clock")
+        check("24-hour time", settings.use_24h, manager.toggle_24h, clock)
+        clock.append(Gtk.SeparatorMenuItem())
+        for face in FACES:
+            check(
+                face.capitalize(),
+                settings.face == face,
+                lambda f=face: manager.set_face(f),
+                clock,
+                radio=True,
+            )
+        clock.append(Gtk.SeparatorMenuItem())
+        for position in POSITIONS:
+            check(
+                position.replace("-", " ").capitalize(),
+                settings.position == position,
+                lambda p=position: manager.set_position(p),
+                clock,
+                radio=True,
+            )
+
+        particles = submenu("Particles")
+        for mode in PARTICLE_MODES:
+            check(
+                "Auto (by season)" if mode == "auto" else mode.capitalize(),
+                settings.particles == mode,
+                lambda m=mode: manager.set_particles(m),
+                particles,
+                radio=True,
+            )
+
+        widgets = submenu("Widgets")
+        for name, (label, _default) in WIDGETS.items():
+            if name == "visualizer" and not manager.cava.available:
+                label += " (needs cava)"
+            check(
+                label,
+                settings.enabled(name),
+                lambda n=name: manager.toggle_widget(n),
+                widgets,
+            )
+
+        menu.show_all()
+        # Wayland places popups relative to a parent
+        menu.attach_to_widget(self.background, None)
+        # keep a reference, or the menu is garbage collected while open
+        self._menu = menu
+        menu.popup_at_pointer(event)
+
+
+def _widget_coords(event: Gdk.EventButton, window: Gtk.Window) -> tuple[int, int]:
+    """The event position relative to `window`."""
+    origin = window.get_window()
+    if origin is None:
+        return round(event.x), round(event.y)
+    _ok, wx, wy = origin.get_origin()
+    return max(0, round(event.x_root - wx)), max(0, round(event.y_root - wy))
+
+
+class DesktopManager:
+    """One desktop per monitor, kept in step with settings, time and services."""
+
+    def __init__(self):
+        self.settings = DesktopSettings()
+        self.visibility = DesktopVisibility()
+        self.focus = FocusTimer()
+        self.cava = Cava()
+        self.weather = WeatherService()
+        self.on_this_day = OnThisDay()
+        self.notes = NotesStore()
+        self.windows: list[DesktopWindow] = []
+        self._hidden_since: dict[str, float] = {}
+
+        display = Gdk.Display.get_default()
+        if display is None:
+            raise RuntimeError("no default Gdk display")
+        self.display = display
+        self._build()
+        display.connect("monitor-added", lambda *_: self._rebuild_soon())
+        display.connect("monitor-removed", lambda *_: self._rebuild_soon())
+
+        _MinuteTicker(self.refresh)
+        prayer = _prayer_service()
+        prayer.connect(
+            "notify::time-to-next-prayer",
+            lambda *_: self._each(DesktopWindow.update_prayer),
+        )
+        prayer.connect("update", lambda *_: self.refresh())
+
+        config.wallpaper_accent.connect("changed", lambda *_: self.update_accents())
+        self.update_accents()
+
+        self.focus.connect("changed", lambda *_: self._on_focus_changed())
+        self.weather.connect(
+            "changed", lambda *_: self._each(DesktopWindow.update_meta)
+        )
+        self.on_this_day.connect(
+            "changed", lambda *_: self._each(DesktopWindow.update_memory)
+        )
+        self.cava.connect("frame", lambda *_: None)
+        self.visibility.connect("changed", lambda *_: self._on_visibility_changed())
+
+        players = config.mprisplayer
+        players.connect("player-appeared", lambda _m, p: self._watch_player(p))
+        players.connect("player-vanished", lambda *_: self._on_players_changed())
+        for player in players.players.values():
+            self._watch_player(player)
+
+        # say hello once the desktop is up
+        GLib.timeout_add(1500, lambda: self._each(DesktopWindow.show_greeting) or False)
+
+    # Windows
+
+    def _monitor_names(self) -> list[str]:
+        screen = self.display.get_default_screen()
+        with warnings.catch_warnings():
+            # deprecated, but GTK3 has nothing else that gives connector names
+            warnings.simplefilter("ignore", DeprecationWarning)
+            return [
+                screen.get_monitor_plug_name(i) or str(i)
+                for i in range(self.display.get_n_monitors())
+            ]
+
+    def _build(self):
+        self.windows = []
+        for i, name in enumerate(self._monitor_names()):
+            monitor = self.display.get_monitor(i)
+            height = monitor.get_geometry().height if monitor else 1080
+            self.windows.append(DesktopWindow(self, i, name, height))
+
+    def _rebuild_soon(self):
+        # monitor numbering shifts on hotplug; rebuild once things settle
+        def rebuild():
+            for window in self.windows:
+                window.destroy()
+            self._build()
+            self.update_accents()
+            return False
+
+        GLib.timeout_add(500, rebuild)
+
+    def _each(self, method: Callable[[DesktopWindow], object]):
+        for window in self.windows:
+            method(window)
+
+    def refresh(self):
+        self.on_this_day.refresh()
+        self._each(DesktopWindow.refresh)
+
+    def prayer_times(self) -> dict[str, str]:
+        return dict(_prayer_service().prayer_info)
+
+    def update_accents(self):
+        for window in self.windows:
+            window.set_accent(config.wallpaper_accent.color_for(window.monitor_name))
+
+    # Settings
+
+    def _changed(self):
+        self.settings.save()
+        self._update_cava()
+        self._each(DesktopWindow.apply_settings)
+
+    def toggle_24h(self):
+        self.settings.use_24h = not self.settings.use_24h
+        self._changed()
+
+    def set_face(self, face: str):
+        self.settings.face = face
+        self._changed()
+
+    def cycle_face(self, step: int):
+        index = (FACES.index(self.settings.face) + step) % len(FACES)
+        self.set_face(FACES[index])
+
+    def set_position(self, position):
+        self.settings.position = position
+        self._changed()
+
+    def set_particles(self, mode: str):
+        self.settings.particles = mode
+        self._changed()
+
+    def toggle_widget(self, name: str):
+        self.settings.widgets[name] = not self.settings.enabled(name)
+        self._changed()
+
+    # Focus
+
+    def _on_focus_changed(self):
+        for window in self.windows:
+            if self.focus.running:
+                window.update_focus()
+            else:
+                window.refresh()
+
+    # Visibility
+
+    def _on_visibility_changed(self):
+        now = GLib.get_monotonic_time() / 1_000_000
+        for window in self.windows:
+            name = window.monitor_name
+            if self.visibility.visible(name):
+                hidden_since = self._hidden_since.pop(name, None)
+                if (
+                    hidden_since is not None
+                    and now - hidden_since > GREET_AFTER_HIDDEN_S
+                ):
+                    window.show_greeting()
+            else:
+                self._hidden_since.setdefault(name, now)
+        self._update_cava()
+        self._each(DesktopWindow.update_fx)
+
+    # Media
+
+    def _watch_player(self, player):
+        player.connect("changed", lambda *_: self._on_players_changed())
+        self._on_players_changed()
+
+    def _on_players_changed(self):
+        self._update_cava()
+        self._each(DesktopWindow.update_playing)
+        self._each(DesktopWindow.update_fx)
+
+    def current_player(self):
+        players = list(config.mprisplayer.players.values())
+        playing = [p for p in players if p.playback_status == "Playing"]
+        return (playing or players or [None])[0]
+
+    def now_playing_text(self) -> str | None:
+        player = self.current_player()
+        if player is None or not player.title:
+            return None
+        artist = ", ".join(a for a in (player.artist or []) if a)
+        prefix = "♪  " if player.playback_status == "Playing" else "❚❚  "
+        return f"{prefix}{player.title}" + (f"  —  {artist}" if artist else "")
+
+    def _update_cava(self):
+        player = self.current_player()
+        wanted = (
+            self.settings.enabled("visualizer")
+            and player is not None
+            and player.playback_status == "Playing"
+            and self.visibility.any_visible()
+        )
+        if wanted and not self.cava.running:
+            self.cava.start()
+        elif not wanted and self.cava.running:
+            self.cava.stop()
+
+
+class _MinuteTicker:
+    """Calls back on each minute boundary rather than polling every second."""
+
+    def __init__(self, callback: Callable[[], None]):
+        self._callback = callback
+        self._schedule()
+
+    def _schedule(self):
+        now = datetime.datetime.now()
+        ms = (60 - now.second) * 1000 - now.microsecond // 1000
+        # land just after the boundary, not just before it
+        GLib.timeout_add(ms + 50, self._tick)
+
+    def _tick(self):
+        self._callback()
+        self._schedule()
+        return False

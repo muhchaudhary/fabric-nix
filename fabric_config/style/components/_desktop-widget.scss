@@ -1,17 +1,19 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
-// Modelled on the macOS lock-screen clock: the date small above, the time
-// large and semibold in Inter Display (SF Pro's closest open relative), no
-// backdrop, outline or shadow (GTK renders blurred text shadows as smudges).
-// The colour is near-white with a hint of the wallpaper (near-black on light
-// wallpapers), set inline on #desktop-clock; every part inherits it. Sizes
-// are per monitor, generated in desktop_widget.py.
+// The desktop (components/desktop/): a clock modelled on the macOS lock
+// screen, info lines under it, sticky notes and a drawn layer behind them.
+// The clock has no backdrop, outline or shadow (GTK renders blurred text
+// shadows as smudges). Its colour is near-white with a hint of the wallpaper
+// (near-black on light wallpapers, .on-light), set inline on #desktop-clock;
+// every part inherits it, and it eases into the clock moods. Sizes are per
+// monitor, generated in components/desktop/window.py.
 
 #desktop-clock {
   color: white;
   font-family: "Inter", "Roboto", sans-serif;
   font-size: 15px;
+  transition: color 4s ease;
 
   // the global `*` rule gives every node its own colour and font; inherit
   // them here so the tint and font reach every part of the clock
@@ -29,8 +31,13 @@
   opacity: 0.92;
 }
 
-#clock-date   { font-weight: 600; opacity: 0.9; }
-#clock-prayer { font-weight: 500; opacity: 0.75; }
+#desktop-clock .clock-date { font-weight: 600; opacity: 0.9; }
+#desktop-clock .clock-info { font-weight: 500; opacity: 0.78; }
+#desktop-clock #clock-memory { font-weight: 400; font-style: italic; opacity: 0.65; }
+#clock-lines { margin-top: $gap-sm; }
+
+// a running focus timer: the countdown takes the stage
+#desktop-clock.focus #clock-time { opacity: 1; }
 
 /* Word clock */
 #desktop-clock #clock-words .clock-word {
@@ -40,4 +47,53 @@
   @include transition(opacity, 0.6s);
 
   &.lit { opacity: 0.95; }
+}
+
+/* Sticky notes: small translucent cards in a pastel tint */
+@mixin note-tint($color) {
+  background-color: a($color, 0.82);
+  #note-color { background-color: m($color, black, 0.75); }
+}
+
+#desktop-note {
+  border-radius: $radius-lg;
+  padding: 0 $gap-sm $gap-sm;
+  font-family: "Inter", "Roboto", sans-serif;
+
+  &.note-yellow { @include note-tint(#fff1a8); }
+  &.note-pink   { @include note-tint(#ffc9de); }
+  &.note-blue   { @include note-tint(#c4e1ff); }
+  &.note-green  { @include note-tint(#c8f2cf); }
+  &.note-purple { @include note-tint(#e1d1ff); }
+
+  * { color: #26221a; }
+}
+
+#note-bar { min-height: 26px; }
+#note-handle { min-height: 26px; }
+
+#note-color {
+  min-width: 12px;
+  min-height: 12px;
+  margin: 7px $gap-xs 7px 2px;
+  border-radius: 99px;
+}
+
+#note-delete {
+  padding: 0 6px;
+  border-radius: $radius-sm;
+  font-size: 16px;
+  opacity: 0.5;
+  @include transition(opacity background-color);
+
+  &:hover { opacity: 0.9; background-color: a(black, 0.08); }
+}
+
+#note-text {
+  background: none;
+  font-size: 14px;
+  padding: 2px;
+
+  text { background: none; }
+  text selection { background-color: a(black, 0.15); }
 }

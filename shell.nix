@@ -47,6 +47,7 @@ pkgs.mkShell {
       librsvg
       geoclue2
       sox
+      cava
 
       pythonEnv
     ]

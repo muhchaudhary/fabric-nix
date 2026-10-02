@@ -63,7 +63,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
 | `system_osd.py` | On-screen display for volume, mic mute, brightness and keyboard backlight; pops up on service changes (the `toggle_system_osd` action still works), hover to keep open, scroll to adjust, click to mute |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
-| `desktop_widget.py` | Desktop clock: `DesktopClocks` makes one `ClockWidget` per monitor; macOS lock-screen style (date above, Inter Display time, soft shadow), sized from each monitor's height; digital/analog/word faces (scroll), 12/24h (click), next prayer, wallpaper-tinted; `POSITION`/`SCALE` at the top |
+| `desktop/` | The desktop: `DesktopManager` makes one full-screen bottom-layer `DesktopWindow` per monitor with a macOS-style clock (digital/analog/word faces, click for a focus timer), info lines (next prayer, now playing, weather via Open-Meteo, Hijri date, greeting, "on this day"), sticky notes, and a drawn layer (seasonal particles, prayer arc, cava visualizer) that only animates while that monitor's desktop is showing (`visibility.py`). Right-click it for the menu; choices persist via `settings.py`. Sized from each monitor's height |
 
 ### Popup windows (`fabric_config/widgets/popup_window_v2.py`)
 
