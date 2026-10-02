@@ -1,6 +1,4 @@
 import json
-import os
-import subprocess
 
 import gi
 from fabric.widgets.box import Box
@@ -10,36 +8,15 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
+from hyprland_toplevel_streamer import HyprlandFrameCapture
 from loguru import logger
 
 from fabric_config.snippits.popupwindow import PopupWindow
-from fabric_config.utils.icon_resolver import IconResolver
-from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
+from fabric_config.utils.icon_resolver import get_icon_resolver
+from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 
 gi.require_version("Glace", "0.1")
-from gi.repository import GdkPixbuf, Glace, GLib
-
-from hyprland_toplevel_streamer import HyprlandFrameCapture
-
-CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
-APP_CACHE = CACHE_DIR + "/dock"
-if not os.path.exists(CACHE_DIR):
-    os.makedirs(CACHE_DIR)
-if not os.path.exists(APP_CACHE):
-    os.makedirs(APP_CACHE)
-
-
-def get_docked_apps() -> list:
-    docked_apps_list = []
-    if os.path.exists(APP_CACHE + "/docked_apps.json"):
-        with open(APP_CACHE + "/docked_apps.json", "r") as f:
-            try:
-                docked_apps_list = json.load(f)
-            except json.JSONDecodeError:
-                logger.info("[Dock] Cache file does not exist or is corrupted")
-            finally:
-                f.close()
-    return docked_apps_list
+from gi.repository import GdkPixbuf, Glace, GLib  # noqa: E402
 
 
 class AppBar(Box):
@@ -47,6 +24,7 @@ class AppBar(Box):
         self.client_buttons = {}
         self._parent = parent
         self._hide_timeout_id = None
+        self._preview_timeout_id = None
         super().__init__(
             spacing=10,
             name="app-bar",
@@ -63,7 +41,7 @@ class AppBar(Box):
                 )
             ],
         )
-        self.icon_resolver = IconResolver()
+        self.icon_resolver = get_icon_resolver()
         self._manager = Glace.Manager()
         self._manager.connect("client-added", self.on_client_added)
         self._capture = HyprlandFrameCapture()
@@ -115,6 +93,7 @@ class AppBar(Box):
 
     def force_hide(self):
         self._cancel_hide()
+        self._cancel_preview()
         self.popup_revealer.unreveal()
         self.popup.set_visible(False)
 
@@ -122,14 +101,17 @@ class AppBar(Box):
         """Map a Glace client to its Hyprland window address.
 
         Glace clients don't expose the address the capture package needs, so
-        match against `hyprctl clients` by title (and class as a tiebreaker).
+        match against Hyprland's client list by title (and class as a tiebreaker).
         """
         title = client.get_title()
         app_id = client.get_app_id()
         try:
-            clients = json.loads(subprocess.check_output(["hyprctl", "clients", "-j"]))
+            # query the IPC socket directly instead of spawning `hyprctl`
+            clients = json.loads(
+                get_hyprland_monitors().send_command("j/clients").reply
+            )
         except Exception as e:
-            logger.error(f"[Dock] hyprctl clients failed: {e}")
+            logger.error(f"[Dock] fetching Hyprland clients failed: {e}")
             return None
 
         candidates = [
@@ -138,6 +120,25 @@ class AppBar(Box):
         if not candidates:
             return None
         return int(candidates[0]["address"], 16)
+
+    def _schedule_preview(self, client, client_button: Button):
+        # Capturing a frame is synchronous, so only do it once the pointer has
+        # rested on a button, not for every button it passes over.
+        self._cancel_hide()
+        self._cancel_preview()
+        self._preview_timeout_id = GLib.timeout_add(
+            150, self._do_preview, client, client_button
+        )
+
+    def _cancel_preview(self):
+        if self._preview_timeout_id is not None:
+            GLib.source_remove(self._preview_timeout_id)
+            self._preview_timeout_id = None
+
+    def _do_preview(self, client, client_button: Button):
+        self._preview_timeout_id = None
+        self.update_preview_image(client, client_button)
+        return False
 
     def update_preview_image(self, client, client_button: Button):
         self._cancel_hide()
@@ -165,7 +166,9 @@ class AppBar(Box):
         )
         self._preview_image.set_from_pixbuf(
             pbuf.scale_simple(
-                int(pbuf.get_width() * 0.2), int(pbuf.get_height() * 0.2), 2
+                int(pbuf.get_width() * 0.2),
+                int(pbuf.get_height() * 0.2),
+                GdkPixbuf.InterpType.BILINEAR,
             )
         )
         self.popup.set_visible(True)
@@ -179,10 +182,13 @@ class AppBar(Box):
             on_button_press_event=lambda _, event: (
                 client.activate() if event.button == 1 else None
             ),
-            on_enter_notify_event=lambda *_: self.update_preview_image(
+            on_enter_notify_event=lambda *_: self._schedule_preview(
                 client, client_button
             ),
-            on_leave_notify_event=lambda *_: self._schedule_hide(),
+            on_leave_notify_event=lambda *_: (
+                self._cancel_preview(),
+                self._schedule_hide(),
+            ),
         )
         self.client_buttons[client.get_id()] = client_button
 
@@ -202,45 +208,12 @@ class AppBar(Box):
             ),
         )
 
-        client.connect("close", lambda *_: self.remove(client_button))
+        def on_close(*_):
+            self.client_buttons.pop(client.get_id(), None)
+            client_button.destroy()
+
+        client.connect("close", on_close)
         self.add(client_button)
-
-
-class DockContextMenu(Box):
-    def __init__(self):
-        super().__init__(
-            style_classes=["cool-border", "window-basic"],
-            orientation="vertical",
-            all_visible=True,
-            children=[
-                Button(
-                    label="Dock App",
-                    style_classes=[
-                        "button-basic",
-                        "button-basic-props",
-                        "button-border",
-                    ],
-                ),
-                Box(name="prayer-info-separator"),
-                Button(
-                    label="Close App",
-                    style_classes=[
-                        "button-basic",
-                        "button-basic-props",
-                        "button-border",
-                    ],
-                ),
-                Box(name="prayer-info-separator"),
-                Button(
-                    label="Undock App",
-                    style_classes=[
-                        "button-basic",
-                        "button-basic-props",
-                        "button-border",
-                    ],
-                ),
-            ],
-        )
 
 
 class AppDock(Window):
