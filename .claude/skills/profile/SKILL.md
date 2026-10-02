@@ -1,6 +1,6 @@
 ---
 name: profile
-description: This skill should be used when the user asks to "profile the project", "profile startup", "measure startup time", "find slow components", "profile fabric", "check performance", or wants to identify bottlenecks in initialization of this Fabric/GTK4 bar.
+description: This skill should be used when the user asks to "profile the project", "profile startup", "measure startup time", "find slow components", "profile fabric", "check performance", or wants to identify bottlenecks in initialization of this Fabric/GTK3 bar.
 version: 0.1.0
 ---
 
