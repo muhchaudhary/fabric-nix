@@ -60,7 +60,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `notification_popup.py` | Animated notification toasts using Cairo drawing |
 | `overview.py` | Workspace overview with live window previews (`toplevel-streamer-rs`) |
 | `dock.py` | Auto-hiding dock (Glace) with hover window previews |
-| `app_menu.py` | Application launcher |
+| `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
 | `system_osd.py` | On-screen display for volume/brightness |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
 | `desktop_widget.py` | Desktop clock (`ClockWidget`) |
@@ -105,6 +105,7 @@ Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(-
 - `hyprland_monitor.py` — `HyprlandWithMonitors` for multi-monitor awareness; use the shared `get_hyprland_monitors()`
 - `icon_resolver.py` — app icon lookup; use the shared `get_icon_resolver()` (instances share one cache file)
 - `process.py` — `run_command_async(argv, callback(success, stdout, stderr))`
+- `app_search.py` — app menu entries, search scoring, launch stats (`~/.cache/fabric/app_launcher/app_stats.json`), calculator, emoji lookup
 - `uri.py` — `file_uri_to_path()` (decodes `%20` etc.; don't slice `[7:]`)
 - `accent.py` — accent color extraction from images
 - `snippits/animator.py` — animation utility
