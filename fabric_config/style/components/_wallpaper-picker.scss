@@ -1,0 +1,67 @@
+@use '../tokens' as *;
+@use '../mixins' as *;
+
+#wallpaper-picker {
+  @include panel($radius-xl);
+  padding: 20px;
+}
+
+#wallpaper-picker-header { padding: 0px 4px; }
+
+#wallpaper-picker-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#wallpaper-picker-subtitle {
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+#wallpaper-picker-folder {
+  min-width: 34px;
+  min-height: 34px;
+  border-radius: $radius-md;
+  background-color: a(var(--fg), 0.06);
+  @include transition(background-color);
+
+  &:hover { background-color: a(var(--fg), 0.12); }
+}
+
+#wallpaper-grid flowboxchild {
+  padding: 0px;
+  background-color: transparent;
+}
+
+/* Each card: a ring around the tile (radius = tile radius + padding) */
+#wallpaper-card {
+  padding: 4px;
+  border-radius: $radius-lg;
+  border: 2px solid transparent;
+  @include transition(background-color border-color);
+
+  &:hover,
+  &:focus {
+    background-color: a(var(--fg), 0.06);
+    border-color: a(var(--fg), 0.18);
+  }
+
+  &.current {
+    border-color: var(--accent);
+    background-color: a(var(--accent), 0.12);
+  }
+}
+
+#wallpaper-current-badge {
+  margin: 8px;
+  padding: 4px;
+  border-radius: $radius-pill;
+  background-color: var(--accent);
+
+  image { color: var(--bg); }
+}
+
+#wallpaper-empty {
+  padding: 40px;
+  color: var(--fg-dim);
+}

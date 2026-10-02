@@ -1,25 +1,34 @@
-import os
-import mimetypes
 import json
+import mimetypes
+import os
 import subprocess
 
+from fabric.core.service import Signal
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
-from fabric.widgets.label import Label
-from gi.repository import GLib
-
-# from fabric_config.widgets.rounded_image import CustomImage
+from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
-from fabric.utils import exec_shell_command_async
+from fabric.widgets.label import Label
+from fabric.widgets.overlay import Overlay
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric_config.widgets.popup_window_v2 import PopupWindow
-from fabric.core.service import Signal
+from gi.repository import GdkPixbuf, Gio, GLib, Gtk
+from loguru import logger
 
-WALLPAPER_DIR = f"/home/{GLib.get_user_name()}/wallpapers"
-WALLPAPER_THUMBS_DIR = f"/home/{GLib.get_user_name()}/wallpapers/.thumbs"
+from fabric_config.utils.process import run_command_async
+from fabric_config.widgets.popup_window_v2 import PopupWindow
+from fabric_config.widgets.wallpaper_tile import WallpaperTile
+
+WALLPAPER_DIR = os.path.join(GLib.get_home_dir(), "wallpapers")
+WALLPAPER_THUMBS_DIR = os.path.join(WALLPAPER_DIR, ".thumbs")
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 WALLPAPER_CACHE = CACHE_DIR + "/wallpaper-picker"
 LAST_WALLPAPER_FILE = WALLPAPER_CACHE + "/last_selected.json"
+
+THUMB_SIZE = 480  # px wide; tiles are drawn at up to 2x, so this stays sharp
+TILE_WIDTH = 256
+TILE_HEIGHT = 144  # 16:9
+TILE_RADIUS = 12
+GRID_COLUMNS = 3
 
 if not os.path.exists(WALLPAPER_DIR):
     os.makedirs(WALLPAPER_DIR)
@@ -38,9 +47,8 @@ def _set_hyprpaper_wallpaper(wp_path: str):
     try:
         monitors = json.loads(subprocess.check_output(["hyprctl", "-j", "monitors"]))
         for monitor in monitors:
-            exec_shell_command_async(
-                f"hyprctl hyprpaper wallpaper '{monitor['name']},{wp_path}'",
-                lambda *_: None,
+            run_command_async(
+                ["hyprctl", "hyprpaper", "wallpaper", f"{monitor['name']},{wp_path}"]
             )
     except Exception:
         pass
@@ -70,117 +78,200 @@ def _get_last_wallpaper() -> str | None:
     return None
 
 
-class ImageButton(Button):
+def _load_pixbuf_async(path: str, callback):
+    """Load an image file without blocking the main loop."""
+
+    def on_pixbuf(_source, result: Gio.AsyncResult):
+        try:
+            callback(GdkPixbuf.Pixbuf.new_from_stream_finish(result))
+        except GLib.Error as e:
+            logger.error(f"[Wallpaper] Failed to load {path}: {e.message}")
+
+    def on_read(file: Gio.File, result: Gio.AsyncResult):
+        try:
+            stream = file.read_finish(result)
+        except GLib.Error as e:
+            logger.error(f"[Wallpaper] Failed to open {path}: {e.message}")
+            return
+        GdkPixbuf.Pixbuf.new_from_stream_async(stream, None, on_pixbuf)
+
+    Gio.File.new_for_path(path).read_async(GLib.PRIORITY_DEFAULT, None, on_read)
+
+
+def _list_wallpapers() -> list[str]:
+    names = []
+    for name in os.listdir(WALLPAPER_DIR):
+        file_type = mimetypes.guess_type(name)[0]
+        if file_type and file_type.startswith("image/"):
+            names.append(name)
+    return sorted(names, key=str.lower)
+
+
+class WallpaperCard(Button):
     @Signal
     def wallpaper_change(self, wp_path: str) -> str: ...
 
-    def __init__(self, wallpaper_name, thumb_size=300, **kwargs):
+    def __init__(self, wallpaper_name: str, is_current: bool = False, **kwargs):
         self.wallpaper_name = wallpaper_name
-        self.wp_path = os.path.join(WALLPAPER_DIR, self.wallpaper_name)
-        self.thumb_size = thumb_size
+        self.wp_path = os.path.join(WALLPAPER_DIR, wallpaper_name)
         self.wp_thumb_path = os.path.join(
-            WALLPAPER_THUMBS_DIR, f"{self.thumb_size}_{self.wallpaper_name}"
+            WALLPAPER_THUMBS_DIR, f"{THUMB_SIZE}_{wallpaper_name}"
         )
+        self.tile = WallpaperTile(TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
+
+        badge = Box(
+            name="wallpaper-current-badge",
+            h_align="end",
+            v_align="start",
+            children=Image(icon_name="object-select-symbolic", icon_size=14),
+        )
+        # keep the grid's show_all() from revealing the badge on every card
+        badge.set_no_show_all(True)
+        badge.set_visible(is_current)
+
         super().__init__(
-            style_classes=["button-basic", "button-basic-props", "cool-border"],
+            name="wallpaper-card",
+            tooltip_text=wallpaper_name,
+            child=Overlay(child=self.tile, overlays=badge),
             on_clicked=lambda *_: self._set_wallpaper_from_image(),
             **kwargs,
         )
-        self._generate_wp_thumbnail()
+        if is_current:
+            self.add_style_class("current")
+        self._load_thumbnail()
 
     def _set_wallpaper_from_image(self):
         _save_last_wallpaper(self.wp_path)
         self.wallpaper_change(self.wp_path)
         _set_hyprpaper_wallpaper(self.wp_path)
 
-    def _generate_wp_thumbnail(self):
+    def _load_thumbnail(self):
         if os.path.exists(self.wp_thumb_path):
-            self.set_image(
-                Image(image_file=self.wp_thumb_path, style="border-radius: 20px")
-            )
+            _load_pixbuf_async(self.wp_thumb_path, self.tile.set_pixbuf)
             return
 
-        exec_shell_command_async(
-            f"ffmpegthumbnailer -i {self.wp_path} -s {self.thumb_size} -o {self.wp_thumb_path}",
-            lambda *_: self.set_image(
-                Image(image_file=self.wp_thumb_path, style="border-radius: 20px")
-            ),
+        def on_thumbnail_done(success: bool, _stdout: str, stderr: str):
+            if not success:
+                logger.error(
+                    f"[Wallpaper] Failed to thumbnail {self.wp_path}: {stderr.strip()}"
+                )
+                return
+            _load_pixbuf_async(self.wp_thumb_path, self.tile.set_pixbuf)
+
+        # argv list rather than a shell string, so file names with spaces work;
+        # the callback fires on exit, since ffmpegthumbnailer prints nothing
+        run_command_async(
+            [
+                "ffmpegthumbnailer",
+                "-i",
+                self.wp_path,
+                "-s",
+                str(THUMB_SIZE),
+                "-o",
+                self.wp_thumb_path,
+            ],
+            on_thumbnail_done,
         )
 
 
-class WallpaperPickerBox(ScrolledWindow):
+class WallpaperGrid(ScrolledWindow):
     @Signal
     def wallpaper_change(self, wp_path: str) -> str: ...
 
     def __init__(self, **kwargs):
-        self._buttons = []
+        self.flowbox = Gtk.FlowBox(
+            homogeneous=True,
+            selection_mode=Gtk.SelectionMode.NONE,
+            min_children_per_line=GRID_COLUMNS,
+            max_children_per_line=GRID_COLUMNS,
+            row_spacing=6,
+            column_spacing=6,
+            valign=Gtk.Align.START,
+        )
+        self.flowbox.set_name("wallpaper-grid")
+        self.flowbox.show()
+        self.empty_label = Label(
+            label=f"No images in {WALLPAPER_DIR.replace(GLib.get_home_dir(), '~')}",
+            name="wallpaper-empty",
+            visible=False,
+        )
         super().__init__(
-            orientation="h",
-            max_content_size=(-1, 800),
-            on_destroy=self.destroy_wallpaper_images,
+            name="wallpaper-scroll",
+            h_scrollbar_policy="never",
+            min_content_size=(-1, 560),
+            max_content_size=(-1, 560),
+            child=Box(orientation="v", children=[self.flowbox, self.empty_label]),
             **kwargs,
         )
+        self._built = False
 
-    def destroy_wallpaper_images(self, *_):
-        [b.destroy() for b in self._buttons]
-        [c.destroy() for c in self._main_box.children]
-        self._buttons = []
-        self._main_box.destroy()
+    def build(self) -> int:
+        """Populate the grid (once until cleared); returns the image count."""
+        if self._built:
+            return len(self.flowbox.get_children())
+        self._built = True
 
-    def grab_wallpaper_images(self, *_):
-        if len(self._buttons) == 0:
-            self._buttons = self._grab_wallpeper_images()
-        else:
-            return
+        current = _get_last_wallpaper()
+        names = _list_wallpapers()
+        for name in names:
+            card = WallpaperCard(
+                name,
+                is_current=os.path.join(WALLPAPER_DIR, name) == current,
+                on_wallpaper_change=lambda _, wp_path: self.wallpaper_change(wp_path),
+            )
+            self.flowbox.add(card)
+        self.flowbox.show_all()
+        self.empty_label.set_visible(not names)
+        self.get_vadjustment().set_value(0)
+        return len(names)
 
-        row_size = 3
-        rows = [
-            self._buttons[i : i + row_size]
-            for i in range(0, len(self._buttons), row_size)
-        ]
-        self._main_box = Box(
-            orientation="v",
-            children=[Box(children=row, orientation="h", spacing=10) for row in rows],
-            spacing=10,
-        )
-        self.children = self._main_box
-
-    def _grab_wallpeper_images(self) -> list[ImageButton]:
-        images = []
-        for wp in os.listdir(WALLPAPER_DIR):
-            file_type = mimetypes.guess_type(wp)[0]
-            if file_type and "image" in file_type:
-                images.append(
-                    ImageButton(
-                        wp,
-                        on_wallpaper_change=lambda _, wp_path: self.wallpaper_change(
-                            wp_path
-                        ),
-                    )
-                )
-        return images
+    def clear(self):
+        # free the pixbufs while hidden; rebuilt on next open
+        for child in self.flowbox.get_children():
+            child.destroy()
+        self._built = False
 
 
 class WallPaperPickerOverlay(PopupWindow):
     def __init__(self):
-        self.wallpaper_box = WallpaperPickerBox(
+        self.wallpaper_grid = WallpaperGrid(
             on_wallpaper_change=lambda *_: self.toggle_popup()
+        )
+        self.count_label = Label(name="wallpaper-picker-subtitle", h_align="start")
+        open_folder_button = Button(
+            name="wallpaper-picker-folder",
+            tooltip_text="Open wallpaper folder",
+            image=Image(icon_name="folder-open-symbolic", icon_size=16),
+            v_align="center",
+            on_clicked=lambda *_: (
+                run_command_async(["xdg-open", WALLPAPER_DIR]),
+                self.toggle_popup(),
+            ),
+        )
+        header = CenterBox(
+            name="wallpaper-picker-header",
+            start_children=Box(
+                orientation="v",
+                children=[
+                    Label(
+                        "Wallpapers",
+                        name="wallpaper-picker-title",
+                        h_align="start",
+                    ),
+                    self.count_label,
+                ],
+            ),
+            end_children=open_folder_button,
         )
         super().__init__(
             layer="top",
             child=Box(
+                name="wallpaper-picker",
                 orientation="v",
-                spacing=10,
-                children=[
-                    Label(
-                        "Wallpaper Picker",
-                        style_classes=["label-title"],
-                    ),
-                    self.wallpaper_box,
-                ],
-                style_classes=["cool-border", "window-basic"],
+                spacing=12,
+                children=[header, self.wallpaper_grid],
             ),
-            transition_duration=300,
+            transition_duration=250,
             transition_type="crossfade",
             anchor="center",
             enable_inhibitor=True,
@@ -188,9 +279,7 @@ class WallPaperPickerOverlay(PopupWindow):
         self.reveal_child.revealer.connect(
             "notify::child-revealed",
             lambda *_: (
-                [
-                    self.wallpaper_box.destroy_wallpaper_images(),
-                ]
+                self.wallpaper_grid.clear()
                 if not self.reveal_child.revealer.child_revealed
                 else None
             ),
@@ -206,7 +295,11 @@ class WallPaperPickerOverlay(PopupWindow):
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor=True)
         if self.popup_visible:
-            self.wallpaper_box.grab_wallpaper_images()
+            count = self.wallpaper_grid.build()
+            folder = WALLPAPER_DIR.replace(GLib.get_home_dir(), "~")
+            self.count_label.set_label(
+                f"{count} image{'s' if count != 1 else ''} · {folder}"
+            )
 
 
 wallpaper_picker = WallPaperPickerOverlay()
