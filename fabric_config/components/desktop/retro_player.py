@@ -13,6 +13,7 @@ from collections.abc import Callable
 
 import cairo
 from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from fabric.widgets.wayland import WaylandWindow
 from loguru import logger
 
 from fabric_config.utils.uri import file_uri_to_path
@@ -165,18 +166,22 @@ def load_art(url: str | None, callback: Callable[[GdkPixbuf.Pixbuf | None], None
 
 
 class RetroPlayer(Gtk.EventBox):
+    """
+    The player card: a glass panel in the theme's colours holding the source
+    chip (player switcher), the device, and the synced lyrics.
+    """
+
     def __init__(
         self,
         monitor_height: int,
         theme: str,
         media,  # MediaState
-        on_move: Callable[[int, int], None],
+        on_move_by: Callable[[int, int], None],
         on_moved: Callable[[], None],
         on_cycle_theme: Callable[[], None],
     ):
         super().__init__()
         self.set_name("retro-player")
-        self.set_visible_window(False)
         self.add_events(
             Gdk.EventMask.BUTTON_PRESS_MASK
             | Gdk.EventMask.BUTTON_RELEASE_MASK
@@ -186,7 +191,7 @@ class RetroPlayer(Gtk.EventBox):
         )
         self.monitor_height = monitor_height
         self.media = media
-        self._on_move = on_move
+        self._on_move_by = on_move_by
         self._on_moved = on_moved
         self._on_cycle_theme = on_cycle_theme
 
@@ -208,6 +213,16 @@ class RetroPlayer(Gtk.EventBox):
         self._art_url: str | None = None
         self.art: GdkPixbuf.Pixbuf | None = None
 
+        # palette, from the bar's theme and the wallpaper accent
+        self.is_light = False
+        self.accent = (0.75, 0.8, 0.95)
+        self.show_lyrics = True
+
+        # lyrics: the line being sung, and a slide when it changes
+        self._lyric_index = -1
+        self._lyric_slide = 0.0  # 1 -> 0 as a new line slides into place
+        self._lyrics_poll: int | None = None
+
         # animation
         self.visible_on_desktop = True
         self._angle = 0.0
@@ -215,28 +230,51 @@ class RetroPlayer(Gtk.EventBox):
         self._tick_id: int | None = None
         self._last_tick: float | None = None
 
-        # input
+        # input; positions are window-local (Wayland has no global pointer
+        # position), and the window follows the pointer while dragging
         self._hits: list[tuple[str, tuple]] = []
-        self._press: tuple[float, float, int, int] | None = None
+        self._press: tuple[float, float] | None = None
+        self._dragged = 0.0
         self._dragging = False
-        self.x = 0
-        self.y = 0
 
         self.theme = ""
         self.set_theme(theme)
         GLib.timeout_add_seconds(1, self._second)
 
-    # State
+    # Layout
 
     def set_theme(self, theme: str):
         self.theme = theme if theme in THEMES else THEMES[0]
+        mh = self.monitor_height
         w, h = THEME_SIZES[self.theme]
-        self.width = round(self.monitor_height * w)
-        self.height = round(self.monitor_height * h)
-        # a strip above the device for the source chip (player switcher)
-        self.chip_h = round(self.monitor_height * 0.028)
-        self.area.set_size_request(self.width, self.height + self.chip_h)
+        # the device
+        self.width = round(mh * w)
+        self.height = round(mh * h)
+        # the card around it
+        self.pad = round(mh * 0.018)
+        self.chip_h = round(mh * 0.03)
+        self.lyrics_h = round(mh * 0.115)
+        self.card_w = max(round(mh * 0.36), self.width) + 2 * self.pad
+        self.card_h = (
+            self.pad + self.chip_h + self.pad + self.height + self.pad
+            + self.lyrics_h + self.pad
+        )  # fmt: skip
+        self.device_x = (self.card_w - self.width) / 2
+        self.device_y = self.pad + self.chip_h + self.pad
+        self.area.set_size_request(self.card_w, self.card_h)
         self.queue_draw()
+
+    @property
+    def total_height(self) -> int:
+        return self.card_h
+
+    def set_palette(self, is_light: bool, accent: tuple[float, float, float] | None):
+        self.is_light = is_light
+        if accent is not None:
+            self.accent = accent
+        self.queue_draw()
+
+    # State
 
     def update_track(self):
         player = self.media.current_player()
@@ -252,7 +290,9 @@ class RetroPlayer(Gtk.EventBox):
             self.length = player.length or 0
             self.source = player.player_name
             self._set_art(player.arturl)
+        self._lyric_index = self.media.lyric_index()
         self._update_animation()
+        self._update_lyrics_poll()
         self.queue_draw()
 
     def _set_art(self, url: str | None):
@@ -269,11 +309,6 @@ class RetroPlayer(Gtk.EventBox):
         load_art(url, done)
 
     @property
-    def total_height(self) -> int:
-        """The device plus the source chip above it."""
-        return self.height + self.chip_h
-
-    @property
     def position(self) -> float:
         """Estimated position in microseconds."""
         return self.media.position
@@ -282,22 +317,50 @@ class RetroPlayer(Gtk.EventBox):
     def progress(self) -> float:
         return min(1.0, self.position / self.length) if self.length else 0.0
 
+    # Lyrics
+
+    def _update_lyrics_poll(self):
+        wanted = (
+            self.show_lyrics
+            and bool(self.media.lyrics)
+            and self.status == "Playing"
+            and self.visible_on_desktop
+        )
+        if wanted and self._lyrics_poll is None:
+            self._lyrics_poll = GLib.timeout_add(200, self._poll_lyrics)
+        elif not wanted and self._lyrics_poll is not None:
+            GLib.source_remove(self._lyrics_poll)
+            self._lyrics_poll = None
+
+    def _poll_lyrics(self):
+        index = self.media.lyric_index()
+        if index != self._lyric_index:
+            self._lyric_index = index
+            self._lyric_slide = 1.0
+            self._update_animation()
+        return True
+
+    def lyrics_changed(self):
+        self._lyric_index = self.media.lyric_index()
+        self._update_lyrics_poll()
+        self.queue_draw()
+
     # Animation
 
     def set_desktop_visible(self, visible: bool):
         self.visible_on_desktop = visible
         self._update_animation()
+        self._update_lyrics_poll()
 
     def _update_animation(self):
-        spinning = self.theme in ("cassette", "vinyl")
-        moving = self.status == "Playing" or self._speed > 0.01
-        wanted = spinning and moving and self.visible_on_desktop
+        spinning = self.theme in ("cassette", "vinyl") and (
+            self.status == "Playing" or self._speed > 0.01
+        )
+        sliding = self._lyric_slide > 0
+        wanted = (spinning or sliding) and self.visible_on_desktop
         if wanted and self._tick_id is None:
             self._last_tick = None
             self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
-        elif not wanted and self._tick_id is not None:
-            GLib.source_remove(self._tick_id)
-            self._tick_id = None
 
     def _tick(self):
         now = GLib.get_monotonic_time() / 1e6
@@ -309,9 +372,14 @@ class RetroPlayer(Gtk.EventBox):
         # a record takes a moment to come up to speed and to wind down
         self._speed += (target - self._speed) * min(1.0, dt * 3)
         self._angle = (self._angle + self._speed * dt) % (2 * math.pi)
+        self._lyric_slide = max(0.0, self._lyric_slide - dt / 0.35)
         self.queue_draw()
-        if self.status != "Playing" and self._speed < 0.01:
-            self._speed = 0.0
+        spinning = self.theme in ("cassette", "vinyl") and (
+            self.status == "Playing" or self._speed > 0.01
+        )
+        if not (spinning and self.visible_on_desktop) and self._lyric_slide <= 0:
+            if self.status != "Playing":
+                self._speed = 0.0
             self._tick_id = None
             return False
         return True
@@ -331,19 +399,22 @@ class RetroPlayer(Gtk.EventBox):
     def _on_press(self, _widget, event: Gdk.EventButton):
         if event.button != 1:
             return False
-        self._press = (event.x_root, event.y_root, self.x, self.y)
+        self._press = (event.x, event.y)
+        self._dragged = 0.0
         self._dragging = False
         return True
 
     def _on_motion(self, _widget, event: Gdk.EventMotion):
         if self._press is None:
             return False
-        sx, sy, x, y = self._press
-        dx, dy = event.x_root - sx, event.y_root - sy
-        if not self._dragging and math.hypot(dx, dy) > DRAG_THRESHOLD:
+        dx, dy = event.x - self._press[0], event.y - self._press[1]
+        self._dragged += math.hypot(dx, dy)
+        if not self._dragging and self._dragged > DRAG_THRESHOLD:
             self._dragging = True
-        if self._dragging:
-            self._on_move(max(0, round(x + dx)), max(0, round(y + dy)))
+        if self._dragging and (dx or dy):
+            # the window moves under the pointer, so the press point stays
+            # put in window coordinates
+            self._on_move_by(round(dx), round(dy))
         return True
 
     def _on_release(self, _widget, event: Gdk.EventButton):
@@ -356,6 +427,20 @@ class RetroPlayer(Gtk.EventBox):
             return True
         if action := self._hit(event.x, event.y):
             self._act(action)
+        return True
+
+    def _on_scroll(self, _widget, event: Gdk.EventScroll):
+        match event.direction:
+            case Gdk.ScrollDirection.UP:
+                step = -1
+            case Gdk.ScrollDirection.DOWN:
+                step = 1
+            case Gdk.ScrollDirection.SMOOTH:
+                step = 1 if event.delta_y > 0 else -1 if event.delta_y < 0 else 0
+            case _:
+                step = 0
+        if step:
+            self.media.cycle_player(step)
         return True
 
     def _hit(self, x: float, y: float) -> str | None:
@@ -398,73 +483,124 @@ class RetroPlayer(Gtk.EventBox):
 
     # Drawing
 
-    def _on_scroll(self, _widget, event: Gdk.EventScroll):
-        match event.direction:
-            case Gdk.ScrollDirection.UP:
-                step = -1
-            case Gdk.ScrollDirection.DOWN:
-                step = 1
-            case Gdk.ScrollDirection.SMOOTH:
-                step = 1 if event.delta_y > 0 else -1 if event.delta_y < 0 else 0
-            case _:
-                step = 0
-        if step:
-            self.media.cycle_player(step)
-        return True
+    @property
+    def ink(self) -> tuple[float, float, float]:
+        """The theme's foreground (--fg)."""
+        return rgb("#4c4f69") if self.is_light else rgb("#cdd6f4")
 
     def _on_draw(self, _widget, cr: cairo.Context):
         self._hits = []
+        self._draw_card(cr)
         self._draw_chip(cr)
-        # the device sits under the chip strip; shift its hit areas to match
+        # the device draws in its own coordinates; shift its hit areas after
+        device_hits = len(self._hits)
         cr.save()
-        cr.translate(0, self.chip_h)
+        cr.translate(self.device_x, self.device_y)
         {
             "mp3": self._draw_mp3,
             "cassette": self._draw_cassette,
             "vinyl": self._draw_vinyl,
         }[self.theme](cr, self.width, self.height)
         cr.restore()
-        shifted = []
-        for action, shape in self._hits:
-            if shape[0] == "source":
-                shifted.append((action, ("rect", *shape[1:])))
-                continue
-            kind, x, y, *rest = shape
-            shifted.append((action, (kind, x, y + self.chip_h, *rest)))
-        self._hits = shifted
+        for i in range(device_hits, len(self._hits)):
+            action, (kind, x, y, *rest) = self._hits[i]
+            self._hits[i] = (
+                action,
+                (kind, x + self.device_x, y + self.device_y, *rest),
+            )
+        self._draw_lyrics(cr)
         return False
+
+    def _draw_card(self, cr: cairo.Context):
+        """The glass panel, like the bar's popups (--bg-glass)."""
+        radius = self.monitor_height * 0.022
+        rounded_rect(cr, 0.5, 0.5, self.card_w - 1, self.card_h - 1, radius)
+        if self.is_light:
+            cr.set_source_rgba(*rgb("#e6e9ef"), 0.88)
+        else:
+            cr.set_source_rgba(0, 0, 0, 0.5)
+        cr.fill_preserve()
+        cr.set_source_rgba(*self.ink, 0.1)
+        cr.set_line_width(1)
+        cr.stroke()
 
     def _draw_chip(self, cr: cairo.Context):
         """The player's name, with arrows to switch when there are several."""
-        if not self.source:
-            return
         h = self.chip_h
-        font(cr, h * 0.5, bold=True)
-        label = self.source.capitalize()
+        y = self.pad
+        label = self.source.capitalize() if self.source else "No player"
+        font(cr, h * 0.48, bold=True)
         arrows = self.source_count > 1
         text_w = cr.text_extents(label).x_advance
-        pad = h * 0.6
-        chip_w = text_w + pad * 2 + (h * 1.6 if arrows else 0)
-        x = (self.width - chip_w) / 2
-        rounded_rect(cr, x, 1, chip_w, h - 4, (h - 4) / 2)
-        cr.set_source_rgba(0, 0, 0, 0.45)
+        inner = h * 0.7
+        chip_w = text_w + inner * 2 + (h * 1.4 if arrows else 0)
+        x = (self.card_w - chip_w) / 2
+        rounded_rect(cr, x, y, chip_w, h, h / 2)
+        cr.set_source_rgba(*self.accent, 0.18)
         cr.fill()
-        cr.set_source_rgba(1, 1, 1, 0.9)
-        text_at(cr, label, self.width / 2, h * 0.62, "center")
-        if arrows:
-            cy = (h - 2) / 2
-            for action, ax, direction in (
-                ("prev_source", x + pad * 0.9, -1),
-                ("next_source", x + chip_w - pad * 0.9, 1),
-            ):
-                cr.move_to(ax - direction * h * 0.12, cy - h * 0.18)
-                cr.line_to(ax + direction * h * 0.12, cy)
-                cr.line_to(ax - direction * h * 0.12, cy + h * 0.18)
-                cr.set_line_width(2)
-                cr.set_line_cap(cairo.LINE_CAP_ROUND)
-                cr.set_line_join(cairo.LINE_JOIN_ROUND)
-                cr.stroke()
-                self._hits.append((action, ("source", ax - h * 0.5, 0, h, h)))
+        cr.set_source_rgba(*self.ink, 0.95)
+        text_at(cr, label, self.card_w / 2, y + h * 0.66, "center")
+        if not arrows:
+            return
+        cy = y + h / 2
+        cr.set_line_width(2)
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_join(cairo.LINE_JOIN_ROUND)
+        for action, ax, direction in (
+            ("prev_source", x + inner * 0.8, -1),
+            ("next_source", x + chip_w - inner * 0.8, 1),
+        ):
+            cr.move_to(ax - direction * h * 0.1, cy - h * 0.18)
+            cr.line_to(ax + direction * h * 0.1, cy)
+            cr.line_to(ax - direction * h * 0.1, cy + h * 0.18)
+            cr.stroke()
+            self._hits.append((action, ("rect", ax - h * 0.55, y, h * 1.1, h)))
+
+    def _draw_lyrics(self, cr: cairo.Context):
+        """Previous, current and next lines; a new line slides up into place."""
+        x0 = self.pad * 1.5
+        width = self.card_w - x0 * 2
+        top = self.device_y + self.height + self.pad
+        h = self.lyrics_h
+        cr.save()
+        cr.rectangle(0, top, self.card_w, h)
+        cr.clip()
+        line_h = h / 3
+        center = top + h / 2
+        if not self.show_lyrics or not self.media.lyrics:
+            cr.set_source_rgba(*self.ink, 0.4)
+            font(cr, line_h * 0.42)
+            message = (
+                "Lyrics off"
+                if not self.show_lyrics
+                else ("No synced lyrics" if self.title else "")
+            )
+            text_at(cr, message, self.card_w / 2, center + line_h * 0.15, "center")
+            cr.restore()
+            return
+        eased = self._lyric_slide * self._lyric_slide * (3 - 2 * self._lyric_slide)
+        offset = eased * line_h
+        index = self._lyric_index
+        for delta in (-2, -1, 0, 1, 2):
+            text = self.media.lyric_at(index + delta)
+            if delta == 0 and not text:
+                text = "♪"
+            if not text:
+                continue
+            y = center + delta * line_h + offset
+            distance = abs((y - center) / line_h)
+            current = delta == 0
+            size = line_h * (0.52 if current else 0.4)
+            font(cr, size, bold=current)
+            alpha = max(0.0, 1 - distance * 0.6) * (1 if current else 0.75)
+            if current:
+                cr.set_source_rgba(*self.accent, alpha)
+            else:
+                cr.set_source_rgba(*self.ink, alpha * 0.7)
+            text_at(
+                cr, fit(cr, text, width), self.card_w / 2, y + size * 0.35, "center"
+            )
+        cr.restore()
 
     def _track_lines(self) -> tuple[str, str]:
         if not self.title:
@@ -554,7 +690,7 @@ class RetroPlayer(Gtk.EventBox):
         cr.set_source_rgba(*ink, 0.15)
         rounded_rect(cr, sx + unit * 0.6, py, sw - unit * 1.2, unit * 0.55, unit * 0.27)
         cr.fill()
-        cr.set_source_rgba(*rgb("#3c7bd6"), 0.9)
+        cr.set_source_rgba(*self.accent, 0.95)
         rounded_rect(
             cr,
             sx + unit * 0.6,
@@ -635,8 +771,8 @@ class RetroPlayer(Gtk.EventBox):
         cr.set_source_rgb(*rgb("#f3ead2"))
         cr.fill()
         stripe_y = ly + lh * 0.8
-        for i, color in enumerate(("#e2603b", "#f0a63a", "#3f8fb3")):
-            cr.set_source_rgb(*rgb(color))
+        for i, color in enumerate((self.accent, rgb("#f0a63a"), rgb("#3f8fb3"))):
+            cr.set_source_rgb(*color)
             cr.rectangle(lx, stripe_y + i * lh * 0.05, lw, lh * 0.05)
             cr.fill()
         title, artist = self._track_lines()
@@ -851,7 +987,9 @@ class RetroPlayer(Gtk.EventBox):
         ):
             bx = tx + br + i * br * 2.8
             cr.arc(bx, by, br, 0, 2 * math.pi)
-            cr.set_source_rgb(*rgb("#d7dade" if action != "play_pause" else "#e2603b"))
+            cr.set_source_rgb(
+                *(rgb("#d7dade") if action != "play_pause" else self.accent)
+            )
             cr.fill()
             cr.set_source_rgb(*rgb("#1e1e22"))
             icon(cr, glyph, bx, by, br * 0.85)
@@ -859,3 +997,67 @@ class RetroPlayer(Gtk.EventBox):
         cr.set_source_rgba(1, 1, 1, 0.4)
         font(cr, h * 0.035, bold=True)
         text_at(cr, "33 ⅓", w - w * 0.05, h * 0.95, "right")
+
+
+class RetroPlayerWindow(WaylandWindow):
+    """
+    The player in a window of its own on the desktop layer, so its clicks and
+    drags never compete with the rest of the desktop. Dragging moves the
+    window by changing its layer-shell margins.
+    """
+
+    def __init__(
+        self,
+        monitor: int,
+        monitor_name: str,
+        geometry: Gdk.Rectangle,
+        theme: str,
+        media,
+        position: list[int] | None,
+        on_moved: Callable[["RetroPlayerWindow"], None],
+        on_cycle_theme: Callable[[], None],
+    ):
+        self.monitor_name = monitor_name
+        self.geometry = geometry
+        self._on_moved_cb = on_moved
+        self.player = RetroPlayer(
+            geometry.height,
+            theme,
+            media,
+            on_move_by=self.move_by,
+            on_moved=lambda: on_moved(self),
+            on_cycle_theme=on_cycle_theme,
+        )
+        if position:
+            self.x, self.y = position
+        else:
+            # bottom-left, above the visualizer
+            self.x = round(geometry.height * 0.06)
+            self.y = (
+                geometry.height - self.player.card_h - round(geometry.height * 0.16)
+            )
+        super().__init__(
+            layer="bottom",
+            anchor="top left",
+            exclusivity="none",
+            keyboard_mode="none",
+            monitor=monitor,
+            child=self.player,
+        )
+        self._apply_position()
+        self.show_all()
+
+    def _apply_position(self):
+        # stay on screen, including after a theme changes the card's size
+        self.x = max(0, min(self.x, self.geometry.width - self.player.card_w))
+        self.y = max(0, min(self.y, self.geometry.height - self.player.card_h))
+        self.margin = (self.y, 0, 0, self.x)
+
+    def move_by(self, dx: int, dy: int):
+        self.x += dx
+        self.y += dy
+        self._apply_position()
+
+    def set_theme(self, theme: str):
+        self.player.set_theme(theme)
+        self._apply_position()

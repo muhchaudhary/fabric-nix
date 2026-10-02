@@ -32,13 +32,18 @@ DEBOUNCE_MS = 500
 STARTUP_DELAY_MS = 1500
 
 
-def theme_accent(rgb: RGB, is_light: bool) -> str:
+def theme_accent_rgb(rgb: RGB, is_light: bool) -> tuple[float, float, float]:
     """
-    The wallpaper colour as a usable accent: light enough to read on the dark
-    palette (dark enough on the light one) and never so grey it disappears.
+    The wallpaper colour as a usable accent, as 0-1 floats: light enough to
+    read on the dark palette (dark enough on the light one) and never so grey
+    it disappears.
     """
     h, _light, s = colorsys.rgb_to_hls(*(c / 255 for c in rgb))
-    r, g, b = colorsys.hls_to_rgb(h, 0.42 if is_light else 0.72, min(max(s, 0.3), 0.65))
+    return colorsys.hls_to_rgb(h, 0.42 if is_light else 0.72, min(max(s, 0.3), 0.65))
+
+
+def theme_accent(rgb: RGB, is_light: bool) -> str:
+    r, g, b = theme_accent_rgb(rgb, is_light)
     return f"rgb({round(r * 255)},{round(g * 255)},{round(b * 255)})"
 
 
@@ -52,6 +57,10 @@ class WallpaperAccent(Service):
 
     @Property(object, "readable")
     def accent(self) -> RGB | None:
+        return self._accent
+
+    def accent_rgb(self) -> RGB | None:
+        """The theme accent's source colour, once known (typed `accent`)."""
         return self._accent
 
     def color_for(self, monitor_name: str) -> RGB | None:

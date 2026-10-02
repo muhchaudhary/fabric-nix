@@ -135,6 +135,20 @@ class MediaState(Service):
 
     # Lyrics
 
+    def lyric_index(self) -> int:
+        """Index of the line being sung (-1 before the first), or -1 if none."""
+        seconds = self.position / 1_000_000
+        index = -1
+        for i, (start, _line) in enumerate(self.lyrics):
+            if start <= seconds:
+                index = i
+            else:
+                break
+        return index
+
+    def lyric_at(self, index: int) -> str:
+        return self.lyrics[index][1] if 0 <= index < len(self.lyrics) else ""
+
     def lyric_lines(self) -> tuple[str, str] | None:
         """(current line, next line) at the current position, if synced."""
         if not self.lyrics:

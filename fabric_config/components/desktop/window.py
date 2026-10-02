@@ -35,11 +35,11 @@ from fabric_config.components.desktop.info import (
     greeting,
     hijri_date,
 )
-from fabric_config.components.desktop.notes import NotesLayer, NotesStore, place
+from fabric_config.components.desktop.notes import NotesLayer, NotesStore
 from fabric_config.components.desktop.retro_player import (
     THEME_LABELS,
     THEMES,
-    RetroPlayer,
+    RetroPlayerWindow,
 )
 from fabric_config.components.desktop.settings import (
     FACES,
@@ -101,7 +101,6 @@ def _sizes_css(cls: str, sizes: ClockSizes) -> str:
 {root} .clock-date {{ font-size: {sizes.date}px; }}
 {root} .clock-info {{ font-size: {sizes.info}px; }}
 {root} #clock-memory {{ font-size: {sizes.memory}px; }}
-{root} #clock-lyric-next {{ font-size: {sizes.memory}px; }}
 {root} #clock-words .clock-word {{ font-size: {sizes.words}px; }}
 """
 
@@ -222,23 +221,6 @@ class DesktopWindow(WaylandWindow):
         self.overlay = Gtk.Overlay()
         self.overlay.add(self.background)
 
-        # the retro player, dragged anywhere
-        self.monitor_height = monitor_height
-        self.player = RetroPlayer(
-            monitor_height,
-            manager.settings.player_theme,
-            manager.media,
-            on_move=self._move_player,
-            on_moved=self._save_player_position,
-            on_cycle_theme=manager.cycle_player_theme,
-        )
-        self.overlay.add_overlay(self.player)
-        # its default spot depends on the screen size; place it once laid out
-        self.background.connect(
-            "size-allocate",
-            lambda *_: GLib.idle_add(lambda: self._place_player() or False),
-        )
-
         self.notes = NotesLayer(manager.notes, monitor_name, self.overlay)
 
         # clock
@@ -276,35 +258,6 @@ class DesktopWindow(WaylandWindow):
         self.date_stack.child_set_property(self.greeting_label, "name", "greeting")
 
         self.prayer_label = Label(name="clock-prayer", style_classes=["clock-info"])
-        self.playing_label = Label(
-            name="clock-playing",
-            style_classes=["clock-info"],
-            max_chars_width=48,
-            ellipsization="end",
-        )
-        self.playing = EventBox(
-            events=["button-press", "scroll", "smooth-scroll"],
-            child=self.playing_label,
-            h_align="center",
-            tooltip_text="Click to play/pause, scroll to skip",
-        )
-        self.playing.connect("button-press-event", self._on_playing_press)
-        self.playing.connect("scroll-event", self._on_playing_scroll)
-        self.lyric_label = Label(
-            name="clock-lyric",
-            style_classes=["clock-info"],
-            max_chars_width=60,
-            ellipsization="end",
-        )
-        self.lyric_next_label = Label(
-            name="clock-lyric-next", max_chars_width=60, ellipsization="end"
-        )
-        self.lyrics = Box(
-            name="clock-lyrics",
-            orientation="v",
-            children=[self.lyric_label, self.lyric_next_label],
-        )
-        self._lyrics_tick: int | None = None
         self.meta_label = Label(name="clock-meta", style_classes=["clock-info"])
         self.memory_label = Label(
             name="clock-memory", max_chars_width=70, ellipsization="end"
@@ -327,8 +280,6 @@ class DesktopWindow(WaylandWindow):
                     spacing=4,
                     children=[
                         self.prayer_label,
-                        self.playing,
-                        self.lyrics,
                         self.meta_label,
                         self.memory,
                     ],
@@ -363,52 +314,8 @@ class DesktopWindow(WaylandWindow):
         settings = self.manager.settings
         self.face_stack.set_visible_child_name(settings.face)
         self.notes.set_visible(settings.enabled("notes"))
-        if self.player.theme != settings.player_theme:
-            self.player.set_theme(settings.player_theme)
-            self._player_placed = False
-        self.player.set_visible(settings.enabled("retro_player"))
-        self._place_player()
         self._place_column()
         self.refresh()
-
-    # Retro player
-
-    _player_placed = False
-
-    def _place_player(self):
-        if self._player_placed:
-            return
-        saved = self.manager.settings.player_positions.get(self.monitor_name)
-        alloc = self.background.get_allocation()
-        if alloc.height <= 1:
-            return  # not laid out yet
-        if saved:
-            x, y = saved
-        else:
-            # bottom-left, above the visualizer
-            margin = self.sizes.margin
-            x = margin
-            y = (
-                alloc.height
-                - self.player.total_height
-                - round(self.monitor_height * 0.11)
-            )
-        # keep it on screen if the theme or monitor changed size
-        x = max(0, min(x, alloc.width - self.player.width))
-        y = max(0, min(y, alloc.height - self.player.total_height))
-        self._move_player(x, y)
-        self._player_placed = True
-
-    def _move_player(self, x: int, y: int):
-        self.player.x, self.player.y = x, y
-        place(self.player, x, y)
-
-    def _save_player_position(self):
-        self.manager.settings.player_positions[self.monitor_name] = [
-            self.player.x,
-            self.player.y,
-        ]
-        self.manager.settings.save()
 
     def _place_column(self):
         margin = self.sizes.margin
@@ -440,8 +347,6 @@ class DesktopWindow(WaylandWindow):
         self.date_label.set_label(now.strftime("%A, %B %-d"))
         self.update_focus()
         self.update_prayer()
-        self.update_playing()
-        self.update_lyrics()
         self.update_meta()
         self.update_memory()
         self.update_color(now, prayer_times)
@@ -460,49 +365,6 @@ class DesktopWindow(WaylandWindow):
             return
         self.prayer_label.set_label(f"{name} in {str(remaining).removeprefix('0h ')}")
         self.prayer_label.show()
-
-    def update_lyrics(self):
-        """Show the synced lyric line, ticking only while it can change."""
-        media = self.manager.media
-        lines = media.lyric_lines()
-        player = media.current_player()
-        showing = (
-            self.manager.settings.enabled("lyrics")
-            and lines is not None
-            and player is not None
-        )
-        self.lyrics.set_visible(showing)
-        if showing and lines is not None:
-            current, upcoming = lines
-            if self.lyric_label.get_label() != current:
-                self.lyric_label.set_label(current or "♪")
-                self.lyric_next_label.set_label(upcoming)
-        ticking = (
-            showing
-            and player is not None
-            and player.playback_status == "Playing"
-            and self.manager.visibility.visible(self.monitor_name)
-        )
-        if ticking and self._lyrics_tick is None:
-            self._lyrics_tick = GLib.timeout_add(250, self._on_lyrics_tick)
-        elif not ticking and self._lyrics_tick is not None:
-            GLib.source_remove(self._lyrics_tick)
-            self._lyrics_tick = None
-
-    def _on_lyrics_tick(self):
-        lines = self.manager.media.lyric_lines()
-        if lines is not None and self.lyric_label.get_label() != (lines[0] or "♪"):
-            self.lyric_label.set_label(lines[0] or "♪")
-            self.lyric_next_label.set_label(lines[1])
-        return True
-
-    def update_playing(self):
-        text = self.manager.now_playing_text()
-        if not self.manager.settings.enabled("now_playing") or not text:
-            self.playing.hide()
-            return
-        self.playing_label.set_label(text)
-        self.playing.show()
 
     def update_meta(self):
         settings = self.manager.settings
@@ -573,7 +435,6 @@ class DesktopWindow(WaylandWindow):
         self.fx.show_arc = settings.enabled("prayer_arc")
         self.fx.show_bars = settings.enabled("visualizer") and self.manager.cava.running
         self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
-        self.player.set_desktop_visible(visible)
         self.fx.queue_draw()
 
     # Greeting
@@ -598,19 +459,6 @@ class DesktopWindow(WaylandWindow):
     def _on_face_scroll(self, _widget, event: Gdk.EventScroll):
         if step := _scroll_step(event):
             self.manager.cycle_face(step)
-        return True
-
-    def _on_playing_press(self, _widget, event: Gdk.EventButton):
-        if event.button == 1 and (player := self.manager.current_player()):
-            player.play_pause()
-            return True
-        return False
-
-    def _on_playing_scroll(self, _widget, event: Gdk.EventScroll):
-        player = self.manager.current_player()
-        step = _scroll_step(event)
-        if player and step:
-            player.next() if step > 0 else player.previous()
         return True
 
     def _on_memory_press(self, _widget, event: Gdk.EventButton):
@@ -753,6 +601,7 @@ class DesktopManager:
         self.notes = NotesStore()
         self.media = MediaState()
         self.windows: list[DesktopWindow] = []
+        self.player_windows: list[RetroPlayerWindow] = []
         self._hidden_since: dict[str, float] = {}
 
         display = Gdk.Display.get_default()
@@ -772,6 +621,9 @@ class DesktopManager:
         prayer.connect("update", lambda *_: self.refresh())
 
         config.wallpaper_accent.connect("changed", lambda *_: self.update_accents())
+        config.wallpaper_accent.connect(
+            "changed", lambda *_: self.update_player_palette()
+        )
         self.update_accents()
 
         self.focus.connect("changed", lambda *_: self._on_focus_changed())
@@ -786,7 +638,11 @@ class DesktopManager:
 
         self.media.connect("changed", lambda *_: self._on_players_changed())
         self.media.connect(
-            "lyrics-changed", lambda *_: self._each(DesktopWindow.update_lyrics)
+            "lyrics-changed",
+            lambda *_: [w.player.lyrics_changed() for w in self.player_windows],
+        )
+        config.theme.connect(
+            "notify::is-light", lambda *_: self.update_player_palette()
         )
         self._on_players_changed()
 
@@ -807,15 +663,30 @@ class DesktopManager:
 
     def _build(self):
         self.windows = []
+        self.player_windows = []
         for i, name in enumerate(self._monitor_names()):
             monitor = self.display.get_monitor(i)
             height = monitor.get_geometry().height if monitor else 1080
             self.windows.append(DesktopWindow(self, i, name, height))
+            if monitor is not None:
+                self.player_windows.append(
+                    RetroPlayerWindow(
+                        i,
+                        name,
+                        monitor.get_geometry(),
+                        self.settings.player_theme,
+                        self.media,
+                        self.settings.player_positions.get(name),
+                        on_moved=self._save_player_position,
+                        on_cycle_theme=self.cycle_player_theme,
+                    )
+                )
+        self.apply_player_settings()
 
     def _rebuild_soon(self):
         # monitor numbering shifts on hotplug; rebuild once things settle
         def rebuild():
-            for window in self.windows:
+            for window in [*self.windows, *self.player_windows]:
                 window.destroy()
             self._build()
             self.update_accents()
@@ -844,6 +715,31 @@ class DesktopManager:
         self.settings.save()
         self._update_cava()
         self._each(DesktopWindow.apply_settings)
+        self.apply_player_settings()
+
+    # Retro player
+
+    def apply_player_settings(self):
+        for window in self.player_windows:
+            if window.player.theme != self.settings.player_theme:
+                window.set_theme(self.settings.player_theme)
+            window.player.show_lyrics = self.settings.enabled("lyrics")
+            window.player.lyrics_changed()
+            window.set_visible(self.settings.enabled("retro_player"))
+        self.update_player_palette()
+
+    def update_player_palette(self):
+        from fabric_config.services.wallpaper_accent import theme_accent_rgb
+
+        is_light = config.theme.is_light
+        rgb = config.wallpaper_accent.accent_rgb()
+        accent = theme_accent_rgb(rgb, is_light) if rgb else None
+        for window in self.player_windows:
+            window.player.set_palette(is_light, accent)
+
+    def _save_player_position(self, window: RetroPlayerWindow):
+        self.settings.player_positions[window.monitor_name] = [window.x, window.y]
+        self.settings.save()
 
     def toggle_24h(self):
         self.settings.use_24h = not self.settings.use_24h
@@ -907,27 +803,21 @@ class DesktopManager:
                 self._hidden_since.setdefault(name, now)
         self._update_cava()
         self._each(DesktopWindow.update_fx)
-        self._each(DesktopWindow.update_lyrics)
+        for window in self.player_windows:
+            window.player.set_desktop_visible(
+                self.visibility.visible(window.monitor_name)
+            )
 
     # Media
 
     def _on_players_changed(self):
         self._update_cava()
-        self._each(DesktopWindow.update_playing)
-        self._each(DesktopWindow.update_lyrics)
-        self._each(lambda w: w.player.update_track())
+        for window in self.player_windows:
+            window.player.update_track()
         self._each(DesktopWindow.update_fx)
 
     def current_player(self):
         return self.media.current_player()
-
-    def now_playing_text(self) -> str | None:
-        player = self.current_player()
-        if player is None or not player.title:
-            return None
-        artist = ", ".join(a for a in (player.artist or []) if a)
-        prefix = "♪  " if player.playback_status == "Playing" else "❚❚  "
-        return f"{prefix}{player.title}" + (f"  —  {artist}" if artist else "")
 
     def _update_cava(self):
         player = self.current_player()
