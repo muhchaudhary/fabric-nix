@@ -1,5 +1,5 @@
 import gi
-import shlex
+from typing import Callable
 
 from fabric_config.components.quick_settings.widgets.quick_settings_submenu import (
     QuickSubMenu,
@@ -13,12 +13,17 @@ from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from fabric.utils import exec_shell_command_async
+from loguru import logger
+
+from fabric_config.utils.process import run_command_async
 
 gi.require_version("AstalNetwork", "0.1")
 gi.require_version("NM", "1.0")
 from gi.repository import AstalNetwork as an  # noqa: E402
-from gi.repository import GLib, NM  # noqa: E402
+from gi.repository import Gio, GLib, NM  # noqa: E402
+
+# the GI name starts with a digit, so it can't be accessed as an attribute
+_AP_SECURITY = getattr(NM, "80211ApSecurityFlags")
 
 
 def _freq_band(freq_mhz: int) -> str:
@@ -27,6 +32,14 @@ def _freq_band(freq_mhz: int) -> str:
     if freq_mhz >= 3000:
         return "5 GHz"
     return "2.4 GHz"
+
+
+def _key_mgmt_for(ap: an.AccessPoint) -> str:
+    rsn = ap.get_rsn_flags()
+    # WPA3-only networks need SAE; WPA2 and mixed WPA2/WPA3 accept a PSK
+    if rsn & _AP_SECURITY.KEY_MGMT_SAE and not rsn & _AP_SECURITY.KEY_MGMT_PSK:
+        return "sae"
+    return "wpa-psk"
 
 
 def _get_saved_ssids(network: an.Network) -> set[str]:
@@ -49,11 +62,13 @@ class WifiNetworkRow(Box):
         ap: an.AccessPoint,
         network: an.Network,
         saved_ssids: set[str],
+        on_forgotten: Callable[[], None] | None = None,
         **kwargs,
     ):
         super().__init__(orientation="v", h_expand=True, spacing=0, **kwargs)
         self.ap = ap
         self.network = network
+        self.on_forgotten = on_forgotten
 
         wifi = network.get_wifi()
         active_ap = wifi.get_active_access_point() if wifi else None
@@ -190,23 +205,58 @@ class WifiNetworkRow(Box):
             self._connect()
 
     def _connect(self, password: str | None = None):
-        bssid = shlex.quote(self.ap.get_bssid())
-        cmd = f"nmcli device wifi connect {bssid}"
-        if password:
-            cmd += f" password {shlex.quote(password)}"
+        # Connect through the NetworkManager API rather than nmcli, so the
+        # password never appears in a process's argv (visible to `ps`).
+        nm_client: NM.Client = self.network.get_client()
+        wifi = self.network.get_wifi()
+        device = wifi.get_device() if wifi else None
+        if not nm_client or device is None:
+            self._notify_failure("NetworkManager is not available")
+            return
+
         self.main_btn.add_style_class("connecting")
 
-        ssid = self.ap.get_ssid()
-
-        def on_done(output: str):
+        def on_done(client: NM.Client, result: Gio.AsyncResult, add_new: bool):
             self.main_btn.remove_style_class("connecting")
-            if "Error" in output or "error" in output:
-                exec_shell_command_async(
-                    f"notify-send 'Wi-Fi' {shlex.quote(f'Failed to connect to {ssid}')} -i network-wireless-error-symbolic",
-                    lambda *_: None,
-                )
+            try:
+                if add_new:
+                    client.add_and_activate_connection_finish(result)
+                else:
+                    client.activate_connection_finish(result)
+            except GLib.Error as e:
+                self._notify_failure(e.message)
 
-        exec_shell_command_async(cmd, on_done)
+        saved = self._find_saved_connection()
+        if saved is not None and not password:
+            nm_client.activate_connection_async(
+                saved, device, self.ap.get_path(), None, on_done, False
+            )
+            return
+
+        partial = None
+        if password:
+            partial = NM.SimpleConnection.new()
+            security = NM.SettingWirelessSecurity.new()
+            security.set_property(
+                NM.SETTING_WIRELESS_SECURITY_KEY_MGMT, _key_mgmt_for(self.ap)
+            )
+            security.set_property(NM.SETTING_WIRELESS_SECURITY_PSK, password)
+            partial.add_setting(security)
+
+        nm_client.add_and_activate_connection_async(
+            partial, device, self.ap.get_path(), None, on_done, True
+        )
+
+    def _notify_failure(self, reason: str):
+        run_command_async(
+            [
+                "notify-send",
+                "-i",
+                "network-wireless-error-symbolic",
+                "Wi-Fi",
+                f"Failed to connect to {self.ap.get_ssid()}: {reason}",
+            ]
+        )
 
     def _on_connect_with_password(self, *_):
         pw = self.password_entry.get_text().strip() if self.password_entry else None
@@ -216,11 +266,19 @@ class WifiNetworkRow(Box):
 
     def _on_forget(self, _btn):
         conn = self._find_saved_connection()
-        if conn:
-            uuid = conn.get_uuid()
-            exec_shell_command_async(
-                f"nmcli connection delete {shlex.quote(uuid)}", lambda *_: None
-            )
+        if conn is None:
+            return
+
+        def on_deleted(connection: NM.RemoteConnection, result: Gio.AsyncResult):
+            try:
+                connection.delete_finish(result)
+            except GLib.Error as e:
+                logger.error(f"[Wi-Fi] Failed to forget {self.ap.get_ssid()}: {e}")
+                return
+            if self.on_forgotten:
+                self.on_forgotten()
+
+        conn.delete_async(None, on_deleted)
 
 
 class WifiSubMenu(QuickSubMenu):
@@ -319,9 +377,14 @@ class WifiSubMenu(QuickSubMenu):
         self.available_networks_box.children = []
         self.seen_networks.clear()
 
+        # Only one row is shown per SSID. Put the active access point first so
+        # its row is the one kept; otherwise, on dual-band or mesh networks, a
+        # stronger AP with the same SSID would hide the "connected" state.
+        active_ap = self.wifi_device.get_active_access_point()
+        active_bssid = active_ap.get_bssid() if active_ap else None
         aps = sorted(
             self.wifi_device.get_access_points(),
-            key=lambda ap: ap.get_strength(),
+            key=lambda ap: (ap.get_bssid() == active_bssid, ap.get_strength()),
             reverse=True,
         )
 
@@ -330,7 +393,12 @@ class WifiSubMenu(QuickSubMenu):
             if ssid and ssid not in self.seen_networks:
                 self.seen_networks.add(ssid)
                 self.available_networks_box.add(
-                    WifiNetworkRow(ap, self.network, saved_ssids=saved_ssids)
+                    WifiNetworkRow(
+                        ap,
+                        self.network,
+                        saved_ssids=saved_ssids,
+                        on_forgotten=self.build_wifi_options,
+                    )
                 )
 
 
@@ -365,8 +433,10 @@ class WifiToggle(QuickSubToggle):
                 ],
             )
 
-            wifi.bind("icon-name", "icon-name", self.action_icon)
-            wifi.bind("ssid", "label", self.action_label)
+            # AstalNetwork objects are plain GObjects, not fabric Services, so
+            # they have bind_property() but no fabric-style bind()
+            wifi.bind_property("icon-name", self.action_icon, "icon-name")
+            wifi.bind_property("ssid", self.action_label, "label")
 
     def on_action(self, _btn):
         wifi: an.Wifi | None = self.client.get_wifi()
