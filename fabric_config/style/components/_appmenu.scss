@@ -1,13 +1,16 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
+// rounding of the panel's right side; keep in step with CORNER_SIZE in app_menu.py
+$appmenu-radius: 32px;
+
 #appmenu,
 #appmenu-corner * { background-color: var(--bg-glass); }
 
 #appmenu {
   padding: $gap-lg $gap-lg $gap-md $gap-lg;
-  border-top-right-radius: $radius-pill;
-  border-bottom-right-radius: $radius-pill;
+  border-top-right-radius: $appmenu-radius;
+  border-bottom-right-radius: $appmenu-radius;
   min-height: 600px;
   min-width: 400px;
   border-style: none;

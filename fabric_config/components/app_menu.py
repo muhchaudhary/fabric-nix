@@ -25,6 +25,9 @@ from fabric_config.widgets.popup_window_v2 import PopupWindow
 ICON_SIZE = 32
 MAX_RESULTS = 30
 FREQUENT_COUNT = 6
+# size of the flares joining the panel to the screen edge; keep in step
+# with $appmenu-radius in _appmenu.scss
+CORNER_SIZE = 32
 
 HINTS = "=  calculate    >  run    :  emoji    !  hidden apps"
 
@@ -137,7 +140,7 @@ class AppMenu(PopupWindow):
                 children=[
                     Box(
                         name="appmenu-corner",
-                        children=Corner(orientation="bottom-left", size=50),
+                        children=Corner(orientation="bottom-left", size=CORNER_SIZE),
                     ),
                     Box(
                         name="appmenu",
@@ -151,7 +154,7 @@ class AppMenu(PopupWindow):
                     ),
                     Box(
                         name="appmenu-corner",
-                        children=Corner(orientation="top-left", size=50),
+                        children=Corner(orientation="top-left", size=CORNER_SIZE),
                     ),
                 ],
             ),
