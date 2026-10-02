@@ -119,10 +119,11 @@ class PlayerBox(Box):
         self.player: MprisPlayer = player
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
 
-        self.player_width = 450
-        self.image_size = 160
         # tall enough for the title block, seek bar, times and controls
         self.player_height = 176
+        # the album art is as tall as the card
+        self.image_size = self.player_height
+        self.player_width = 466
 
         # State
         self.exit = False
@@ -207,13 +208,13 @@ class PlayerBox(Box):
             h_align="start",
             style=f"min-width: {self.player_width - self.image_size - 20}px;",
             children=[
-                # the source chip shares the title's row, so a long title
-                # ellipsizes before it instead of running underneath
+                # the title gets the whole row; the compact source chip
+                # (icon and switch arrows) sits at the end of the artist's
+                self.track_title,
                 Box(
                     spacing=8,
-                    children=[self.track_title, self._make_source_chip()],
+                    children=[self.track_artist, self._make_source_chip()],
                 ),
-                self.track_artist,
             ],
         )
         # Player Signals
@@ -405,9 +406,9 @@ class PlayerBox(Box):
                     icon_name=app_icon_name(self.player.player_name),
                     pixel_size=12,
                 ),
-                Label(self.player.player_name.capitalize(), name="player-source-name"),
                 self._source_arrows[1],
             ],
+            tooltip_text=self.player.player_name.capitalize(),
         )
 
     def set_switchable(self, switchable: bool):
