@@ -1,4 +1,5 @@
 import datetime
+import os
 import shlex
 from typing import Any, Callable
 
@@ -52,6 +53,7 @@ class ScreenRecorder(Service):
     def __init__(self, **kwargs):
         self.screenshot_path = GLib.get_home_dir() + "/Pictures/Screenshots"
         self.screenrecord_path = GLib.get_home_dir() + "/Videos/Screencasting/"
+        self._current_screencast_path: str | None = None
 
         super().__init__(**kwargs)
 
@@ -81,7 +83,7 @@ class ScreenRecorder(Service):
                 ),
             )
 
-        except Exception as e:
+        except Exception:
             logger.error(f"[SCREENSHOT] Failed to run command: {command}")
 
     def screencast_start(self, fullscreen=False):
@@ -90,18 +92,57 @@ class ScreenRecorder(Service):
                 "[SCREENRECORD] Another instance of wf-recorder is already running"
             )
             return
+        if fullscreen:
+            self._start_wf_recorder(None)
+            return
+
+        # run slurp asynchronously so selecting a region doesn't block the UI
+        slurp = Gio.Subprocess.new(
+            ["slurp"],
+            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
+        )
+
+        def on_slurp_done(process: Gio.Subprocess, task: Gio.Task):
+            try:
+                _, stdout, _ = process.communicate_utf8_finish(task)
+            except GLib.Error as e:
+                logger.error(f"[SCREENRECORD] slurp failed: {e.message}")
+                return
+            geometry = (stdout or "").strip()
+            if not process.get_successful() or not geometry:
+                logger.info("[SCREENRECORD] Region selection cancelled")
+                return
+            self._start_wf_recorder(geometry)
+
+        slurp.communicate_utf8_async(None, None, on_slurp_done)
+
+    def _start_wf_recorder(self, geometry: str | None):
+        os.makedirs(self.screenrecord_path, exist_ok=True)
         time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
         file_path = self.screenrecord_path + str(time) + ".mp4"
+        command = ["wf-recorder", f"--file={file_path}", "--pixel-format", "yuv420p"]
+        if geometry:
+            command += ["-g", geometry]
+        try:
+            # wf-recorder writes progress continuously; don't pipe its output, or
+            # the unread pipe fills up and stalls the recording
+            Gio.Subprocess.new(
+                command,
+                Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
+            )
+        except GLib.Error as e:
+            logger.error(f"[SCREENRECORD] Failed to start wf-recorder: {e.message}")
+            return
         self._current_screencast_path = file_path
-        area = "" if fullscreen else f"-g '{exec_shell_command('slurp')}'"
-        command = f"wf-recorder --file={file_path} --pixel-format yuv420p {area}"
-        exec_shell_command_async(command)
         self.emit("recording", True)
 
     def screencast_stop(self):
         exec_shell_command_async("killall -INT wf-recorder")
         self.emit("recording", False)
+        if self._current_screencast_path is None:
+            return
         self.send_screencast_notification(self._current_screencast_path)
+        self._current_screencast_path = None
 
     def send_screencast_notification(self, file_path):
         # TODO: Generate a thumbnail
@@ -127,14 +168,14 @@ class ScreenRecorder(Service):
 
         def do_callback(process: Gio.Subprocess, task: Gio.Task):
             try:
-                _, stdout, stderr = process.communicate_utf8_finish(task)
-            except Exception:
+                _, stdout, _ = process.communicate_utf8_finish(task)
+            except GLib.Error as e:
                 logger.error(
-                    f"[SCREENCAST] Failed read notification action with error {stderr}"
+                    f"[SCREENCAST] Failed read notification action with error {e.message}"
                 )
                 return
 
-            match stdout.strip("\n"):
+            match (stdout or "").strip("\n"):
                 case "files":
                     exec_shell_command_async(f"xdg-open {self.screenrecord_path}")
                 case "view":
@@ -169,14 +210,14 @@ class ScreenRecorder(Service):
 
         def do_callback(process: Gio.Subprocess, task: Gio.Task):
             try:
-                _, stdout, stderr = process.communicate_utf8_finish(task)
-            except Exception:
+                _, stdout, _ = process.communicate_utf8_finish(task)
+            except GLib.Error as e:
                 logger.error(
-                    f"[SCREENSHOT] Failed read notification action with error {stderr}"
+                    f"[SCREENSHOT] Failed read notification action with error {e.message}"
                 )
                 return
 
-            match stdout.strip("\n"):
+            match (stdout or "").strip("\n"):
                 case "files":
                     exec_shell_command_async(f"xdg-open {self.screenshot_path}")
                 case "view":
