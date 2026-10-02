@@ -14,7 +14,6 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from fabric.widgets.scale import Scale
 from fabric.widgets.stack import Stack
 from gi.repository import GLib
 from loguru import logger
@@ -22,6 +21,7 @@ from loguru import logger
 from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
 from fabric_config.snippits.animator import Animator
 from fabric_config.utils.accent import grab_accent_color_threaded
+from fabric_config.widgets.level_seek_bar import LevelSeekBar, format_time
 from fabric_config.utils.uri import file_uri_to_path
 from fabric_config.widgets.circleimage import CircleImage
 
@@ -180,13 +180,6 @@ class PlayerBoxStack(Box):
         self.buttons_box.add_center(self.player_buttons[-1])
 
 
-def format_time(microseconds: int) -> str:
-    seconds = microseconds // 1_000_000
-    minutes = seconds // 60
-    seconds = seconds % 60
-    return f"{minutes}:{seconds:02d}"
-
-
 def easeOutBounce(t: float) -> float:
     if t < 4 / 11:
         return 121 * t * t / 16
@@ -231,8 +224,6 @@ class PlayerBox(Box):
         self.angle_direction = 1
         self.skipped = False
         self._color_generation = 0
-        self._user_seeking = False
-        self._seek_timeout_id = 0
 
         # Exit Logic
         self.player.connect("closed", self.on_player_exit)
@@ -251,15 +242,6 @@ class PlayerBox(Box):
         )
 
         self.player.connect("notify::arturl", self.set_image)
-
-        self.player.connect(
-            "seeked",
-            lambda _, position: (
-                self.seek_bar.set_value(position / self.player.length * 100)
-                if self.player.length and not self._user_seeking
-                else None
-            ),
-        )
 
         def do_anim(p: Animator, *_):
             self.image_box.angle = self.angle_direction * p.value
@@ -411,38 +393,9 @@ class PlayerBox(Box):
         self.button_box.start_children = [self.prev_button, self.shuffle_button]
         self.button_box.end_children = [self.loop_button, self.next_button]
 
-        # Seek Bar
-        self.seek_bar = Scale(
-            style_classes=["cool-border"],
-            min_value=0,
-            max_value=100,
-            increments=(5, 5),
-            orientation="h",
-            draw_value=False,
-            name="seek-bar",
-            value=self.player.position if self.player.can_seek else 0,
-        )
-        self.seek_bar.connect("change-value", self.on_scale_move)
-        self.player.connect(
-            "notify::position",
-            lambda *_: (
-                self.seek_bar.set_value(self.player.position / self.player.length * 100)
-                if self.player.length and not self._user_seeking
-                else None
-            ),
-        )
-        self.player.connect(
-            "notify::position",
-            lambda *_: self.update_time_label(),
-        )
-        self.player.connect(
-            "notify::length",
-            lambda *_: self.seek_bar.set_value(0) if self.player.length else None,
-        )
-        self.player.connect(
-            "notify::length",
-            lambda *_: self.update_time_label(),
-        )
+        # Seek bar: level bars driven by cava; click or drag to scrub
+        self.seek_bar = LevelSeekBar(self.player)
+        self.seek_bar.set_name("seek-bar")
         self.player.bind("can-seek", "visible", self.seek_bar)
 
         self.time_label = Label(
@@ -495,7 +448,7 @@ class PlayerBox(Box):
         self.children = self.children + [self.overlay_box]
         self.set_style(f"min-height:{self.image_size + 4}px")
 
-        self._seekbar_timer_id = invoke_repeater(1000, self.move_seekbar)
+        self._seekbar_timer_id = invoke_repeater(1000, self.update_time_label)
         self.connect("destroy", self._on_destroy)
 
     def _on_destroy(self, *_):
@@ -503,20 +456,6 @@ class PlayerBox(Box):
         if self._seekbar_timer_id:
             GLib.source_remove(self._seekbar_timer_id)
             self._seekbar_timer_id = 0
-
-    def on_scale_move(self, scale: Scale, event, moved_pos: float):
-        if not self.player.length:
-            return
-        self._user_seeking = True
-        if self._seek_timeout_id:
-            GLib.source_remove(self._seek_timeout_id)
-        self._seek_timeout_id = GLib.timeout_add(500, self._clear_seeking_flag)
-        self.player.seek_to(int(moved_pos / 100 * self.player.length))
-
-    def _clear_seeking_flag(self) -> bool:
-        self._user_seeking = False
-        self._seek_timeout_id = 0
-        return False
 
     def on_player_exit(self, _, value):
         self.exit = value
@@ -526,14 +465,12 @@ class PlayerBox(Box):
         self.angle_direction = 1
         self.art_animator.pause()
         self.image_box.angle = 0
-        self.seek_bar.set_value(0)
         self.player.next()
 
     def on_player_prev(self, _):
         self.angle_direction = -1
         self.art_animator.pause()
         self.image_box.angle = 0
-        self.seek_bar.set_value(0)
         self.player.previous()
 
     def on_loop_update(self, _, __):
@@ -568,12 +505,13 @@ class PlayerBox(Box):
         def on_accent_color(color):
             if generation != self._color_generation:
                 return
-            color = f"mix(rgb{colors if not color else color}, #F7EFD1, 0.5)"
-            bg = f"background-color: {color};"
-            border = f"border-color: {color};"
-            self.seek_bar.set_style(
-                f" trough highlight{{ {bg} {border} }} slider {{ {bg} }}"
+            # the played part takes the art's colour, softened toward cream
+            r, g, b = color if color else colors
+            cream = (0xF7, 0xEF, 0xD1)
+            self.seek_bar.ink = tuple(  # type: ignore[assignment]
+                (c + k) / 2 / 255 for c, k in zip((r, g, b), cream)
             )
+            self.seek_bar.queue_draw()
             self.art_animator.play()
 
         grab_accent_color_threaded(image_path=self.cover_path, callback=on_accent_color)
@@ -616,20 +554,8 @@ class PlayerBox(Box):
 
         threading.Thread(target=download, daemon=True).start()
 
-    def update_time_label(self):
+    def update_time_label(self) -> bool:
         length = self.player.length or 0
-        pos = int(self.seek_bar.get_value() / 100 * length) if length else 0
-        self.time_label.set_label(f"{format_time(pos)} / {format_time(length)}")
-
-    def move_seekbar(self) -> bool:
-        if (
-            self.player.can_seek
-            and self.player.playback_status == "Playing"
-            and self.player.length
-            and not self._user_seeking
-        ):
-            self.seek_bar.set_value(
-                self.seek_bar.get_value() + 1_000_000 / self.player.length * 100
-            )
-        self.update_time_label()
+        position = self.seek_bar.position if length else 0
+        self.time_label.set_label(f"{format_time(position)} / {format_time(length)}")
         return True

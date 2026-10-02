@@ -27,7 +27,7 @@ from gi.repository import Gdk, GLib, Gtk
 import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
-from fabric_config.components.desktop.fx import Cava, FxLayer
+from fabric_config.components.desktop.fx import FxLayer
 from fabric_config.components.desktop.media import MediaState
 from fabric_config.components.desktop.info import (
     OnThisDay,
@@ -566,7 +566,7 @@ class DesktopManager:
         self.settings = DesktopSettings()
         self.visibility = DesktopVisibility()
         self.focus = FocusTimer()
-        self.cava = Cava()
+        self.cava = config.cava
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
@@ -796,10 +796,7 @@ class DesktopManager:
                 for w in self.windows
             )
         )
-        if wanted and not self.cava.running:
-            self.cava.start()
-        elif not wanted and self.cava.running:
-            self.cava.stop()
+        self.cava.set_wanted("desktop", wanted)
 
 
 class _MinuteTicker:

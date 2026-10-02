@@ -81,6 +81,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `mpris_v2.py` — `MprisPlayerManager` for media player control. `play_pause()` reports the expected status at once until the player confirms it; `fetch_position()` reads the live position (the cached `Position` goes stale)
 - `screen_record.py` — Screen recording/screenshot via wf-recorder/slurp/hyprshot
 - `clipboard_history.py` — cliphist-backed clipboard history
+- `cava.py` — shared cava audio levels (`config.cava`); callers `set_wanted(owner, bool)` and it runs while anyone wants it
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)
 - `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 

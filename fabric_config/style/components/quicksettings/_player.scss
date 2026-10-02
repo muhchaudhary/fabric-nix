@@ -31,32 +31,11 @@
   color: var(--fg-dim);
 }
 
+/* Seek bar (widgets/level_seek_bar.py): drawn level bars; `color` is the
+   text and unplayed colour, the album art tints the played part */
 #seek-bar {
-  border-radius: 10px;
-  margin-top: $gap-sm;
-  margin-bottom: 6px;
-
-  trough {
-    border-radius: 10px;
-    min-height: 5px;
-    background-color: a(var(--fg), 0.15);
-    transition: background-color 0.15s ease;
-
-    &:hover { background-color: a(var(--fg), 0.25); }
-
-    highlight {
-      border-top-left-radius: 10px;
-      border-bottom-left-radius: 10px;
-      background-color: var(--accent);
-    }
-  }
-
-  slider {
-    border-radius: 100%;
-    min-width: 12px;
-    min-height: 12px;
-    background-color: var(--fg);
-  }
+  color: var(--fg);
+  margin-top: 2px;
 }
 
 #player-box   { margin: 6px; }
