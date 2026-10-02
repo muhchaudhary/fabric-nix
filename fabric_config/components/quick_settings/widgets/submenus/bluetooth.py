@@ -10,7 +10,7 @@ from fabric.widgets.label import Label
 from fabric.widgets.image import Image
 from fabric.widgets.scrolledwindow import ScrolledWindow
 from fabric.bluetooth.service import BluetoothClient, BluetoothDevice
-from gi.repository import GLib, Gio
+from gi.repository import GLib, Gio, Gtk
 from typing import Callable
 
 # GnomeBluetooth does not always surface a device's battery (battery-type
@@ -265,7 +265,7 @@ class BluetoothSubMenu(QuickSubMenu):
         parent = box.get_parent()
         if parent is section:
             return
-        if parent is not None:
+        if isinstance(parent, Gtk.Container):
             parent.remove(box)
         section.add(box)
 

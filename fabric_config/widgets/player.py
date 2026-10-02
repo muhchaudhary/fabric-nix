@@ -2,7 +2,7 @@ import math
 import os
 import threading
 import urllib.request
-from typing import List
+from typing import List, cast
 
 from fabric.utils import (
     get_relative_path,
@@ -133,7 +133,7 @@ class PlayerBoxStack(Box):
         # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
         # (player-vanished carries the full bus name, not the short player_name)
         logger.info(f"[PLAYER_MANAGER] Player Removed {bus_name}")
-        players: List[PlayerBox] = self.player_stack.get_children()
+        players = cast(List[PlayerBox], self.player_stack.get_children())
         if not players:
             self.hide()
             self.current_stack_pos = 0
@@ -148,9 +148,10 @@ class PlayerBoxStack(Box):
             self.player_stack.set_visible_child(
                 self.player_stack.get_children()[self.current_stack_pos],
             )
-        self.player_buttons[self.current_stack_pos].set_style_classes(
-            ["active", "cool-border"]
-        )
+        self.player_buttons[self.current_stack_pos].style_classes = [
+            "active",
+            "cool-border",
+        ]
         self.buttons_box.hide() if len(players) == 2 else self.buttons_box.show()
 
     def make_new_player_button(self, player_box):

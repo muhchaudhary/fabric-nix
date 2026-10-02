@@ -10,11 +10,7 @@ def exec_brightnessctl_async(args: str):
     exec_shell_command_async(f"brightnessctl {args}", lambda _: None)
 
 
-SCREEN = os.listdir("/sys/class/backlight")
-if SCREEN:
-    SCREEN = SCREEN[0]
-else:
-    SCREEN = ""
+SCREEN = next(iter(os.listdir("/sys/class/backlight")), "")
 leds = os.listdir("/sys/class/leds")
 
 kbd = ""

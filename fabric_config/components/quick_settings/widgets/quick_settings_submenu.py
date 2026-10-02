@@ -27,10 +27,10 @@ class QuickSubMenu(Box):
         self.revealer_child = Box(orientation="v", name="quicksettings-submenu")
 
         self.submenu_title_box = self.make_submenu_box()
-        self.revealer_child.add(
-            self.submenu_title_box
-        ) if self.submenu_title_box else None
-        self.revealer_child.add(self.child) if child else None
+        if self.submenu_title_box is not None:
+            self.revealer_child.add(self.submenu_title_box)
+        if self.child is not None:
+            self.revealer_child.add(self.child)
 
         self.revealer = Revealer(
             child=self.revealer_child, transition_type="slide-down", h_expand=True
@@ -158,9 +158,7 @@ class QuickSubToggle(Box):
         invoke_repeater(10, do_animate)
 
     def set_active_style(self, action: bool) -> None:
-        self.set_style_classes([""]) if not action else self.set_style_classes(
-            ["active"]
-        )
+        self.style_classes = ["active"] if action else [""]
 
     def set_action_label(self, label: str):
         self.action_label.set_label(label)

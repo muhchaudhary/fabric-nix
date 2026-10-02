@@ -32,6 +32,17 @@ typeCheckingMode = "basic"
 # stale store path
 venvPath = ".direnv"
 venv = "python"
+# dev scripts and experiments, not part of the bar. Setting exclude replaces
+# the defaults, so those (hidden dirs like .direnv, __pycache__) are re-added
+exclude = [
+  "**/.*",
+  "**/__pycache__",
+  "**/node_modules",
+  "examples",
+  "test",
+  "run_mouseless.py",
+  "fabric_config/widgets/radial_menu/test_radial_menu.py",
+]
 # gi.repository modules (Gtk, GLib, ...) are generated at runtime from
 # typelibs, so they only ever exist as stubs and never have a "source"
 reportMissingModuleSource = false

@@ -189,7 +189,7 @@ class ClipboardHistory(Service):
 
     # ---- history ---------------------------------------------------------
 
-    @Property(object, "readable")
+    @Property(list, "readable")
     def entries(self) -> list[ClipEntry]:
         """Newest first, with exact duplicate text entries removed."""
         return self._entries
@@ -454,7 +454,7 @@ class ClipboardHistory(Service):
 
     # ---- pins ------------------------------------------------------------
 
-    @Property(object, "readable")
+    @Property(list, "readable")
     def pins(self) -> list[Pin]:
         return self._pins
 

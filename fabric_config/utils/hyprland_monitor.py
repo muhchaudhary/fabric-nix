@@ -28,7 +28,10 @@ from gi.repository import Gdk  # noqa: E402
 
 class HyprlandWithMonitors(Hyprland):
     def __init__(self, commands_only: bool = False, **kwargs):
-        self.display: Gdk.Display = Gdk.Display.get_default()
+        display = Gdk.Display.get_default()
+        if display is None:
+            raise RuntimeError("no default Gdk display")
+        self.display: Gdk.Display = display
         super().__init__(commands_only, **kwargs)
 
     # Add new arguments

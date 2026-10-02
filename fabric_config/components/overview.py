@@ -201,7 +201,7 @@ class WorkspaceCard(Box):
         self.wallpaper_path = wallpaper_path
         self.wallpaper_monitor: str | None = None  # monitor whose wallpaper it shows
         self.backdrop = RoundedCoverImage(size[0], size[1], radius=CARD_RADIUS)
-        overlays = [
+        overlays: list[Gtk.Widget] = [
             Box(name="overview-workspace-dim", size=size),
         ]
         if fixed is not None:
@@ -271,7 +271,7 @@ class Overview(PopupWindow):
             spacing=16,
             children=[header, self.grid],
         )
-        self.workspace_boxes: dict[int, Box] = {}
+        self.workspace_boxes: dict[int, Gtk.Fixed] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
         self._update_timeout_id: int | None = None
         self._cards: list[WorkspaceCard] = []

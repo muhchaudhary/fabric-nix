@@ -1,6 +1,7 @@
 import json
 
 import gi
+from fabric import Application
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.button import Button
@@ -35,9 +36,7 @@ class AppBar(Box):
                         icon_name="view-app-grid-symbolic",
                         icon_size=60,
                     ),
-                    on_button_press_event=lambda *_: (
-                        self._parent.get_application().actions["toggle-appmenu"][0]()
-                    ),
+                    on_button_press_event=self._toggle_appmenu,
                 )
             ],
         )
@@ -76,6 +75,11 @@ class AppBar(Box):
                 else None
             ),
         )
+
+    def _toggle_appmenu(self, *_):
+        app = self._parent.get_application()
+        if isinstance(app, Application):
+            app.actions["toggle-appmenu"][0]()
 
     def _schedule_hide(self):
         self._cancel_hide()

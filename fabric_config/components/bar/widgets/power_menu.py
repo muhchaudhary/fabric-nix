@@ -114,40 +114,32 @@ class PowerMenuPopup(PopupWindow):
                 not self.confirm_menu.get_reveal_child()
             ),
         )
+        self.action_buttons = Box(
+            children=[
+                PowerMenuActionButton(
+                    action_name="Power Off",
+                    icon_name="system-shutdown-symbolic",
+                    icon_size=150,
+                    on_clicked=lambda button: self.on_button_press(button, "shutdown"),
+                ),
+                PowerMenuActionButton(
+                    action_name="Lock",
+                    icon_name="system-lock-screen-symbolic",
+                    icon_size=150,
+                    on_clicked=lambda button: self.on_button_press(button, "lock"),
+                ),
+                PowerMenuActionButton(
+                    action_name="Reboot",
+                    icon_name="system-reboot-symbolic",
+                    icon_size=150,
+                    on_clicked=lambda button: self.on_button_press(button, "reboot"),
+                ),
+            ],
+        )
         self.menu = Box(
             name=box_name,
             orientation="v",
-            children=[
-                Box(
-                    children=[
-                        PowerMenuActionButton(
-                            action_name="Power Off",
-                            icon_name="system-shutdown-symbolic",
-                            icon_size=150,
-                            on_clicked=lambda button: self.on_button_press(
-                                button, "shutdown"
-                            ),
-                        ),
-                        PowerMenuActionButton(
-                            action_name="Lock",
-                            icon_name="system-lock-screen-symbolic",
-                            icon_size=150,
-                            on_clicked=lambda button: self.on_button_press(
-                                button, "lock"
-                            ),
-                        ),
-                        PowerMenuActionButton(
-                            action_name="Reboot",
-                            icon_name="system-reboot-symbolic",
-                            icon_size=150,
-                            on_clicked=lambda button: self.on_button_press(
-                                button, "reboot"
-                            ),
-                        ),
-                    ],
-                ),
-                self.confirm_menu,
-            ],
+            children=[self.action_buttons, self.confirm_menu],
         )
 
         # Setup
@@ -160,7 +152,7 @@ class PowerMenuPopup(PopupWindow):
         )
 
     def set_action_buttons_focus(self, can_focus: bool):
-        for child in self.menu.children[0]:
+        for child in self.action_buttons.children:
             child.set_sensitive(can_focus)
 
     def on_button_press(
