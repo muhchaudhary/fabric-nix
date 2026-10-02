@@ -10,7 +10,7 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from gi.repository import GLib
+from gi.repository import Gio, GLib
 
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
@@ -22,6 +22,10 @@ PRAYER_TIMES_CACHE = os.path.join(CACHE_DIR, "prayer-times")
 PRAYER_TIMES_FILE = os.path.join(PRAYER_TIMES_CACHE, "current_times.json")
 LOCATION_CACHE_FILE = os.path.join(PRAYER_TIMES_CACHE, "location.json")
 os.makedirs(PRAYER_TIMES_CACHE, exist_ok=True)
+
+# Geoclue can wait forever when it has no usable source (e.g. Wi-Fi off on a
+# wired desktop) instead of failing, so give up and use the cached location
+GEOCLUE_TIMEOUT_S = 10
 
 
 def _save_location(lat: float, lon: float, city: str = ""):
@@ -212,15 +216,15 @@ class PrayerTimesService(Service):
                 lon = loc.get_property("longitude")
             except Exception:
                 cached = _load_location()
-                if cached:
-                    GLib.idle_add(
-                        lambda: setattr(self, "location_name", cached.get("city", ""))
-                    )
-                    threading.Thread(
-                        target=self._fetch_with_coords,
-                        args=(cached["lat"], cached["lon"]),
-                        daemon=True,
-                    ).start()
+                if not cached:
+                    self.location_name = ""
+                    return
+                self.location_name = cached.get("city", "")
+                threading.Thread(
+                    target=self._fetch_with_coords,
+                    args=(cached["lat"], cached["lon"]),
+                    daemon=True,
+                ).start()
                 return
 
             def fetch():
@@ -231,10 +235,13 @@ class PrayerTimesService(Service):
 
             threading.Thread(target=fetch, daemon=True).start()
 
+        # cancelling after the request has finished is a no-op
+        cancellable = Gio.Cancellable()
+        GLib.timeout_add_seconds(GEOCLUE_TIMEOUT_S, cancellable.cancel)
         Geoclue.Simple.new(
             "fabric-config",
             Geoclue.AccuracyLevel.CITY,
-            None,
+            cancellable,
             on_geoclue_ready,
         )
 
