@@ -46,6 +46,7 @@ class MyApp(Application):
             "fabric-bar",
             self.bar,
             *self.desktop.windows,
+            *self.desktop.player_windows,
             self.systemOverlay,
             self.nc,
             self.appMenu,

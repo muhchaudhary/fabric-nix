@@ -171,19 +171,43 @@ class NoteWidget(Box):
         return False
 
 
-class NotesLayer(Gtk.Fixed):
-    def __init__(self, store: NotesStore, monitor: str):
-        super().__init__()
+def place(widget: Gtk.Widget, x: int, y: int):
+    """Position an overlay child by its top-left corner."""
+    widget.set_halign(Gtk.Align.START)
+    widget.set_valign(Gtk.Align.START)
+    widget.set_margin_start(max(0, x))
+    widget.set_margin_top(max(0, y))
+
+
+class NotesLayer:
+    """
+    This monitor's notes, each its own overlay child on the desktop. (A
+    full-screen click-through layer would also swallow clicks meant for the
+    notes: GTK passes them through its children too.)
+    """
+
+    def __init__(self, store: NotesStore, monitor: str, overlay: Gtk.Overlay):
         self.store = store
         self.monitor = monitor
+        self.overlay = overlay
+        self.widgets: list[NoteWidget] = []
+        self._visible = True
         for note in store.for_monitor(monitor):
             self._add_widget(note)
 
     def _add_widget(self, note: dict) -> NoteWidget:
         widget = NoteWidget(note, self.store, self._move, self._delete)
-        self.put(widget, note["x"], note["y"])
+        place(widget, note["x"], note["y"])
+        self.overlay.add_overlay(widget)
         widget.show_all()
+        widget.set_visible(self._visible)
+        self.widgets.append(widget)
         return widget
+
+    def set_visible(self, visible: bool):
+        self._visible = visible
+        for widget in self.widgets:
+            widget.set_visible(visible)
 
     def add_note(self, x: int, y: int):
         widget = self._add_widget(self.store.add(self.monitor, x, y))
@@ -191,8 +215,9 @@ class NotesLayer(Gtk.Fixed):
 
     def _move(self, widget: NoteWidget, x: int, y: int):
         widget.note["x"], widget.note["y"] = x, y
-        self.move(widget, x, y)
+        place(widget, x, y)
 
     def _delete(self, widget: NoteWidget):
         self.store.remove(widget.note["id"])
+        self.widgets.remove(widget)
         widget.destroy()

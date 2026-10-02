@@ -2,7 +2,7 @@
 The desktop: one full-screen window per monitor on the bottom layer (behind
 windows, above the wallpaper). It stacks, from the bottom up:
 
-- the drawn layer (particles, prayer arc, audio visualizer),
+- the drawn layer (prayer arc, audio visualizer),
 - sticky notes,
 - the clock with its information lines.
 
@@ -27,7 +27,8 @@ from gi.repository import Gdk, GLib, Gtk
 import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
-from fabric_config.components.desktop.fx import Cava, FxLayer, season_mode
+from fabric_config.components.desktop.fx import Cava, FxLayer
+from fabric_config.components.desktop.media import MediaState
 from fabric_config.components.desktop.info import (
     OnThisDay,
     WeatherService,
@@ -35,9 +36,13 @@ from fabric_config.components.desktop.info import (
     hijri_date,
 )
 from fabric_config.components.desktop.notes import NotesLayer, NotesStore
+from fabric_config.components.desktop.retro_player import (
+    THEME_LABELS,
+    THEMES,
+    RetroPlayerWindow,
+)
 from fabric_config.components.desktop.settings import (
     FACES,
-    PARTICLE_MODES,
     POSITIONS,
     WIDGETS,
     DesktopSettings,
@@ -147,13 +152,6 @@ def mood_color(now: datetime.datetime, prayer_times: dict[str, str]) -> RGB | No
     return None
 
 
-def is_night(now: datetime.datetime, prayer_times: dict[str, str]) -> bool:
-    minute = now.hour * 60 + now.minute
-    fajr = _minutes(prayer_times.get("Fajr", "")) or 6 * 60
-    maghrib = _minutes(prayer_times.get("Maghrib", "")) or 19 * 60
-    return minute < fajr or minute >= maghrib
-
-
 def _prayer_service():
     from fabric_config.components.bar.widgets.prayer_times import (
         _get_prayer_service,
@@ -208,7 +206,14 @@ class DesktopWindow(WaylandWindow):
         self.background.connect("button-press-event", self._on_background_press)
         self.fx.connect("size-allocate", lambda *_: self.update_fx())
 
-        self.notes = NotesLayer(manager.notes, monitor_name)
+        # Each piece is its own overlay child covering only its own area, so
+        # it gets clicks directly and the bare desktop still reaches the
+        # background. (Full-screen click-through layers also pass through
+        # the clicks meant for their children.)
+        self.overlay = Gtk.Overlay()
+        self.overlay.add(self.background)
+
+        self.notes = NotesLayer(manager.notes, monitor_name, self.overlay)
 
         # clock
         self.digital = DigitalFace(manager.focus.toggle, self.show_menu)
@@ -245,20 +250,6 @@ class DesktopWindow(WaylandWindow):
         self.date_stack.child_set_property(self.greeting_label, "name", "greeting")
 
         self.prayer_label = Label(name="clock-prayer", style_classes=["clock-info"])
-        self.playing_label = Label(
-            name="clock-playing",
-            style_classes=["clock-info"],
-            max_chars_width=48,
-            ellipsization="end",
-        )
-        self.playing = EventBox(
-            events=["button-press", "scroll", "smooth-scroll"],
-            child=self.playing_label,
-            h_align="center",
-            tooltip_text="Click to play/pause, scroll to skip",
-        )
-        self.playing.connect("button-press-event", self._on_playing_press)
-        self.playing.connect("scroll-event", self._on_playing_scroll)
         self.meta_label = Label(name="clock-meta", style_classes=["clock-info"])
         self.memory_label = Label(
             name="clock-memory", max_chars_width=70, ellipsization="end"
@@ -281,7 +272,6 @@ class DesktopWindow(WaylandWindow):
                     spacing=4,
                     children=[
                         self.prayer_label,
-                        self.playing,
                         self.meta_label,
                         self.memory,
                     ],
@@ -289,13 +279,7 @@ class DesktopWindow(WaylandWindow):
             ],
         )
 
-        overlay = Gtk.Overlay()
-        overlay.add(self.background)
-        for layer in (self.notes, self.column):
-            overlay.add_overlay(layer)
-            # the layer's own window lets clicks through; its widgets still
-            # take them
-            overlay.set_overlay_pass_through(layer, True)
+        self.overlay.add_overlay(self.column)
 
         super().__init__(
             layer="bottom",
@@ -304,7 +288,7 @@ class DesktopWindow(WaylandWindow):
             # notes need typing; the desktop only takes the keyboard on click
             keyboard_mode="on-demand",
             monitor=monitor,
-            child=overlay,
+            child=self.overlay,
         )
         self.show_all()
         self.apply_settings()
@@ -318,10 +302,14 @@ class DesktopWindow(WaylandWindow):
 
     # Settings and layout
 
+    def enabled(self, widget: str) -> bool:
+        """Whether `widget` shows on this monitor."""
+        return self.manager.settings.enabled(widget, self.monitor_name)
+
     def apply_settings(self):
         settings = self.manager.settings
         self.face_stack.set_visible_child_name(settings.face)
-        self.notes.set_visible(settings.enabled("notes"))
+        self.notes.set_visible(self.enabled("notes"))
         self._place_column()
         self.refresh()
 
@@ -348,14 +336,13 @@ class DesktopWindow(WaylandWindow):
         settings = self.manager.settings
         prayer_times = self.manager.prayer_times()
 
-        on_the_hour = now.minute == 0 and settings.enabled("moods")
+        on_the_hour = now.minute == 0 and self.enabled("moods")
         self.digital.update(now, settings.use_24h)
         self.faces["analog"].update(now, settings.use_24h)  # type: ignore[attr-defined]
         self.words.update(now, settings.use_24h, sweep=on_the_hour)
         self.date_label.set_label(now.strftime("%A, %B %-d"))
         self.update_focus()
         self.update_prayer()
-        self.update_playing()
         self.update_meta()
         self.update_memory()
         self.update_color(now, prayer_times)
@@ -366,7 +353,7 @@ class DesktopWindow(WaylandWindow):
         service = _prayer_service()
         name, remaining = service.next_prayer, service.time_to_next_prayer
         if (
-            not self.manager.settings.enabled("prayer")
+            not self.enabled("prayer")
             or name in (None, "None")
             or remaining in (None, "None")
         ):
@@ -375,27 +362,18 @@ class DesktopWindow(WaylandWindow):
         self.prayer_label.set_label(f"{name} in {str(remaining).removeprefix('0h ')}")
         self.prayer_label.show()
 
-    def update_playing(self):
-        text = self.manager.now_playing_text()
-        if not self.manager.settings.enabled("now_playing") or not text:
-            self.playing.hide()
-            return
-        self.playing_label.set_label(text)
-        self.playing.show()
-
     def update_meta(self):
-        settings = self.manager.settings
         parts = []
-        if settings.enabled("weather") and self.manager.weather.text:
+        if self.enabled("weather") and self.manager.weather.text:
             parts.append(self.manager.weather.text)
-        if settings.enabled("hijri") and (hijri := hijri_date()):
+        if self.enabled("hijri") and (hijri := hijri_date()):
             parts.append(hijri)
         self.meta_label.set_label("  ·  ".join(parts))
         self.meta_label.set_visible(bool(parts))
 
     def update_memory(self):
         memory = self.manager.on_this_day.current
-        if not self.manager.settings.enabled("on_this_day") or memory is None:
+        if not self.enabled("on_this_day") or memory is None:
             self.memory.hide()
             return
         self.memory_label.set_label(memory.text)
@@ -426,9 +404,7 @@ class DesktopWindow(WaylandWindow):
 
     def update_color(self, now: datetime.datetime, prayer_times: dict[str, str]):
         color = self.accent or (240, 240, 245)
-        if self.manager.settings.enabled("moods") and (
-            mood := mood_color(now, prayer_times)
-        ):
+        if self.enabled("moods") and (mood := mood_color(now, prayer_times)):
             color = _blend(color, mood, 0.55 if not self.on_light else 0.35)
         self.column.set_style(f"color: rgb({color[0]}, {color[1]}, {color[2]});")
         if self.on_light:
@@ -442,22 +418,16 @@ class DesktopWindow(WaylandWindow):
     # Drawn layer
 
     def update_fx(self):
-        settings = self.manager.settings
         visible = self.manager.visibility.visible(self.monitor_name)
-        now = datetime.datetime.now()
-        mode = settings.particles
-        if mode == "auto":
-            mode = season_mode(now, is_night(now, self.manager.prayer_times()))
-        self.fx.configure_particles(mode)
-        self.fx.show_arc = settings.enabled("prayer_arc")
-        self.fx.show_bars = settings.enabled("visualizer") and self.manager.cava.running
-        self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
+        self.fx.show_arc = self.enabled("prayer_arc")
+        self.fx.show_bars = self.enabled("visualizer") and self.manager.cava.running
+        self.fx.set_animating(visible and self.fx.show_bars)
         self.fx.queue_draw()
 
     # Greeting
 
     def show_greeting(self):
-        if not self.manager.settings.enabled("greeting") or self.manager.focus.running:
+        if not self.enabled("greeting") or self.manager.focus.running:
             return
         self.greeting_label.set_label(greeting())
         self.date_stack.set_visible_child_name("greeting")
@@ -476,19 +446,6 @@ class DesktopWindow(WaylandWindow):
     def _on_face_scroll(self, _widget, event: Gdk.EventScroll):
         if step := _scroll_step(event):
             self.manager.cycle_face(step)
-        return True
-
-    def _on_playing_press(self, _widget, event: Gdk.EventButton):
-        if event.button == 1 and (player := self.manager.current_player()):
-            player.play_pause()
-            return True
-        return False
-
-    def _on_playing_scroll(self, _widget, event: Gdk.EventScroll):
-        player = self.manager.current_player()
-        step = _scroll_step(event)
-        if player and step:
-            player.next() if step > 0 else player.previous()
         return True
 
     def _on_memory_press(self, _widget, event: Gdk.EventButton):
@@ -538,7 +495,7 @@ class DesktopWindow(WaylandWindow):
             menu.append(entry)
             return sub
 
-        if settings.enabled("notes"):
+        if self.enabled("notes"):
             # where the click landed, in this window's coordinates
             coords = _widget_coords(event, self)
             item("New note", lambda: self.notes.add_note(*coords))
@@ -570,24 +527,32 @@ class DesktopWindow(WaylandWindow):
                 radio=True,
             )
 
-        particles = submenu("Particles")
-        for mode in PARTICLE_MODES:
+        player = submenu("Retro player")
+        for theme in THEMES:
             check(
-                "Auto (by season)" if mode == "auto" else mode.capitalize(),
-                settings.particles == mode,
-                lambda m=mode: manager.set_particles(m),
-                particles,
+                THEME_LABELS[theme],
+                settings.player_theme == theme,
+                lambda t=theme: manager.set_player_theme(t),
+                player,
                 radio=True,
             )
 
-        widgets = submenu("Widgets")
+        # widgets are chosen per display; the menu edits this one
+        widgets = submenu(f"Widgets on {self.monitor_name}")
         for name, (label, _default) in WIDGETS.items():
             if name == "visualizer" and not manager.cava.available:
                 label += " (needs cava)"
             check(
                 label,
-                settings.enabled(name),
-                lambda n=name: manager.toggle_widget(n),
+                self.enabled(name),
+                lambda n=name: manager.toggle_widget(n, self.monitor_name),
+                widgets,
+            )
+        if len(manager.windows) > 1:
+            widgets.append(Gtk.SeparatorMenuItem())
+            item(
+                "Use these on all displays",
+                lambda: manager.widgets_everywhere(self.monitor_name),
                 widgets,
             )
 
@@ -619,7 +584,9 @@ class DesktopManager:
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
+        self.media = MediaState()
         self.windows: list[DesktopWindow] = []
+        self.player_windows: list[RetroPlayerWindow] = []
         self._hidden_since: dict[str, float] = {}
 
         display = Gdk.Display.get_default()
@@ -639,6 +606,9 @@ class DesktopManager:
         prayer.connect("update", lambda *_: self.refresh())
 
         config.wallpaper_accent.connect("changed", lambda *_: self.update_accents())
+        config.wallpaper_accent.connect(
+            "changed", lambda *_: self.update_player_palette()
+        )
         self.update_accents()
 
         self.focus.connect("changed", lambda *_: self._on_focus_changed())
@@ -651,11 +621,15 @@ class DesktopManager:
         self.cava.connect("frame", lambda *_: None)
         self.visibility.connect("changed", lambda *_: self._on_visibility_changed())
 
-        players = config.mprisplayer
-        players.connect("player-appeared", lambda _m, p: self._watch_player(p))
-        players.connect("player-vanished", lambda *_: self._on_players_changed())
-        for player in players.players.values():
-            self._watch_player(player)
+        self.media.connect("changed", lambda *_: self._on_players_changed())
+        self.media.connect(
+            "lyrics-changed",
+            lambda *_: [w.player.lyrics_changed() for w in self.player_windows],
+        )
+        config.theme.connect(
+            "notify::is-light", lambda *_: self.update_player_palette()
+        )
+        self._on_players_changed()
 
         # say hello once the desktop is up
         GLib.timeout_add(1500, lambda: self._each(DesktopWindow.show_greeting) or False)
@@ -674,15 +648,30 @@ class DesktopManager:
 
     def _build(self):
         self.windows = []
+        self.player_windows = []
         for i, name in enumerate(self._monitor_names()):
             monitor = self.display.get_monitor(i)
             height = monitor.get_geometry().height if monitor else 1080
             self.windows.append(DesktopWindow(self, i, name, height))
+            if monitor is not None:
+                self.player_windows.append(
+                    RetroPlayerWindow(
+                        i,
+                        name,
+                        monitor.get_geometry(),
+                        self.settings.player_theme,
+                        self.media,
+                        self.settings.player_positions.get(name),
+                        on_moved=self._save_player_position,
+                        on_cycle_theme=self.cycle_player_theme,
+                    )
+                )
+        self.apply_player_settings()
 
     def _rebuild_soon(self):
         # monitor numbering shifts on hotplug; rebuild once things settle
         def rebuild():
-            for window in self.windows:
+            for window in [*self.windows, *self.player_windows]:
                 window.destroy()
             self._build()
             self.update_accents()
@@ -711,6 +700,32 @@ class DesktopManager:
         self.settings.save()
         self._update_cava()
         self._each(DesktopWindow.apply_settings)
+        self.apply_player_settings()
+
+    # Retro player
+
+    def apply_player_settings(self):
+        for window in self.player_windows:
+            if window.player.theme != self.settings.player_theme:
+                window.set_theme(self.settings.player_theme)
+            name = window.monitor_name
+            window.player.show_lyrics = self.settings.enabled("lyrics", name)
+            window.player.lyrics_changed()
+            window.set_visible(self.settings.enabled("retro_player", name))
+        self.update_player_palette()
+
+    def update_player_palette(self):
+        from fabric_config.services.wallpaper_accent import theme_accent_rgb
+
+        is_light = config.theme.is_light
+        rgb = config.wallpaper_accent.accent_rgb()
+        accent = theme_accent_rgb(rgb, is_light) if rgb else None
+        for window in self.player_windows:
+            window.player.set_palette(is_light, accent)
+
+    def _save_player_position(self, window: RetroPlayerWindow):
+        self.settings.player_positions[window.monitor_name] = [window.x, window.y]
+        self.settings.save()
 
     def toggle_24h(self):
         self.settings.use_24h = not self.settings.use_24h
@@ -728,12 +743,26 @@ class DesktopManager:
         self.settings.position = position
         self._changed()
 
-    def set_particles(self, mode: str):
-        self.settings.particles = mode
+    def set_player_theme(self, theme: str):
+        self.settings.player_theme = theme
         self._changed()
 
-    def toggle_widget(self, name: str):
-        self.settings.widgets[name] = not self.settings.enabled(name)
+    def cycle_player_theme(self):
+        index = (
+            THEMES.index(self.settings.player_theme)
+            if self.settings.player_theme in THEMES
+            else -1
+        )
+        self.set_player_theme(THEMES[(index + 1) % len(THEMES)])
+
+    def toggle_widget(self, name: str, monitor: str):
+        self.settings.set_widget(
+            name, monitor, not self.settings.enabled(name, monitor)
+        )
+        self._changed()
+
+    def widgets_everywhere(self, monitor: str):
+        self.settings.use_everywhere(monitor)
         self._changed()
 
     # Focus
@@ -762,38 +791,33 @@ class DesktopManager:
                 self._hidden_since.setdefault(name, now)
         self._update_cava()
         self._each(DesktopWindow.update_fx)
+        for window in self.player_windows:
+            window.player.set_desktop_visible(
+                self.visibility.visible(window.monitor_name)
+            )
 
     # Media
 
-    def _watch_player(self, player):
-        player.connect("changed", lambda *_: self._on_players_changed())
-        self._on_players_changed()
-
     def _on_players_changed(self):
         self._update_cava()
-        self._each(DesktopWindow.update_playing)
+        for window in self.player_windows:
+            window.player.update_track()
         self._each(DesktopWindow.update_fx)
 
     def current_player(self):
-        players = list(config.mprisplayer.players.values())
-        playing = [p for p in players if p.playback_status == "Playing"]
-        return (playing or players or [None])[0]
-
-    def now_playing_text(self) -> str | None:
-        player = self.current_player()
-        if player is None or not player.title:
-            return None
-        artist = ", ".join(a for a in (player.artist or []) if a)
-        prefix = "♪  " if player.playback_status == "Playing" else "❚❚  "
-        return f"{prefix}{player.title}" + (f"  —  {artist}" if artist else "")
+        return self.media.current_player()
 
     def _update_cava(self):
         player = self.current_player()
+        # wanted while something plays and a desktop that shows bars is visible
         wanted = (
-            self.settings.enabled("visualizer")
-            and player is not None
+            player is not None
             and player.playback_status == "Playing"
-            and self.visibility.any_visible()
+            and any(
+                self.settings.enabled("visualizer", w.monitor_name)
+                and self.visibility.visible(w.monitor_name)
+                for w in self.windows
+            )
         )
         if wanted and not self.cava.running:
             self.cava.start()

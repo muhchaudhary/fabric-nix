@@ -1,6 +1,6 @@
 """
-The desktop's drawn layer, under the clock: seasonal particles, the prayer
-arc across the lower half and the audio visualizer along the bottom.
+The desktop's drawn layer, under the clock: the prayer arc across the lower
+half and the audio visualizer along the bottom.
 
 It animates only while something is moving and the monitor's desktop is
 showing; otherwise it redraws once a minute for the arc.
@@ -9,8 +9,6 @@ showing; otherwise it redraws once a minute for the arc.
 import datetime
 import math
 import os
-import random
-from dataclasses import dataclass
 
 import cairo
 from fabric.core.service import Service, Signal
@@ -130,133 +128,6 @@ noise_reduction = 77
         self._read_next()
 
 
-# Particles
-
-
-@dataclass
-class Particle:
-    x: float
-    y: float
-    vx: float
-    vy: float
-    size: float
-    phase: float
-    spin: float
-    color: tuple[float, float, float]
-
-
-_LEAF_COLORS = [
-    (0.85, 0.45, 0.15),
-    (0.75, 0.25, 0.12),
-    (0.9, 0.65, 0.2),
-    (0.55, 0.3, 0.12),
-]
-_PETAL_COLORS = [(1.0, 0.75, 0.82), (0.98, 0.85, 0.9), (1.0, 0.65, 0.75)]
-
-
-def season_mode(now: datetime.datetime, is_night: bool) -> str:
-    """The particle mode "auto" resolves to for this date and time."""
-    month = now.month
-    if month in (12, 1, 2):
-        return "snow"
-    if month in (3, 4, 5):
-        return "petals"
-    if month in (9, 10, 11):
-        return "leaves"
-    return "fireflies" if is_night else "off"
-
-
-class ParticleField:
-    def __init__(self):
-        self.mode = "off"
-        self.particles: list[Particle] = []
-        self._size = (0, 0)
-
-    def configure(self, mode: str, width: int, height: int):
-        if mode == self.mode and (width, height) == self._size:
-            return
-        self.mode, self._size = mode, (width, height)
-        count = {
-            "snow": width * height // 30000,
-            "leaves": width * height // 90000,
-            "petals": width * height // 80000,
-            "fireflies": width * height // 70000,
-        }.get(mode, 0)
-        self.particles = [
-            self._spawn(width, height, anywhere=True) for _ in range(count)
-        ]
-
-    def _spawn(self, width: int, height: int, anywhere: bool = False) -> Particle:
-        rnd = random.random
-        x = rnd() * width
-        y = rnd() * height if anywhere else -20.0
-        match self.mode:
-            case "snow":
-                size = 1.2 + rnd() * 2.8
-                return Particle(
-                    x, y, 0, 15 + size * 10, size, rnd() * 6.3, 0, (1, 1, 1)
-                )
-            case "leaves":
-                return Particle(
-                    x, y, 10 * (rnd() - 0.3), 30 + rnd() * 35, 6 + rnd() * 6,
-                    rnd() * 6.3, (rnd() - 0.5) * 2, random.choice(_LEAF_COLORS),
-                )  # fmt: skip
-            case "petals":
-                return Particle(
-                    x, y, 15 * rnd(), 22 + rnd() * 25, 4 + rnd() * 4,
-                    rnd() * 6.3, (rnd() - 0.5) * 2.5, random.choice(_PETAL_COLORS),
-                )  # fmt: skip
-            case _:  # fireflies wander anywhere in the lower part of the screen
-                return Particle(
-                    x, height * (0.35 + rnd() * 0.6), 0, 0, 1.5 + rnd() * 1.5,
-                    rnd() * 6.3, rnd() * 6.3, (1.0, 0.92, 0.45),
-                )  # fmt: skip
-
-    def step(self, dt: float, t: float):
-        width, height = self._size
-        for i, p in enumerate(self.particles):
-            if self.mode == "fireflies":
-                p.spin += (random.random() - 0.5) * 2 * dt
-                p.x += math.cos(p.spin) * 18 * dt
-                p.y += math.sin(p.spin) * 12 * dt
-                if not (0 < p.x < width and height * 0.25 < p.y < height):
-                    p.spin += math.pi
-                continue
-            sway = math.sin(t * 0.8 + p.phase) * (25 if self.mode == "snow" else 40)
-            p.x += (p.vx + sway) * dt
-            p.y += p.vy * dt
-            p.phase += p.spin * dt
-            if p.y > height + 20 or p.x < -40 or p.x > width + 40:
-                self.particles[i] = self._spawn(width, height)
-
-    def draw(self, cr: cairo.Context, t: float):
-        for p in self.particles:
-            match self.mode:
-                case "snow":
-                    cr.set_source_rgba(1, 1, 1, 0.55 + p.size / 12)
-                    cr.arc(p.x, p.y, p.size, 0, 2 * math.pi)
-                    cr.fill()
-                case "leaves" | "petals":
-                    cr.save()
-                    cr.translate(p.x, p.y)
-                    cr.rotate(p.phase)
-                    cr.scale(1, 0.5 + 0.3 * math.sin(p.phase * 1.7))
-                    cr.arc(0, 0, p.size, 0, 2 * math.pi)
-                    cr.restore()
-                    cr.set_source_rgba(*p.color, 0.8)
-                    cr.fill()
-                case "fireflies":
-                    glow = 0.35 + 0.65 * (0.5 + 0.5 * math.sin(t * 2 + p.phase))
-                    radius = p.size * 5
-                    gradient = cairo.RadialGradient(p.x, p.y, 0, p.x, p.y, radius)
-                    gradient.add_color_stop_rgba(0, *p.color, 0.9 * glow)
-                    gradient.add_color_stop_rgba(0.25, *p.color, 0.35 * glow)
-                    gradient.add_color_stop_rgba(1, *p.color, 0)
-                    cr.set_source(gradient)
-                    cr.arc(p.x, p.y, radius, 0, 2 * math.pi)
-                    cr.fill()
-
-
 # Prayer arc
 
 PRAYERS = ("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
@@ -275,7 +146,6 @@ class FxLayer(Gtk.DrawingArea):
         self.set_hexpand(True)
         self.set_vexpand(True)
         self.cava = cava
-        self.particles = ParticleField()
         self.prayer_times: dict[str, str] = {}
         self.show_arc = True
         self.show_bars = False
@@ -305,7 +175,6 @@ class FxLayer(Gtk.DrawingArea):
         dt = min(0.1, now - self._last) if self._last is not None else FRAME_MS / 1000
         self._last = now
         self._t += dt
-        self.particles.step(dt, self._t)
         # rise quickly, fall gently
         target = self.cava.bars if self.show_bars else [0.0] * CAVA_BARS
         self._bars = [
@@ -314,17 +183,10 @@ class FxLayer(Gtk.DrawingArea):
         self.queue_draw()
         return True
 
-    def configure_particles(self, mode: str):
-        self.particles.configure(
-            mode, self.get_allocated_width(), self.get_allocated_height()
-        )
-
     # Drawing
 
     def _on_draw(self, widget: Gtk.Widget, cr: cairo.Context):
         w, h = widget.get_allocated_width(), widget.get_allocated_height()
-        if self.particles.mode != "off":
-            self.particles.draw(cr, self._t)
         if self.show_arc and self.prayer_times:
             self._draw_arc(cr, w, h)
         if any(b > 0.01 for b in self._bars):

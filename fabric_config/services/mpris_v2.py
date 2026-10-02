@@ -1,6 +1,7 @@
 from gi.repository.GLib import Variant
 
 
+from collections.abc import Callable
 from typing import Literal, Optional, cast
 
 import gi
@@ -19,6 +20,8 @@ gi.require_version("Gtk", "3.0")
 from gi.repository import Gio, GLib  # noqa: E402
 
 MPRIS_MEDIAPLAYER_BUS_NAME = "org.mpris.MediaPlayer2"
+# how long play_pause() shows its expected status without confirmation
+EXPECTED_STATUS_TIMEOUT_MS = 2000
 MPRIS_MEDIAPLAYER_BUS_PATH = "/org/mpris/MediaPlayer2"
 # MPRIS_MEDIAPLAYER_BUS_IFACE_NODE = load_dbus_xml(
 #     get_relative_path("service_assets/org.mpris.MediaPlayer2.xml")
@@ -51,6 +54,10 @@ class MprisPlayer(Service):
 
     @Property(str, "readable")
     def playback_status(self) -> Literal["Playing", "Paused", "Stopped"]:
+        # play_pause() answers right away with the expected status, until the
+        # player confirms it (browsers can take a noticeable moment)
+        if self._expected_status is not None:
+            return self._expected_status
         return cast(
             Literal["Playing", "Paused", "Stopped"],
             self._cached_string("PlaybackStatus", "Stopped"),
@@ -182,6 +189,8 @@ class MprisPlayer(Service):
         super().__init__(**kwargs)
         self.bus_name: str = bus_name
         self._proxy: Gio.DBusProxy
+        self._expected_status: Literal["Playing", "Paused", "Stopped"] | None = None
+        self._expected_timeout: int | None = None
 
         # Ahoy!
         self.do_register()
@@ -254,6 +263,8 @@ class MprisPlayer(Service):
     def _do_handle_properties_changed(
         self, proxy: Gio.DBusProxy, changed_properties, invalidated_properties: str
     ):
+        if "PlaybackStatus" in changed_properties.keys():
+            self._clear_expected_status(notify=False)
         for prop_name in set(
             [
                 snake_case_to_kebab_case(pascal_case_to_snake_case(x))
@@ -316,8 +327,57 @@ class MprisPlayer(Service):
         self._proxy_call("Pause", None) if self.can_pause else None
 
     def play_pause(self):
-        self._proxy_call("PlayPause", None) if self.can_pause else logger.error(
-            f"[MPRIS-{self.bus_name}] `play_pause` is not supported by this player"
+        if not self.can_pause:
+            logger.error(
+                f"[MPRIS-{self.bus_name}] `play_pause` is not supported by this player"
+            )
+            return
+        self._expect_status(
+            "Paused" if self.playback_status == "Playing" else "Playing"
+        )
+        self._proxy_call("PlayPause", None)
+
+    def _expect_status(self, status: Literal["Playing", "Paused", "Stopped"]):
+        """Show `status` now; the player's own report replaces it."""
+        self._clear_expected_status(notify=False)
+        self._expected_status = status
+        # if the player never confirms, fall back to what it last reported
+        self._expected_timeout = GLib.timeout_add(
+            EXPECTED_STATUS_TIMEOUT_MS, self._clear_expected_status
+        )
+        self.notifier("playback-status")
+
+    def _clear_expected_status(self, notify: bool = True) -> bool:
+        if self._expected_timeout is not None:
+            GLib.source_remove(self._expected_timeout)
+            self._expected_timeout = None
+        if self._expected_status is not None:
+            self._expected_status = None
+            if notify:
+                self.notifier("playback-status")
+        return False
+
+    def fetch_position(self, callback: Callable[[int], None]):
+        """
+        The player's real position in microseconds, asynchronously. The
+        cached Position is only as fresh as the last GetAll, since players
+        don't announce position changes.
+        """
+
+        def on_done(proxy: Gio.DBusProxy, result: Gio.AsyncResult):
+            try:
+                value = proxy.call_finish(result)[0]
+                callback(int(value))
+            except Exception:
+                callback(self.position)
+
+        self._proxy.call(
+            "org.freedesktop.DBus.Properties.Get",
+            GLib.Variant("(ss)", (MPRIS_MEDIAPLAYER_PLAYER_BUS_NAME, "Position")),
+            Gio.DBusCallFlags.NONE,
+            1000,
+            None,
+            on_done,
         )
 
     def stop(self):
