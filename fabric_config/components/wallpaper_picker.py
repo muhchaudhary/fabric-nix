@@ -16,7 +16,7 @@ from loguru import logger
 
 from fabric_config.utils.process import run_command_async
 from fabric_config.widgets.popup_window_v2 import PopupWindow
-from fabric_config.widgets.wallpaper_tile import WallpaperTile
+from fabric_config.widgets.rounded_cover_image import RoundedCoverImage
 
 WALLPAPER_DIR = os.path.join(GLib.get_home_dir(), "wallpapers")
 WALLPAPER_THUMBS_DIR = os.path.join(WALLPAPER_DIR, ".thumbs")
@@ -117,7 +117,7 @@ class WallpaperCard(Button):
         self.wp_thumb_path = os.path.join(
             WALLPAPER_THUMBS_DIR, f"{THUMB_SIZE}_{wallpaper_name}"
         )
-        self.tile = WallpaperTile(TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
+        self.tile = RoundedCoverImage(TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
 
         badge = Box(
             name="wallpaper-current-badge",

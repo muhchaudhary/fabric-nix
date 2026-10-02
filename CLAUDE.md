@@ -62,7 +62,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `dock.py` | Auto-hiding dock (Glace) with hover window previews |
 | `app_menu.py` | Application launcher |
 | `system_osd.py` | On-screen display for volume/brightness |
-| `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/wallpaper_tile.py` |
+| `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
 | `desktop_widget.py` | Desktop clock (`ClockWidget`) |
 
 ### Popup windows (`fabric_config/widgets/popup_window_v2.py`)
