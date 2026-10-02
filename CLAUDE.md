@@ -46,7 +46,7 @@ basedpyright .        # type check
 ### Entry points
 
 - `run_fabric.py` → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
-- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`. Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
+- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
 
 ### Components (`fabric_config/components/`)
 
@@ -82,6 +82,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `screen_record.py` — Screen recording/screenshot via wf-recorder/slurp/hyprshot
 - `clipboard_history.py` — cliphist-backed clipboard history
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)
+- `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 
 Networking uses AstalNetwork (`config.network`) directly, plus the NM API for connecting/forgetting Wi-Fi (no `nmcli`, so passwords never appear in argv).
 
@@ -96,7 +97,7 @@ SCSS, compiled with `sass` (dart-sass) at startup into `~/.cache/fabric/css/main
 - `_global-classes.scss` — shared utility classes (`.button-basic`, `.button-border`, `.cool-border`, etc.)
 - `components/` — per-component partials, registered in `components/_components.scss`
 
-Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables).
+Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables). Fabric compiles them to `@define-color`/`@name`, and GTK takes a named colour from the highest-priority provider that defines it: `config.wallpaper_accent` overrides `@accent` that way, so the accent follows the wallpaper without recompiling SCSS. Between providers GTK goes by priority, not selector specificity.
 
 `apply_style` DBus action recompiles and hot-reloads CSS without restarting; Python changes need a restart.
 

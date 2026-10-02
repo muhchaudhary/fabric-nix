@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Literal
 
-from fabric.utils import monitor_file
 from fabric.widgets.box import Box
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
@@ -17,12 +16,7 @@ from fabric.widgets.wayland import WaylandWindow
 from gi.repository import Gdk, GLib, Gtk
 from loguru import logger
 
-from fabric_config.utils.accent import grab_dominant_color_threaded
-from fabric_config.utils.wallpaper import (
-    LAST_WALLPAPER_FILE,
-    query_active_wallpapers,
-    wallpaper_for_monitor,
-)
+import fabric_config.config as config
 
 # Layout. POSITION picks where the clock sits on each monitor. Everything is
 # sized from the monitor's height, so screens of different resolutions get a
@@ -487,10 +481,6 @@ class DesktopClocks:
     def __init__(self):
         self.settings = ClockSettings()
         self.windows: list[ClockWidget] = []
-        self._accent_cache: dict[str, Accent | None] = {}
-        # windows waiting on an extraction already running for that path
-        self._accent_waiting: dict[str, list[ClockWidget]] = {}
-        self._accent_timer: int | None = None
 
         display = Gdk.Display.get_default()
         if display is None:
@@ -507,13 +497,9 @@ class DesktopClocks:
             lambda *_: [w.update_prayer() for w in self.windows],
         )
 
-        # the wallpaper picker saves its choice here; startup scripts may set
-        # one directly, so ask hyprpaper too
-        self._wallpaper_monitor = monitor_file(LAST_WALLPAPER_FILE)
-        self._wallpaper_monitor.connect(
-            "changed", lambda *_: self._update_accents_soon()
-        )
-        GLib.timeout_add(1500, lambda: self.update_accents() or False)
+        # tint each clock from its own monitor's wallpaper
+        config.wallpaper_accent.connect("changed", lambda *_: self.update_accents())
+        self.update_accents()
 
     def _monitor_names(self) -> list[str]:
         screen = self.display.get_default_screen()
@@ -561,48 +547,7 @@ class DesktopClocks:
 
     # Wallpaper accent
 
-    def _update_accents_soon(self):
-        # one save fires several file events, and hyprpaper switches a moment
-        # after the picker saves: wait for the burst to settle, then update once
-        if self._accent_timer is not None:
-            GLib.source_remove(self._accent_timer)
-
-        def fire():
-            self._accent_timer = None
-            self.update_accents()
-            return False
-
-        self._accent_timer = GLib.timeout_add(500, fire)
-
     def update_accents(self):
-        def on_active(active: dict[str, str]):
-            for window in self.windows:
-                path = active.get(window.monitor_name) or wallpaper_for_monitor(
-                    window.monitor_name
-                )
-                if path:
-                    self._apply_accent(window, path)
-
-        query_active_wallpapers(on_active)
-
-    def _apply_accent(self, window: ClockWidget, path: str):
-        if path in self._accent_cache:
-            window.set_accent(self._accent_cache[path])
-            return
-
-        waiting = self._accent_waiting.get(path)
-        if waiting is not None:
-            # same wallpaper on another monitor: share the running extraction
-            waiting.append(window)
-            return
-        self._accent_waiting[path] = [window]
-
-        def on_color(rgb):
-            accent = readable_accent(rgb) if rgb else None
-            self._accent_cache[path] = accent
-            for waiting_window in self._accent_waiting.pop(path, []):
-                if waiting_window in self.windows:
-                    waiting_window.set_accent(accent)
-            return False
-
-        grab_dominant_color_threaded(path, on_color)
+        for window in self.windows:
+            rgb = config.wallpaper_accent.color_for(window.monitor_name)
+            window.set_accent(readable_accent(rgb) if rgb else None)
