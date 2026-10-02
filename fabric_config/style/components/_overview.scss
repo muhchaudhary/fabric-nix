@@ -2,41 +2,102 @@
 @use '../mixins' as *;
 
 #overview-window {
-  @include panel($radius-xl);
+  @include panel($radius-xl + 8px);
+  padding: 20px;
+}
+
+/* ---- header (matches the wallpaper picker) ---------------------------- */
+
+#overview-header { padding: 0px 4px; }
+
+#overview-title {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+#overview-subtitle {
+  font-size: 12px;
+  color: var(--fg-dim);
+}
+
+#overview-hint {
+  font-size: 12px;
+  color: var(--fg-dim2);
+}
+
+/* ---- workspace cards ------------------------------------------------ */
+
+/* ring around the wallpaper card; radius = card radius (14) + padding */
+#overview-workspace {
+  padding: 3px;
+  border-radius: 17px;
+  border: 2px solid transparent;
+  @include transition(border-color background-color);
+
+  &:hover { border-color: a(var(--fg), 0.25); }
+
+  /* shown on some monitor */
+  &.active { border-color: a(var(--accent), 0.55); }
+
+  /* the focused workspace */
+  &.focused {
+    border-color: var(--accent);
+    background-color: a(var(--accent), 0.12);
+  }
+
+  /* a window is being dragged over it */
+  &.drop-target {
+    border-color: var(--accent);
+    background-color: a(var(--accent), 0.25);
+  }
+}
+
+/* darken the wallpaper a touch so windows and chips stand out */
+#overview-workspace-dim {
+  border-radius: 14px;
+  background-color: a(black, 0.18);
+}
+
+#overview-workspace.empty #overview-workspace-dim { background-color: a(black, 0.35); }
+#overview-workspace.empty:hover #overview-workspace-dim { background-color: a(black, 0.2); }
+
+#overview-workspace-chip,
+#overview-monitor-chip {
+  margin: 8px;
+  min-height: 22px;
+  border-radius: $radius-pill;
+  background-color: a(black, 0.6);
+  border: 1px solid a(white, 0.18);
+
+  label {
+    font-size: 12px;
+    font-weight: 700;
+    color: white;
+    padding: 0px 7px;
+  }
+}
+
+#overview-workspace-chip { min-width: 22px; }
+#overview-monitor-chip label { font-size: 11px; font-weight: 600; padding: 0px 8px; }
+
+#overview-workspace.focused #overview-workspace-chip { background-color: var(--accent); border-color: transparent; }
+#overview-workspace.focused #overview-workspace-chip label { color: var(--bg); }
+
+/* ---- windows -------------------------------------------------------- */
+
+#overview-client-box {
+  padding: 0px;
+  border-radius: 9px;
+  border: 1px solid a(white, 0.18);
+  background-color: a(black, 0.35);
+  @include transition(border-color);
+
+  &:hover { border-color: var(--accent); }
 }
 
 #overview-icon {
   margin: 6px;
-  background-color: a(var(--fg), 0.06);
-  border-radius: 14px;
-  border-width: 1px;
-  border-style: solid;
-  border-color: a(var(--fg), 0.12);
-  padding: 5px;
-  @include transition(background-color border-color);
-}
-
-#overview-client-box,
-#overview-workspace-bg,
-#overview-frame { border-radius: 10px; }
-
-#overview-client-box {
-  background-color: a(var(--accent), 0.85);
-  @include transition(background-color);
-
-  &:hover  { background-color: a(var(--accent), 0.6); }
-  &:active { background-color: var(--accent); }
-}
-
-#overview-workspace-bg {
-  background-color: a(var(--fg), 0.06);
-  border-style: solid;
-  border-width: 1px;
-  border-color: a(var(--fg), 0.1);
-}
-
-#overview-workspace-box {
-  padding: $gap-md;
-
-  label { margin-top: $gap-md; font-size: 22px; font-weight: 600; }
+  padding: 4px;
+  border-radius: $radius-sm;
+  background-color: a(black, 0.5);
 }
