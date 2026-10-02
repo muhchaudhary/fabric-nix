@@ -39,6 +39,7 @@ let
     sox # play (notification sound)
     dconf
     pulseaudio # pactl (default sink/source lookup)
+    cava # desktop audio visualizer
   ];
 in
 buildPythonApplication {

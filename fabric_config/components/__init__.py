@@ -1,6 +1,6 @@
 from .app_menu import AppMenu
 from .bar.bar import StatusBarSeperated
-from .desktop_widget import ClockWidget, DesktopClocks
+from .desktop import DesktopManager
 from .notification_popup import NotificationPopup
 
 # from .overview import Overview
@@ -10,8 +10,7 @@ from .system_osd import SystemOSD
 __all__ = [
     "AppMenu",
     "StatusBarSeperated",
-    "ClockWidget",
-    "DesktopClocks",
+    "DesktopManager",
     "NotificationPopup",
     # "Overview",
     "QuickSettings",
