@@ -37,8 +37,21 @@
                 });
                 # Stubs default to GTK4; this project (and Fabric) use GTK3.
                 # Overridden in the scope so transitive users get the same build.
-                pygobject-stubs = pyprev.pygobject-stubs.overridePythonAttrs (_: {
+                pygobject-stubs = pyprev.pygobject-stubs.overridePythonAttrs (old: {
                   PYGOBJECT_STUB_CONFIG = "Gtk3,Gdk3";
+                  # Mark the stubs partial (PEP 561) so type checkers fall back to
+                  # the real gi package for modules they don't cover, such as
+                  # gi._propertyhelper, which Fabric's Property subclasses
+                  # Also add stubs for the typelibs it doesn't ship (Gray, NM, ...)
+                  postInstall = (old.postInstall or "") + ''
+                    echo partial > $out/${pyfinal.python.sitePackages}/gi-stubs/py.typed
+                    cp ${
+                      final.callPackage ./nix/gi-extra-stubs.nix {
+                        python3 = prev.${pythonAttr};
+                        pygobject-stubs-src = pyprev.pygobject-stubs;
+                      }
+                    }/*.pyi $out/${pyfinal.python.sitePackages}/gi-stubs/repository/
+                  '';
                 });
                 python-fabric = final.callPackage "${inputs.fabric}/default.nix" {
                   python312Packages = pyfinal;

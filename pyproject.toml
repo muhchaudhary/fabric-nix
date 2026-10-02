@@ -22,3 +22,21 @@ find = { namespaces = true }
 "fabric_config.assets" = ["**"]
 "fabric_config.services.service_assets" = ["**"]
 
+
+[tool.basedpyright]
+# also what VS Code uses: with this section present, the editor's
+# basedpyright.analysis.* settings are ignored
+typeCheckingMode = "basic"
+# gi.repository modules (Gtk, GLib, ...) are generated at runtime from
+# typelibs, so they only ever exist as stubs and never have a "source"
+reportMissingModuleSource = false
+# honour the existing `# type: ignore` comments (basedpyright ignores them
+# by default)
+enableTypeIgnoreComments = true
+# Fabric widgets mix a GTK class with fabric's Widget (e.g.
+# `class X(Gtk.DrawingArea, Widget)`); GObject chains their constructors
+reportUnsafeMultipleInheritance = false
+# fabric's Property isn't a builtins.property subclass, so every
+# `@Property def x` + `@x.setter def x` pair counts as a redeclaration;
+# ruff's F811 still catches real duplicate definitions
+reportRedeclaration = false
