@@ -38,6 +38,7 @@ let
     xdg-utils
     sox # play (notification sound)
     dconf
+    pulseaudio # pactl (default sink/source lookup)
   ];
 in
 buildPythonApplication {
