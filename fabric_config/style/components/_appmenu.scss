@@ -5,21 +5,18 @@
 #appmenu-corner * { background-color: var(--bg-glass); }
 
 #appmenu {
-  padding: 20px;
+  padding: $gap-lg $gap-lg $gap-md $gap-lg;
   border-top-right-radius: $radius-pill;
   border-bottom-right-radius: $radius-pill;
   min-height: 600px;
-  min-width: 350px;
+  min-width: 400px;
   border-style: none;
 }
 
 /* Search entry */
-#appmenu-entry,
-#appmenu-button label { font-family: "Roboto", "Helvetica Neue", sans-serif; }
-
 #appmenu-entry {
   background-color: a(var(--fg), 0.07);
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   padding: $gap-sm $gap-md;
   color: var(--fg);
@@ -28,54 +25,67 @@
   border-style: solid;
   border-width: 1px;
   border-color: a(var(--fg), 0.1);
-  transition: min-width 0.4s cubic-bezier(0.33, 1.29, 1, 1.15),
-              border-color 0.2s ease;
+  @include transition(border-color background-color);
 
-  &:focus { border-color: a(var(--accent), 0.5); }
-  &.active { min-width: 260px; }
+  &:focus {
+    background-color: a(var(--fg), 0.1);
+    border-color: a(var(--accent), 0.5);
+  }
 
-  image { color: var(--fg-dim); margin-right: 6px; }
+  image { color: var(--fg-dim); margin-right: $gap-sm; }
 
-  selection,
-  &.active selection {
+  selection {
     background-color: a(var(--accent), 0.35);
     color: var(--fg);
   }
 }
 
 #appmenu-scroll slider {
-  border-width: 1px;
-  border-color: a(var(--fg), 0.2);
+  min-width: 4px;
+  background-color: a(var(--fg), 0.2);
   border-radius: $radius-xl;
-  border-style: solid;
 }
 
-/* App slots */
-@keyframes app-slot-shine {
-  50%  { background-color: a(var(--fg), 0.15); padding: 10px 5px; }
-  100% { background-color: unset; }
+/* Section headers and messages */
+#appmenu-section {
+  color: var(--fg-dim);
+  font-size: 12px;
+  font-weight: 700;
+  margin: $gap-md $gap-sm $gap-xs;
 }
 
+#appmenu-message {
+  color: var(--fg-dim);
+  font-size: 14px;
+  margin-top: $gap-lg * 2;
+}
+
+#appmenu-hints {
+  color: var(--fg-dim2);
+  font-size: 11px;
+}
+
+/* Result rows */
 #appmenu-button {
-  background-color: a(var(--fg), 0.05);
-  margin: $gap-xs;
-  padding: 10px $gap-md;
+  background-color: transparent;
+  padding: 6px $gap-sm;
   border-radius: $radius-md;
   border-style: solid;
   border-width: 1px;
   border-color: transparent;
   @include transition(background-color border-color);
 
-  label { font-weight: 600; font-size: 15px; }
+  &:hover   { background-color: a(var(--fg), 0.07); }
+  &.default { background-color: a(var(--fg), 0.1); }
+  &:focus   { background-color: a(var(--fg), 0.12); border-color: a(var(--accent), 0.4); }
+  &:active  { background-color: a(var(--accent), 0.25); border-color: a(var(--accent), 0.5); }
 
-  &.shine { animation: app-slot-shine 0.3s ease; }
-  &:hover  { background-color: a(var(--fg), 0.1);  border-color: a(var(--fg), 0.1); }
-  &:focus  { background-color: a(var(--fg), 0.15); border-color: a(var(--accent), 0.4); }
-  &:active { background-color: a(var(--accent), 0.25); border-color: a(var(--accent), 0.5); }
+  &.hidden-app { opacity: 0.6; }
 }
 
-#appmenu-app-name { color: var(--fg); }
-#appmenu-app-desc { font-style: italic; color: var(--fg-dim); }
+#appmenu-app-name { color: var(--fg); font-size: 14px; font-weight: 600; }
+#appmenu-app-desc { color: var(--fg-dim); font-size: 12px; }
+#appmenu-glyph    { font-size: 22px; }
 
 /* App sidebar */
 #app-bar {
