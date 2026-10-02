@@ -1,11 +1,14 @@
+import hashlib
+import json
 import os
 import re
-import shlex
-import threading
-from typing import Callable
+import uuid
+from collections import deque
+from dataclasses import dataclass
+from typing import Callable, Literal
 
 import gi
-from fabric import Fabricator, Property, Service, Signal
+from fabric import Property, Service, Signal
 from loguru import logger
 
 from fabric_config.utils.uri import file_uri_to_path
@@ -13,328 +16,549 @@ from fabric_config.utils.uri import file_uri_to_path
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gio, GLib  # noqa: E402
 
-_BINARY_RE = re.compile(r"\[\[ binary data .* \]\]")
+# "[[ binary data 82 KiB png 535x440 ]]"
+_BINARY_RE = re.compile(
+    r"^\[\[ binary data (?P<size>\S+ \S+) (?P<format>\w+)(?: (?P<w>\d+)x(?P<h>\d+))? \]\]$"
+)
+# cliphist marks previews cut at -preview-width with a trailing ellipsis
+_TRUNCATED_SUFFIX = "…"
 
-SUPPORTED_MIME_TYPES = [
-    mime_type for fmt in GdkPixbuf.Pixbuf.get_formats() for mime_type in fmt.mime_types
-]
-SUPPORTED_FILE_EXTENSIONS = [
-    file_extension
-    for fmt in GdkPixbuf.Pixbuf.get_formats()
-    for file_extension in fmt.extensions
-]
+THUMBNAIL_WIDTH = 720  # ~2x the card width, for HiDPI
+THUMBNAIL_HEIGHT = 480
+MAX_CONCURRENT_DECODES = 2
 
-# TODO: Assign a fixed number of image loading threads
-# TODO: make these cancelable
+SUPPORTED_IMAGE_EXTENSIONS = {
+    ext for fmt in GdkPixbuf.Pixbuf.get_formats() for ext in fmt.get_extensions()
+}
+
+PINS_DIR = os.path.join(GLib.get_user_data_dir(), "fabric", "clipboard")
+PINS_FILE = os.path.join(PINS_DIR, "pins.json")
+
+EntryKind = Literal["text", "image", "html", "file"]
 
 
-def get_pixbuf_for_data_threaded(data: bytes, callback: Callable):
-    def thread_function():
+@dataclass(frozen=True)
+class ClipEntry:
+    """One `cliphist list` row. `preview` is cliphist's (possibly truncated) text."""
+
+    id: str
+    preview: str
+    kind: EntryKind
+    image_format: str | None = None  # for images, e.g. "png"
+    size_label: str | None = None  # for images, e.g. "82 KiB"
+    dimensions: tuple[int, int] | None = None  # for images
+
+    @property
+    def truncated(self) -> bool:
+        return self.kind == "text" and self.preview.endswith(_TRUNCATED_SUFFIX)
+
+    @property
+    def path(self) -> str | None:
+        return self.preview if self.kind == "file" else None
+
+
+@dataclass
+class Pin:
+    """A pinned item, stored independently of cliphist so it survives re-copies
+    (which give the entry a new id) and cliphist's max-items pruning."""
+
+    key: str
+    kind: Literal["text", "image"]
+    text: str | None = None  # for text pins
+    file: str | None = None  # for image pins, relative to PINS_DIR
+    mime: str | None = None  # for image pins
+    source_id: str | None = None  # cliphist id it was pinned from, if any
+
+
+def _parse_entry(cliphist_id: str, preview: str) -> ClipEntry:
+    if m := _BINARY_RE.match(preview):
+        dims = (int(m["w"]), int(m["h"])) if m["w"] else None
+        return ClipEntry(
+            cliphist_id,
+            preview,
+            "image",
+            image_format=m["format"],
+            size_label=m["size"],
+            dimensions=dims,
+        )
+    if preview.startswith("<meta") and "<img" in preview:
+        # an image copied from a browser, stored as HTML (the image itself is
+        # usually also stored as a separate binary entry)
+        return ClipEntry(cliphist_id, preview, "html")
+    candidate = preview.strip()
+    if candidate.startswith("file://"):
+        candidate = file_uri_to_path(candidate)
+    if (
+        candidate.startswith("/")
+        and "\n" not in candidate
+        and len(candidate) < 1024
+        and not preview.endswith(_TRUNCATED_SUFFIX)
+        and os.path.exists(candidate)
+    ):
+        return ClipEntry(cliphist_id, candidate, "file")
+    return ClipEntry(cliphist_id, preview, "text")
+
+
+def _cliphist_db_path() -> str:
+    return os.environ.get("CLIPHIST_DB_PATH") or os.path.join(
+        GLib.get_user_cache_dir(), "cliphist", "db"
+    )
+
+
+def _run(
+    argv: list[str],
+    callback: Callable[[bool, bytes], None],
+    stdin: bytes | None = None,
+    capture_stdout: bool = True,
+):
+    """
+    Run argv; callback(success, stdout_bytes) on exit. stdin is closed after
+    writing. Use capture_stdout=False for commands that leave a background
+    child running (wl-copy): the child would keep the pipe open and the
+    callback would never fire.
+    """
+    flags = Gio.SubprocessFlags.STDERR_SILENCE | (
+        Gio.SubprocessFlags.STDOUT_PIPE
+        if capture_stdout
+        else Gio.SubprocessFlags.STDOUT_SILENCE
+    )
+    if stdin is not None:
+        flags |= Gio.SubprocessFlags.STDIN_PIPE
+    try:
+        proc = Gio.Subprocess.new(argv, flags)
+    except GLib.Error as e:
+        logger.error(f"[CLIPBOARD] Failed to start {argv[0]}: {e.message}")
+        callback(False, b"")
+        return
+
+    def on_done(p: Gio.Subprocess, result: Gio.AsyncResult):
         try:
-            loader = GdkPixbuf.PixbufLoader()
-            loader.write(data)
-            loader.close()
-            pixbuf = loader.get_pixbuf()
-            GLib.idle_add(callback, (True, pixbuf))
-        except Exception as _:
-            logger.error("[CLIPBOARD] Failed make get loader for data")
-            GLib.idle_add(callback, (False, None))
-        finally:
-            GLib.idle_add(thread.join)
+            _, out, _ = p.communicate_finish(result)
+        except GLib.Error as e:
+            logger.error(f"[CLIPBOARD] {argv[0]} failed: {e.message}")
+            callback(False, b"")
+            return
+        callback(p.get_successful(), out.get_data() if out else b"")
 
-    thread = threading.Thread(target=thread_function)
-    thread.start()
-
-
-def get_pixbuf_for_file_threaded(file_path: str, callback: Callable):
-    def thread_function():
-        try:
-            pixbuf = GdkPixbuf.Pixbuf.new_from_file(file_path)
-            GLib.idle_add(callback, (True, pixbuf))
-        except Exception as _:
-            logger.error(f"[CLIPBOARD] Failed make pixbuf for file: {file_path}")
-            GLib.idle_add(callback, (False, None))
-        finally:
-            GLib.idle_add(thread.join)
-
-    thread = threading.Thread(target=thread_function)
-    thread.start()
+    proc.communicate_async(
+        GLib.Bytes.new(stdin) if stdin is not None else None, None, on_done
+    )
 
 
 class ClipboardHistory(Service):
     @Signal
     def clipboard_deleted(self, cliphist_id: str) -> str: ...
+
     @Signal
     def clipboard_copied(self, cliphist_id: str) -> str: ...
+
     @Signal
-    def clipboard_data_ready(self, cliphist_id: str) -> str: ...
+    def thumbnail_ready(self, key: str) -> str: ...
 
-    def __init__(self, length_cutoff: int = 5000, file_max_size: int = 5000000):
-        self._length_cutoff = length_cutoff
-        self._file_max_size = file_max_size
-        self._clipboard_history = {}
-        self._decoded_clipboard_history = {}
-        super().__init__()
-        self.wl_paste_watcher = Fabricator(
-            poll_from="wl-paste --watch bash -c ' sleep 0.5 && echo '",
-            stream=True,
-            interval=-1,
-        )
-        self.wl_paste_watcher.connect("changed", lambda *_: self.cliphist_list())
+    @Signal
+    def pins_changed(self) -> None: ...
 
-    def cliphist_list(self):
-        def callback(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                _, stdout, stderr = proc.communicate_utf8_finish(task)
-                self._clipboard_history = {
-                    key: file_uri_to_path(value)
-                    if value.startswith("file://")
-                    else value
-                    for x in stdout.split("\n")[:-1]
-                    for key, value in [x.split("\t", 1)]
-                }
-                # drop decoded data (pixbufs) for entries that no longer exist
-                for stale in set(self._decoded_clipboard_history) - set(
-                    self._clipboard_history
-                ):
-                    del self._decoded_clipboard_history[stale]
-                self.notify("clipboard-history")
-            except Exception as _:
-                logger.error("[CLIPBOARD] Failed to read from `cliphist list`")
+    def __init__(self, **kwargs):
+        self._entries: list[ClipEntry] = []
+        self._by_id: dict[str, ClipEntry] = {}
+        self._thumbnails: dict[str, GdkPixbuf.Pixbuf] = {}
+        self._decode_queue: deque[str] = deque()
+        self._queued: set[str] = set()
+        self._decoding = 0
+        # full-text hashes for truncated entries whose previews collide, so
+        # exact duplicates can be hidden without decoding every entry
+        self._full_hashes: dict[str, str] = {}
+        self._hashing: set[str] = set()
+        self._last_listing = ""
+        self._pins: list[Pin] = self._load_pins()
+        super().__init__(**kwargs)
 
-        process: Gio.Subprocess = Gio.Subprocess.new(
-            ["cliphist", "list"],
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-        )  # type: ignore
-        process.communicate_utf8_async(None, None, callback)
+        # Watch cliphist's database instead of running `wl-paste --watch`: no
+        # extra process (which used to outlive the bar), and it also catches
+        # deletions made elsewhere. Writes come in bursts, so debounce.
+        self._refresh_timeout_id: int | None = None
+        self._db_monitor: Gio.FileMonitor | None = None
+        try:
+            self._db_monitor = Gio.File.new_for_path(_cliphist_db_path()).monitor_file(
+                Gio.FileMonitorFlags.NONE, None
+            )
+            self._db_monitor.connect("changed", lambda *_: self._schedule_refresh())
+        except GLib.Error as e:
+            logger.error(f"[CLIPBOARD] Can't watch cliphist db: {e.message}")
+        self.refresh()
 
-    def cliphist_decode(self, cliphist_id: str, callback: Callable):
-        process = Gio.Subprocess.new(
-            ["cliphist", "decode", str(cliphist_id)],
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-        )
-        process.communicate_async(None, None, callback)
+    # ---- history ---------------------------------------------------------
 
-    def cliphist_copy(self, cliphist_id: str):
-        def on_done(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                proc.wait_finish(task)
-                self.emit("clipboard-copied", cliphist_id)
-            except Exception as e:
-                logger.error(f"[CLIPBOARD] Failed to copy id: {cliphist_id}: {e}")
+    @Property(object, "readable")
+    def entries(self) -> list[ClipEntry]:
+        """Newest first, with exact duplicate text entries removed."""
+        return self._entries
 
-        process = Gio.Subprocess.new(
-            [
-                "/bin/sh",
-                "-c",
-                f"cliphist decode {shlex.quote(str(cliphist_id))} | wl-copy",
-            ],
-            Gio.SubprocessFlags.STDERR_PIPE,
-        )
-        process.wait_async(None, on_done)
+    @Property(dict, "readable")
+    def clipboard_history(self) -> dict:
+        # kept for compatibility: id -> preview
+        return {e.id: e.preview for e in self._entries}
 
-    def cliphist_delete(self, cliphist_ids: str | list[str], on_done=None):
+    def get_entry(self, cliphist_id: str) -> ClipEntry | None:
+        return self._by_id.get(cliphist_id)
+
+    def _schedule_refresh(self):
+        if self._refresh_timeout_id is not None:
+            GLib.source_remove(self._refresh_timeout_id)
+        self._refresh_timeout_id = GLib.timeout_add(150, self._do_scheduled_refresh)
+
+    def _do_scheduled_refresh(self):
+        self._refresh_timeout_id = None
+        self.refresh()
+        return False
+
+    def refresh(self, on_done: Callable[[], None] | None = None):
+        def on_list(ok: bool, out: bytes):
+            if ok:
+                self._set_entries(out.decode("utf-8", errors="replace"))
+            else:
+                logger.error("[CLIPBOARD] `cliphist list` failed")
+            if on_done:
+                on_done()
+
+        _run(["cliphist", "list"], on_list)
+
+    def _set_entries(self, listing: str):
+        self._last_listing = listing
+        parsed: list[ClipEntry] = []
+        for line in listing.splitlines():
+            cliphist_id, sep, preview = line.partition("\t")
+            if not sep:
+                continue
+            entry = self._by_id.get(cliphist_id)
+            if entry is None or entry.preview != preview:
+                entry = _parse_entry(cliphist_id, preview)
+            parsed.append(entry)
+
+        # cliphist only de-duplicates against its most recent entries, so hide
+        # older exact copies. Complete previews compare directly; truncated ones
+        # only match once their full texts are known to be equal.
+        preview_counts: dict[str, int] = {}
+        for e in parsed:
+            if e.truncated:
+                preview_counts[e.preview] = preview_counts.get(e.preview, 0) + 1
+        to_hash = [
+            e.id
+            for e in parsed
+            if e.truncated
+            and preview_counts[e.preview] > 1
+            and e.id not in self._full_hashes
+        ]
+
+        entries: list[ClipEntry] = []
+        seen: set[str] = set()
+        for e in parsed:
+            if e.kind == "text" and not e.truncated:
+                key = "text:" + e.preview
+            elif e.truncated and e.id in self._full_hashes:
+                key = "hash:" + self._full_hashes[e.id]
+            else:
+                key = "id:" + e.id
+            if key in seen:
+                continue
+            seen.add(key)
+            entries.append(e)
+
+        self._entries = entries
+        self._by_id = {e.id: e for e in entries}
+        # free thumbnails of entries that are gone (pin thumbnails use "pin:" keys)
+        for key in [k for k in self._thumbnails if not k.startswith("pin:")]:
+            if key not in self._by_id:
+                del self._thumbnails[key]
+        listed = {e.id for e in parsed}
+        for key in [k for k in self._full_hashes if k not in listed]:
+            del self._full_hashes[key]
+        self.notify("entries")
+        self.notify("clipboard-history")
+        self._hash_entries(to_hash)
+
+    def _hash_entries(self, ids: list[str]):
+        pending = [i for i in ids if i not in self._hashing]
+        if not pending:
+            return
+        self._hashing.update(pending)
+        remaining = len(pending)
+
+        def on_decoded(cliphist_id: str, ok: bool, data: bytes):
+            nonlocal remaining
+            self._hashing.discard(cliphist_id)
+            # record failures as unique values so they aren't retried in a loop
+            self._full_hashes[cliphist_id] = (
+                hashlib.sha1(data).hexdigest() if ok else f"unhashable:{cliphist_id}"
+            )
+            remaining -= 1
+            if remaining == 0:
+                # re-evaluate duplicates now that the full texts are known
+                self._set_entries(self._last_listing)
+
+        for cliphist_id in pending:
+            _run(
+                ["cliphist", "decode", cliphist_id],
+                lambda ok, data, i=cliphist_id: on_decoded(i, ok, data),
+            )
+
+    # ---- thumbnails ------------------------------------------------------
+
+    def get_thumbnail(self, key: str) -> GdkPixbuf.Pixbuf | None:
+        return self._thumbnails.get(key)
+
+    def request_thumbnail(self, key: str):
         """
-        Delete one or more items with a single `cliphist delete` process.
-
-        cliphist reads entries from stdin until EOF, so stdin is passed in full
-        and closed via communicate; `on_done` runs once the process exits.
+        Load a downscaled preview for an image/file entry id or a "pin:<key>".
+        Emits thumbnail-ready(key) when available. Decodes run asynchronously,
+        at most MAX_CONCURRENT_DECODES at a time.
         """
-        ids = [cliphist_ids] if isinstance(cliphist_ids, str) else cliphist_ids
+        if key in self._thumbnails:
+            self.thumbnail_ready(key)
+            return
+        if key in self._queued:
+            return
+        self._queued.add(key)
+        self._decode_queue.append(key)
+        self._pump_decode_queue()
+
+    def _pump_decode_queue(self):
+        while self._decoding < MAX_CONCURRENT_DECODES and self._decode_queue:
+            key = self._decode_queue.popleft()
+            self._decoding += 1
+            self._start_decode(key)
+
+    def _finish_decode(self, key: str, pixbuf: GdkPixbuf.Pixbuf | None):
+        self._decoding -= 1
+        self._queued.discard(key)
+        if pixbuf is not None:
+            self._thumbnails[key] = pixbuf
+            self.thumbnail_ready(key)
+        self._pump_decode_queue()
+
+    def _load_scaled(self, stream: Gio.InputStream, key: str):
+        def on_pixbuf(_src, result: Gio.AsyncResult):
+            try:
+                pixbuf = GdkPixbuf.Pixbuf.new_from_stream_finish(result)
+            except GLib.Error as e:
+                logger.debug(f"[CLIPBOARD] No thumbnail for {key}: {e.message}")
+                pixbuf = None
+            self._finish_decode(key, pixbuf)
+
+        GdkPixbuf.Pixbuf.new_from_stream_at_scale_async(
+            stream, THUMBNAIL_WIDTH, THUMBNAIL_HEIGHT, True, None, on_pixbuf
+        )
+
+    def _load_file(self, path: str, key: str):
+        def on_read(file: Gio.File, result: Gio.AsyncResult):
+            try:
+                self._load_scaled(file.read_finish(result), key)
+            except GLib.Error:
+                self._finish_decode(key, None)
+
+        Gio.File.new_for_path(path).read_async(GLib.PRIORITY_LOW, None, on_read)
+
+    def _start_decode(self, key: str):
+        if key.startswith("pin:"):
+            pin = self._pin_by_key(key[4:])
+            if pin is None or pin.file is None:
+                self._finish_decode(key, None)
+                return
+            self._load_file(os.path.join(PINS_DIR, pin.file), key)
+            return
+
+        entry = self._by_id.get(key)
+        if entry is None:
+            self._finish_decode(key, None)
+        elif entry.kind == "image":
+            try:
+                proc = Gio.Subprocess.new(
+                    ["cliphist", "decode", entry.id],
+                    Gio.SubprocessFlags.STDOUT_PIPE
+                    | Gio.SubprocessFlags.STDERR_SILENCE,
+                )
+            except GLib.Error:
+                self._finish_decode(key, None)
+                return
+            self._load_scaled(proc.get_stdout_pipe(), key)
+        elif entry.kind == "file" and entry.path:
+            ext = os.path.splitext(entry.path)[1].lstrip(".").lower()
+            if ext in SUPPORTED_IMAGE_EXTENSIONS and os.path.isfile(entry.path):
+                self._load_file(entry.path, key)
+            else:
+                self._finish_decode(key, None)
+        else:
+            # text and html entries never need decoding; html images are not
+            # fetched, so copying never triggers network requests
+            self._finish_decode(key, None)
+
+    # ---- actions ---------------------------------------------------------
+
+    def copy(self, cliphist_id: str, on_done: Callable[[bool], None] | None = None):
+        entry = self._by_id.get(cliphist_id)
+        if entry is None:
+            if on_done:
+                on_done(False)
+            return
+
+        def on_decoded(ok: bool, data: bytes):
+            if not ok:
+                logger.error(f"[CLIPBOARD] Failed to decode {cliphist_id}")
+                if on_done:
+                    on_done(False)
+                return
+            mime = None
+            if entry.kind == "html":
+                mime = "text/html"  # paste as the image/markup, not as source text
+            elif entry.kind == "image" and entry.image_format:
+                mime = f"image/{entry.image_format}"
+            self._wl_copy(
+                data, mime, lambda ok: self._after_copy(cliphist_id, ok, on_done)
+            )
+
+        _run(["cliphist", "decode", cliphist_id], on_decoded)
+
+    def _after_copy(self, cliphist_id: str, ok: bool, on_done):
+        if ok:
+            self.clipboard_copied(cliphist_id)
+        if on_done:
+            on_done(ok)
+
+    def _wl_copy(self, data: bytes, mime: str | None, on_done: Callable[[bool], None]):
+        argv = ["wl-copy"] + (["--type", mime] if mime else [])
+        _run(argv, lambda ok, _out: on_done(ok), stdin=data, capture_stdout=False)
+
+    def delete(
+        self, cliphist_ids: list[str], on_done: Callable[[], None] | None = None
+    ):
+        """Delete entries with a single `cliphist delete` (reads ids until EOF)."""
         lines = "".join(
-            f"{cliphist_id}\t{self._clipboard_history[cliphist_id]}\n"
-            for cliphist_id in ids
-            if cliphist_id in self._clipboard_history
+            f"{i}\t{self._by_id[i].preview}\n" for i in cliphist_ids if i in self._by_id
         )
         if not lines:
             return
 
-        def callback(proc: Gio.Subprocess, task: Gio.Task):
-            try:
-                proc.communicate_utf8_finish(task)
-            except Exception as e:
-                logger.error(f"[CLIPBOARD] Failed to delete items {ids}: {e}")
+        def on_deleted(ok: bool, _out: bytes):
+            if not ok:
+                logger.error(f"[CLIPBOARD] cliphist delete failed for {cliphist_ids}")
+            for i in cliphist_ids:
+                self.clipboard_deleted(i)
+            # the db monitor also notices, but refresh now so the UI is immediate
+            self.refresh(on_done)
+
+        _run(["cliphist", "delete"], on_deleted, stdin=lines.encode())
+
+    def clear(self, on_done: Callable[[], None] | None = None):
+        """Delete all history. Pins are stored separately and are kept."""
+        self.delete([e.id for e in self._entries], on_done)
+
+    # ---- pins ------------------------------------------------------------
+
+    @Property(object, "readable")
+    def pins(self) -> list[Pin]:
+        return self._pins
+
+    def _pin_by_key(self, key: str) -> Pin | None:
+        return next((p for p in self._pins if p.key == key), None)
+
+    def pin_for_entry(self, cliphist_id: str) -> Pin | None:
+        entry = self._by_id.get(cliphist_id)
+        for pin in self._pins:
+            if pin.source_id == cliphist_id:
+                return pin
+            if (
+                entry is not None
+                and entry.kind == "text"
+                and not entry.truncated
+                and pin.kind == "text"
+                and pin.text == entry.preview
+            ):
+                return pin
+        return None
+
+    def pin(self, cliphist_id: str):
+        entry = self._by_id.get(cliphist_id)
+        if entry is None or self.pin_for_entry(cliphist_id):
+            return
+
+        def on_decoded(ok: bool, data: bytes):
+            if not ok:
+                logger.error(f"[CLIPBOARD] Failed to pin {cliphist_id}")
                 return
-            if not proc.get_successful():
-                logger.error(f"[CLIPBOARD] cliphist delete failed for {ids}")
-                return
-            for cliphist_id in ids:
-                self._decoded_clipboard_history.pop(cliphist_id, None)
-                self.emit("clipboard-deleted", cliphist_id)
-            if on_done:
-                on_done()
-
-        process: Gio.Subprocess = Gio.Subprocess.new(
-            ["cliphist", "delete"],
-            Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
-        )  # type: ignore
-        process.communicate_utf8_async(lines, None, callback)
-
-    def parse_data_binary(self, cliphist_id: str):
-        preview = self._clipboard_history[cliphist_id]
-        info = preview.split()
-        # _size = info[3:5]
-        data_type = info[5]
-        # image_dimensions = tuple(map(int, info[6].split("x")))
-
-        def callback(pixbuf_loader: GdkPixbuf.Pixbuf, task: Gio.Task):
-            try:
-                pixbuf = GdkPixbuf.Pixbuf.new_from_stream_finish(task)
-                self._decoded_clipboard_history[cliphist_id] = pixbuf
-                self.emit("clipboard-data-ready", cliphist_id)
-
-            except Exception as _:
-                logger.error(
-                    f"[CLIPBOARD] Failed to read pixbuf data from cliphist id: {cliphist_id}"
+            key = uuid.uuid4().hex
+            if entry.kind == "image":
+                ext = entry.image_format or "png"
+                file = f"{key}.{ext}"
+                os.makedirs(PINS_DIR, exist_ok=True)
+                with open(os.path.join(PINS_DIR, file), "wb") as f:
+                    f.write(data)
+                pin = Pin(
+                    key, "image", file=file, mime=f"image/{ext}", source_id=cliphist_id
                 )
+                # reuse the already-decoded thumbnail if there is one
+                if cliphist_id in self._thumbnails:
+                    self._thumbnails[f"pin:{key}"] = self._thumbnails[cliphist_id]
+            else:
+                pin = Pin(
+                    key,
+                    "text",
+                    text=data.decode("utf-8", errors="replace"),
+                    source_id=cliphist_id,
+                )
+            self._pins.insert(0, pin)
+            self._save_pins()
+            self.pins_changed()
 
-        process: Gio.Subprocess = Gio.Subprocess.new(
-            ["cliphist", "decode", cliphist_id],
-            Gio.SubprocessFlags.STDOUT_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
-        )  # type: ignore
+        _run(["cliphist", "decode", cliphist_id], on_decoded)
 
-        if data_type in SUPPORTED_FILE_EXTENSIONS:
-            GdkPixbuf.Pixbuf.new_from_stream_async(
-                process.get_stdout_pipe(), None, callback
+    def unpin(self, key: str):
+        pin = self._pin_by_key(key)
+        if pin is None:
+            return
+        self._pins.remove(pin)
+        if pin.file:
+            try:
+                os.remove(os.path.join(PINS_DIR, pin.file))
+            except OSError:
+                pass
+        self._thumbnails.pop(f"pin:{key}", None)
+        self._save_pins()
+        self.pins_changed()
+
+    def copy_pin(self, key: str, on_done: Callable[[bool], None] | None = None):
+        pin = self._pin_by_key(key)
+        if pin is None:
+            if on_done:
+                on_done(False)
+            return
+        if pin.kind == "image" and pin.file:
+            try:
+                with open(os.path.join(PINS_DIR, pin.file), "rb") as f:
+                    data = f.read()
+            except OSError as e:
+                logger.error(f"[CLIPBOARD] Pinned image missing: {e}")
+                if on_done:
+                    on_done(False)
+                return
+            self._wl_copy(data, pin.mime, on_done or (lambda _ok: None))
+        else:
+            self._wl_copy(
+                (pin.text or "").encode(), None, on_done or (lambda _ok: None)
             )
 
-    def parse_html_tag(self, cliphist_id: str):
-        def on_pixbuf_ready(loader, result):
-            try:
-                self._decoded_clipboard_history[cliphist_id] = (
-                    GdkPixbuf.Pixbuf.new_from_stream_finish(result)
-                )
-                self.emit("clipboard-data-ready", cliphist_id)
-            except Exception as e:
-                logger.error(f"[CLIPBOARD] Failed to load pixbuf from stream: {e}")
+    def _load_pins(self) -> list[Pin]:
+        try:
+            with open(PINS_FILE) as f:
+                return [Pin(**p) for p in json.load(f)]
+        except FileNotFoundError:
+            return []
+        except (OSError, ValueError, TypeError) as e:
+            logger.error(f"[CLIPBOARD] Couldn't read pins: {e}")
+            return []
 
-        def on_file_read(stream: Gio.InputStream, task: Gio.Task, _):
-            try:
-                input_stream = stream.read_finish(task)
-                GdkPixbuf.Pixbuf.new_from_stream_async(
-                    input_stream, None, on_pixbuf_ready
-                )
-                input_stream.close_async(GLib.PRIORITY_DEFAULT, None, None)
-            except Exception as _:
-                logger.error(
-                    f"[CLIPBOARD] Failed to download html image from cliphist id: {cliphist_id}"
-                )
-
-        def decode_callback(proc: Gio.Subprocess, task: Gio.Task):
-            # TODO: The image is just read and stored in memory, since the clipboard is
-            #   updated on every new `cliphist list`, this could take some time on slow connections...
-            #
-            #   We can store these images in a cache file instead, will fix copying these since it current is returning an html tag instead
-            try:
-                _, stdout, stderr = proc.communicate_finish(task)
-                img_src = re.search(
-                    r'<img[^>]+src="([^"]+)"', stdout.get_data().decode("utf8")
-                ).group(1)
-                Gio.File.new_for_uri(img_src).read_async(
-                    GLib.PRIORITY_DEFAULT, None, on_file_read, None
-                )
-
-            except Exception as _:
-                logger.error(
-                    f"[CLIPBOARD] Failed to decode html image for cliphist id: {cliphist_id}"
-                )
-
-        self.cliphist_decode(cliphist_id, decode_callback)
-
-    def parse_string(self, cliphist_id: str):
-        decoded_string = ""
-
-        def on_pixbuf_ready(results):
-            nonlocal decoded_string
-            try:
-                _, pbuf = results
-                self._decoded_clipboard_history[cliphist_id] = pbuf
-                self.emit("clipboard-data-ready", cliphist_id)
-            except Exception as _:
-                self._decoded_clipboard_history[cliphist_id] = decoded_string
-                self.emit("clipboard-data-ready", cliphist_id)
-                logger.error(f"[CLIPBOARD] Failed to read pixbuf for: {decoded_string}")
-
-        def callback(proc: Gio.Subprocess, task: Gio.Task):
-            nonlocal decoded_string
-            try:
-                _, stdout, stderr = proc.communicate_finish(task)
-                decoded_string = str(stdout.get_data().decode("utf-8"))
-                if decoded_string.startswith("file://"):
-                    decoded_string = file_uri_to_path(decoded_string.strip())
-
-                content_type, _ = Gio.content_type_guess(None, stdout.get_data())
-                if content_type in SUPPORTED_MIME_TYPES:
-                    get_pixbuf_for_data_threaded(stdout.get_data(), on_pixbuf_ready)
-                    return
-
-                elif not os.path.exists(decoded_string):
-                    self._decoded_clipboard_history[cliphist_id] = decoded_string[
-                        : self._length_cutoff
-                    ]
-                    self.emit("clipboard-data-ready", cliphist_id)
-                    return
-
-                f = Gio.file_new_for_path(decoded_string)
-                info = f.query_info(
-                    "thumbnail::*,standard::size,standard::content-type",
-                    Gio.FileQueryInfoFlags.NONE,
-                    None,
-                )  # type: ignore
-
-                if info.get_attribute_boolean("thumbnail::is-valid-large"):
-                    get_pixbuf_for_file_threaded(
-                        info.get_attribute_as_string("thumbnail::path-large"),
-                        on_pixbuf_ready,
-                    )
-                    return
-                elif info.get_attribute_boolean("thumbnail::is-valid"):
-                    get_pixbuf_for_file_threaded(
-                        info.get_attribute_as_string("thumbnail::path"), on_pixbuf_ready
-                    )
-                    return
-                # 5MB limit
-                if info.get_size() > self._file_max_size:
-                    return
-
-                # FIXME: python 3.13 introduced a new function guess_file_type, use that
-                # FIXME: using magic, you can detect xbm files but idc, one less depend
-                # detected_filename = magic.detect_from_filename(decoded_string)
-                file_type = info.get_content_type()
-                if file_type in SUPPORTED_MIME_TYPES:
-                    get_pixbuf_for_file_threaded(decoded_string, on_pixbuf_ready)
-                else:
-                    self._decoded_clipboard_history[cliphist_id] = decoded_string
-                    self.emit("clipboard-data-ready", cliphist_id)
-
-            except Exception as e:
-                logger.error(f"[CLIPBOARD] Failed to decode clipboard item: {e}")
-
-        self.cliphist_decode(cliphist_id, callback)
-
-    def decode_item(self, cliphist_id: str):
-        preview = self._clipboard_history.get(cliphist_id)
-        if preview is None:
-            return
-        if cliphist_id in self._decoded_clipboard_history:
-            # already decoded; cliphist ids are stable, so reuse the result
-            self.emit("clipboard-data-ready", cliphist_id)
-            return
-        if _BINARY_RE.match(preview):
-            self.parse_data_binary(cliphist_id)
-        elif preview.startswith("<meta"):
-            self.parse_html_tag(cliphist_id)
-        else:
-            self.parse_string(cliphist_id)
-
-    def decode_clipboard(self):
-        for cliphist_id in self._clipboard_history.keys():
-            self.decode_item(cliphist_id)
-
-    @Property(dict, "readable")
-    def clipboard_history(self) -> dict:
-        return self._clipboard_history
-
-    @Property(dict, "readable")
-    def decoded_clipboard_history(self) -> dict:
-        return self._decoded_clipboard_history
+    def _save_pins(self):
+        os.makedirs(PINS_DIR, exist_ok=True)
+        tmp = PINS_FILE + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump([p.__dict__ for p in self._pins], f)
+        os.replace(tmp, PINS_FILE)  # atomic, so a crash can't corrupt pins
