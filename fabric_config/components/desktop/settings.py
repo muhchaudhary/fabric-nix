@@ -23,7 +23,7 @@ POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right
 WIDGETS: dict[str, tuple[str, bool]] = {
     "prayer": ("Next prayer", True),
     "lyrics": ("Lyrics", True),
-    "retro_player": ("Retro player", True),
+    "music_player": ("Music player", True),
     "weather": ("Weather", True),
     "hijri": ("Hijri date", True),
     "greeting": ("Greeting", True),
@@ -43,8 +43,7 @@ class DesktopSettings:
         # shared defaults, and per-monitor choices that override them
         self.widgets = {name: default for name, (_, default) in WIDGETS.items()}
         self.monitor_widgets: dict[str, dict[str, bool]] = {}
-        self.player_theme = "mp3"
-        # monitor name -> [x, y] of the retro player
+        # monitor name -> [x, y] of the music player
         self.player_positions: dict[str, list[int]] = {}
         try:
             with open(SETTINGS_FILE) as f:
@@ -58,8 +57,6 @@ class DesktopSettings:
             self.face = data["face"]
         if data.get("position") in POSITIONS:
             self.position = data["position"]
-        if isinstance(data.get("player_theme"), str):
-            self.player_theme = data["player_theme"]
         positions = data.get("player_positions")
         if isinstance(positions, dict):
             self.player_positions = {
@@ -112,7 +109,6 @@ class DesktopSettings:
                         "position": self.position,
                         "widgets": self.widgets,
                         "monitor_widgets": self.monitor_widgets,
-                        "player_theme": self.player_theme,
                         "player_positions": self.player_positions,
                     },
                     f,
