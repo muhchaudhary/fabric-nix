@@ -7,7 +7,6 @@ from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
-from fabric.widgets.widget import Widget
 
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
@@ -77,11 +76,9 @@ class PowerMenuConfirmMenu(Revealer):
             return
 
         if active_button:
-            active_button.add_style_class("active") if active_button else None
-        else:
-            self.active_button.remove_style_class(
-                "button-basic-active"
-            ) if self.active_button else None
+            active_button.add_style_class("button-basic-active")
+        elif self.active_button:
+            self.active_button.remove_style_class("button-basic-active")
 
         self.selected_operation = selected_operation
         self.active_button = active_button
@@ -169,7 +166,6 @@ class PowerMenuPopup(PopupWindow):
     def on_button_press(
         self, button: Button, pressed_button: Literal["shutdown", "reboot", "lock"]
     ):
-        button.add_style_class("button-basic-active")
         self.confirm_menu.reveal_menu(True, button, pressed_button)
 
     def toggle_popup(self, monitor: bool = False):
