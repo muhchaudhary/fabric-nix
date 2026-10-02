@@ -8,11 +8,8 @@ import warnings
 from fabric.hyprland import Hyprland
 
 gi.require_version("Gdk", "3.0")
-from gi.repository import Gdk
+from gi.repository import Gdk  # noqa: E402
 
-
-# IDC,  Gdk.Screen.get_monitor_plug_name is deprecated
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # Another idea is to use Gdk.Monitor.get_model() however,
 #       there is no garuntee that this will be unique
@@ -40,9 +37,14 @@ class HyprlandWithMonitors(Hyprland):
         return {monitor["id"]: monitor["name"] for monitor in monitors}
 
     def get_gdk_monitor_id_from_name(self, plug_name: str) -> int | None:
-        for i in range(self.display.get_n_monitors()):
-            if self.display.get_default_screen().get_monitor_plug_name(i) == plug_name:
-                return i
+        screen = self.display.get_default_screen()
+        # Gdk.Screen.get_monitor_plug_name is deprecated, but GTK3 has no
+        # replacement; silence the warning for this call only
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            for i in range(self.display.get_n_monitors()):
+                if screen.get_monitor_plug_name(i) == plug_name:
+                    return i
         return None
 
     def get_gdk_monitor_id(self, hyprland_id: int) -> int | None:
@@ -54,3 +56,17 @@ class HyprlandWithMonitors(Hyprland):
     def get_current_gdk_monitor_id(self) -> int | None:
         active_workspace = json.loads(self.send_command("j/activeworkspace").reply)
         return self.get_gdk_monitor_id_from_name(active_workspace["monitor"])
+
+
+_shared_commands_connection: HyprlandWithMonitors | None = None
+
+
+def get_hyprland_monitors() -> HyprlandWithMonitors:
+    """
+    A shared, commands-only connection. Each non-commands-only Hyprland instance
+    opens its own event-socket listener, so popups shouldn't create their own.
+    """
+    global _shared_commands_connection
+    if _shared_commands_connection is None:
+        _shared_commands_connection = HyprlandWithMonitors(commands_only=True)
+    return _shared_commands_connection

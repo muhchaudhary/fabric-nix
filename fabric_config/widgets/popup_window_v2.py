@@ -1,6 +1,6 @@
 from typing import Literal
 
-from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
+from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 from gi.repository import GLib, Gdk
 
 from fabric.widgets.box import Box
@@ -246,7 +246,7 @@ class PopupWindow(WaylandWindow):
         self.enable_inhibitor = enable_inhibitor
 
         self.monitor_number: int | None = None
-        self.hyprland_monitor = HyprlandWithMonitors()
+        self.hyprland_monitor = get_hyprland_monitors()
 
         self.reveal_child = PopupRevealer(
             name=name,

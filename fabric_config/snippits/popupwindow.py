@@ -1,8 +1,6 @@
-import gi
-
-from gi.repository import Gtk, GtkLayerShell, Gdk, GLib
+from gi.repository import Gtk, GtkLayerShell, GLib
 from fabric.widgets.wayland import WaylandWindow
-from fabric_config.utils.hyprland_monitor import HyprlandWithMonitors
+from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 
 
 class PopupWindow(WaylandWindow):
@@ -18,7 +16,7 @@ class PopupWindow(WaylandWindow):
         self._is_centered = False
         self._parent = parent
         self._pointing_widget = pointing_to
-        self._hyprland = HyprlandWithMonitors()
+        self._hyprland = get_hyprland_monitors()
         self._base_margin = self.extract_margin(margin)
         self.margin = self._base_margin.values()
 
