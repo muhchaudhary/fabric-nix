@@ -8,7 +8,7 @@ import fabric_config.config as config
 
 from fabric_config.components import (
     AppMenu,
-    ClockWidget,
+    DesktopClocks,
     NotificationPopup,
     StatusBarSeperated,
     SystemOSD,
@@ -35,7 +35,7 @@ class MyApp(Application):
         self.sc = config.sc
         self.screen_corners = ScreenCorners()
         self.bar = StatusBarSeperated()
-        self.clockWidget = ClockWidget()
+        self.desktop_clocks = DesktopClocks()
         self.overview = Overview()
         self.systemOverlay = SystemOSD()
         self.nc = NotificationPopup()
@@ -45,7 +45,7 @@ class MyApp(Application):
         super().__init__(
             "fabric-bar",
             self.bar,
-            self.clockWidget,
+            *self.desktop_clocks.windows,
             self.systemOverlay,
             self.nc,
             self.appMenu,

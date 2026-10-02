@@ -1,6 +1,6 @@
 from .app_menu import AppMenu
 from .bar.bar import StatusBarSeperated
-from .desktop_widget import ClockWidget
+from .desktop_widget import ClockWidget, DesktopClocks
 from .notification_popup import NotificationPopup
 
 # from .overview import Overview
@@ -11,6 +11,7 @@ __all__ = [
     "AppMenu",
     "StatusBarSeperated",
     "ClockWidget",
+    "DesktopClocks",
     "NotificationPopup",
     # "Overview",
     "QuickSettings",

@@ -1,17 +1,74 @@
 @use '../tokens' as *;
+@use '../mixins' as *;
 
-#date label,
-#clock label {
-  font-family: "Oswald";
-  font-weight: bolder;
+// No backdrop: the text sits straight on the wallpaper with a crisp outline
+// (unblurred shadows in eight directions) in a contrasting colour, so it
+// reads over busy line art without covering it. Light text with a dark
+// outline normally; dark text with a light outline on light wallpapers
+// (.on-light). The text colour is a tint of the wallpaper's dominant colour,
+// set inline on #desktop-clock; every part inherits it. Font sizes and the
+// time's outline are per monitor, generated in desktop_widget.py.
+// (GTK draws large blurs behind big text as grey smudges, so no blur.)
+@function outline($c, $w: 1px) {
+  @return $w 0 0 $c, (-$w) 0 0 $c, 0 $w 0 $c, 0 (-$w) 0 $c,
+    $w $w 0 $c, (-$w) (-$w) 0 $c, $w (-$w) 0 $c, (-$w) $w 0 $c;
+}
+
+$outline-dark: a(black, 0.55);
+$outline-light: a(white, 0.7);
+
+#desktop-clock {
   color: m(var(--accent), white, 0.2);
+  font-family: "Oswald", sans-serif;
+  font-size: 15px;
+
+  // the global `*` rule gives every node its own colour and font; inherit
+  // them here so the accent and Oswald reach every part of the clock
+  * {
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  label { text-shadow: outline($outline-dark); }
+  #clock-progress { box-shadow: 0 0 0 1px $outline-dark; }
 }
 
-#clock label {
-  font-size: 10em;
-  text-decoration: solid underline m(var(--accent), white, 0.2);
+#desktop-clock.on-light {
+  label { text-shadow: outline($outline-light); }
+  #clock-progress { box-shadow: 0 0 0 1px $outline-light; }
 }
 
-#date label { font-size: 4em; }
+#clock-time  { font-weight: 700; }
+#clock-ampm  { font-weight: 500; opacity: 0.85; }
+#clock-prayer { font-weight: 500; opacity: 0.85; }
 
-#clockbox { margin-top: 50px; background-color: a(var(--bg-glass), 0.5);}
+#clock-date { font-weight: 600; }
+
+/* Day progress: a short accent rule that fills through the day */
+#clock-progress {
+  min-height: 4px;
+  border-radius: $radius-pill;
+  background-color: a(currentColor, 0.25);
+}
+
+#clock-progress-fill {
+  min-height: 4px;
+  border-radius: $radius-pill;
+  background-color: currentColor;
+}
+
+/* Word clock: unlit words stay quiet (no outline), lit ones get one */
+#desktop-clock #clock-words .clock-word {
+  font-weight: 700;
+  letter-spacing: 2px;
+  opacity: 0.3;
+  text-shadow: none;
+  @include transition(opacity, 0.6s);
+
+  &.lit { opacity: 1; text-shadow: outline($outline-dark); }
+}
+
+#desktop-clock.on-light #clock-words .clock-word.lit {
+  text-shadow: outline($outline-light);
+}
