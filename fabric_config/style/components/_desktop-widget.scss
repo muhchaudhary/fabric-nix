@@ -1,18 +1,23 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
-// The clock sits on a translucent card so it stays readable over busy
-// wallpapers: dark glass with light text, or light glass with dark text on
-// light wallpapers (.on-light). The text colour is a tint of the wallpaper's
-// dominant colour, set inline on #desktop-clock; every part inherits it.
-// Keep shadows tight: GTK draws large blurs behind big text as grey smudges.
-$clock-shadow: 0 1px 2px a(black, 0.3);
+// No backdrop: the text sits straight on the wallpaper with a crisp outline
+// (unblurred shadows in eight directions) in a contrasting colour, so it
+// reads over busy line art without covering it. Light text with a dark
+// outline normally; dark text with a light outline on light wallpapers
+// (.on-light). The text colour is a tint of the wallpaper's dominant colour,
+// set inline on #desktop-clock; every part inherits it.
+// (GTK draws large blurs behind big text as grey smudges, so no blur.)
+@function outline($c, $w: 1px) {
+  @return $w 0 0 $c, (-$w) 0 0 $c, 0 $w 0 $c, 0 (-$w) 0 $c,
+    $w $w 0 $c, (-$w) (-$w) 0 $c, $w (-$w) 0 $c, (-$w) $w 0 $c;
+}
+
+$outline-dark: a(black, 0.55);
+$outline-light: a(white, 0.7);
 
 #desktop-clock {
   color: m(var(--accent), white, 0.2);
-  background-color: a(black, 0.6);
-  border-radius: 36px;
-  padding: $gap-lg 40px $gap-lg * 1.5;
   font-family: "Oswald", sans-serif;
   font-size: 15px;
 
@@ -24,7 +29,15 @@ $clock-shadow: 0 1px 2px a(black, 0.3);
     font-size: inherit;
   }
 
-  label { text-shadow: $clock-shadow; }
+  label { text-shadow: outline($outline-dark); }
+  #clock-time { text-shadow: outline($outline-dark, 2px); }
+  #clock-progress { box-shadow: 0 0 0 1px $outline-dark; }
+}
+
+#desktop-clock.on-light {
+  label { text-shadow: outline($outline-light); }
+  #clock-time { text-shadow: outline($outline-light, 2px); }
+  #clock-progress { box-shadow: 0 0 0 1px $outline-light; }
 }
 
 #clock-time  { font-weight: 700; }
@@ -44,14 +57,6 @@ $clock-shadow: 0 1px 2px a(black, 0.3);
   &:hover { background-color: a(currentColor, 0.12); }
 }
 
-/* Dark text on light wallpapers: a light glow instead of a dark shadow */
-$clock-glow: 0 1px 2px a(white, 0.35);
-
-#desktop-clock.on-light {
-  background-color: a(white, 0.85);
-  label { text-shadow: $clock-glow; }
-}
-
 /* Day progress: a short accent rule that fills through the day */
 #clock-progress {
   min-height: 4px;
@@ -65,14 +70,19 @@ $clock-glow: 0 1px 2px a(white, 0.35);
   background-color: currentColor;
 }
 
-/* Word clock */
-.clock-word {
+/* Word clock: unlit words stay quiet (no outline), lit ones get one */
+#desktop-clock #clock-words .clock-word {
   font-weight: 700;
   letter-spacing: 2px;
-  opacity: 0.22;
+  opacity: 0.3;
+  text-shadow: none;
   @include transition(opacity, 0.6s);
 
-  &.lit { opacity: 1; }
+  &.lit { opacity: 1; text-shadow: outline($outline-dark); }
+}
+
+#desktop-clock.on-light #clock-words .clock-word.lit {
+  text-shadow: outline($outline-light);
 }
 
 /* Calendar (click the date) */

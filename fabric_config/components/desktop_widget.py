@@ -18,7 +18,7 @@ from fabric.widgets.wayland import WaylandWindow
 from gi.repository import Gdk, GLib, Gtk
 from loguru import logger
 
-from fabric_config.utils.accent import grab_accent_color_threaded
+from fabric_config.utils.accent import grab_dominant_color_threaded
 from fabric_config.utils.wallpaper import (
     LAST_WALLPAPER_FILE,
     query_active_wallpapers,
@@ -159,27 +159,33 @@ class AnalogFace(Gtk.DrawingArea):
         cx, cy, radius = w / 2, h / 2, min(w, h) / 2 - 6
         cr.set_line_cap(1)  # round
 
-        # dial
+        # an outline in the contrasting colour keeps every stroke readable
+        # over busy wallpapers without a filled backdrop
+        o = 1.0 if self.on_light else 0.0
+        outline = (o, o, o, 0.6 if self.on_light else 0.5)
+        ink = (color.red, color.green, color.blue)
+
+        def stroke(width: float, alpha: float = 1.0):
+            cr.set_source_rgba(*outline)
+            cr.set_line_width(width + 2.5)
+            cr.stroke_preserve()
+            cr.set_source_rgba(*ink, alpha)
+            cr.set_line_width(width)
+            cr.stroke()
+
         cr.arc(cx, cy, radius, 0, 2 * math.pi)
-        shade = 1.0 if self.on_light else 0.0
-        cr.set_source_rgba(shade, shade, shade, 0.08)
-        cr.fill_preserve()
-        cr.set_source_rgba(color.red, color.green, color.blue, 0.35)
-        cr.set_line_width(2)
-        cr.stroke()
+        stroke(1.5, 0.5)
 
         for i in range(12):
             angle = i * math.pi / 6
             major = i % 3 == 0
             inner = radius * (0.80 if major else 0.86)
-            cr.set_line_width(5 if major else 2.5)
-            cr.set_source_rgba(color.red, color.green, color.blue, 1 if major else 0.6)
             cr.move_to(cx + inner * math.sin(angle), cy - inner * math.cos(angle))
             cr.line_to(
                 cx + radius * 0.92 * math.sin(angle),
                 cy - radius * 0.92 * math.cos(angle),
             )
-            cr.stroke()
+            stroke(5 if major else 2.5, 1 if major else 0.7)
 
         minute = self._now.minute
         hour = self._now.hour % 12 + minute / 60
@@ -188,20 +194,15 @@ class AnalogFace(Gtk.DrawingArea):
             (minute * math.pi / 30, radius * 0.76, 5),
         )
         for angle, length, width in hands:
-            x, y = cx + length * math.sin(angle), cy - length * math.cos(angle)
-            # soft shadow first, so the hands stand off the wallpaper
-            cr.set_source_rgba(shade, shade, shade, 0.3)
-            cr.set_line_width(width + 2)
-            cr.move_to(cx + 1, cy + 2)
-            cr.line_to(x + 1, y + 2)
-            cr.stroke()
-            cr.set_source_rgba(color.red, color.green, color.blue, 1)
-            cr.set_line_width(width)
             cr.move_to(cx, cy)
-            cr.line_to(x, y)
-            cr.stroke()
+            cr.line_to(cx + length * math.sin(angle), cy - length * math.cos(angle))
+            stroke(width)
 
         cr.arc(cx, cy, 8, 0, 2 * math.pi)
+        cr.set_source_rgba(*outline)
+        cr.fill_preserve()
+        cr.arc(cx, cy, 6.5, 0, 2 * math.pi)
+        cr.set_source_rgba(*ink, 1)
         cr.fill()
         return False
 
@@ -417,6 +418,9 @@ class DesktopClocks:
         self.settings = ClockSettings()
         self.windows: list[ClockWidget] = []
         self._accent_cache: dict[str, Accent | None] = {}
+        # windows waiting on an extraction already running for that path
+        self._accent_waiting: dict[str, list[ClockWidget]] = {}
+        self._accent_timer: int | None = None
 
         display = Gdk.Display.get_default()
         if display is None:
@@ -486,8 +490,17 @@ class DesktopClocks:
     # Wallpaper accent
 
     def _update_accents_soon(self):
-        # hyprpaper switches a moment after the picker saves
-        GLib.timeout_add(500, lambda: self.update_accents() or False)
+        # one save fires several file events, and hyprpaper switches a moment
+        # after the picker saves: wait for the burst to settle, then update once
+        if self._accent_timer is not None:
+            GLib.source_remove(self._accent_timer)
+
+        def fire():
+            self._accent_timer = None
+            self.update_accents()
+            return False
+
+        self._accent_timer = GLib.timeout_add(500, fire)
 
     def update_accents(self):
         def on_active(active: dict[str, str]):
@@ -505,10 +518,19 @@ class DesktopClocks:
             window.set_accent(self._accent_cache[path])
             return
 
+        waiting = self._accent_waiting.get(path)
+        if waiting is not None:
+            # same wallpaper on another monitor: share the running extraction
+            waiting.append(window)
+            return
+        self._accent_waiting[path] = [window]
+
         def on_color(rgb):
             accent = readable_accent(rgb) if rgb else None
             self._accent_cache[path] = accent
-            if window in self.windows:
-                window.set_accent(accent)
+            for waiting_window in self._accent_waiting.pop(path, []):
+                if waiting_window in self.windows:
+                    waiting_window.set_accent(accent)
+            return False
 
-        grab_accent_color_threaded(path, on_color)
+        grab_dominant_color_threaded(path, on_color)
