@@ -84,10 +84,20 @@ class ThemeService(Service):
         # home-manager writes a symlink here importing Colloid-Dark from the nix store.
         # Resolve the actual CSS path via the nix profile so it stays correct after upgrades.
         gtk4_css_path = config_dir / "gtk-4.0" / "gtk.css"
-        theme_css = (
-            Path.home() / f".nix-profile/share/themes/{gtk_theme}/gtk-4.0/gtk.css"
+        # ~/.nix-profile for standalone home-manager; /etc/profiles/per-user
+        # when home-manager runs as a NixOS module
+        theme_css = next(
+            (
+                profile / f"share/themes/{gtk_theme}/gtk-4.0/gtk.css"
+                for profile in (
+                    Path.home() / ".nix-profile",
+                    Path("/etc/profiles/per-user") / GLib.get_user_name(),
+                )
+                if (profile / f"share/themes/{gtk_theme}/gtk-4.0/gtk.css").exists()
+            ),
+            None,
         )
-        if theme_css.exists():
+        if theme_css is not None:
             css_content = (
                 "/** GTK 4 reads the theme configured by gtk-theme-name, but ignores it.\n"
                 " * It does however respect user CSS, so import the theme from here.\n"
