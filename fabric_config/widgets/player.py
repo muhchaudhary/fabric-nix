@@ -1,4 +1,3 @@
-import math
 import os
 import threading
 import urllib.request
@@ -15,7 +14,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.stack import Stack
-from gi.repository import GLib
+from gi.repository import GLib, Gtk
 from loguru import logger
 
 from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
@@ -40,169 +39,92 @@ PLAYER_ASSETS_PATH = "../assets/player/"
 
 
 class PlayerBoxStack(Box):
+    """One PlayerBox per MPRIS player, switched with a small "‹ name ›" chip."""
+
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
-        # The player stack
         self.player_stack = Stack(
             transition_type="slide-left-right",
-            transition_duration=500,
+            transition_duration=400,
             name="player-stack",
         )
-        self.current_stack_pos = 0
-
-        # Static buttons
-        self.next_player_button = Button(
-            name="panel-button",
-            image=Image(icon_name="go-next-symbolic", pixel_size=24),
-        )
-        self.prev_player_button = Button(
-            name="panel-button",
-            image=Image(icon_name="go-previous-symbolic", pixel_size=24),
-        )
-        self.next_player_button.connect(
-            "clicked",
-            lambda *args: self.on_player_clicked("next"),
-        )
-        self.prev_player_button.connect(
-            "clicked",
-            lambda *args: self.on_player_clicked("prev"),
+        self.player_stack.connect(
+            "notify::visible-child", lambda *_: self._update_switcher()
         )
 
-        # List to store player buttons
-        self.player_buttons: list[Button] = []
-
-        # Box to contain all the buttons
-        self.buttons_box = CenterBox(
-            start_children=self.prev_player_button,
-            end_children=self.next_player_button,
+        self.switcher_label = Label(name="player-switcher-name")
+        self.switcher = Box(
+            name="player-switcher",
+            h_align="center",
+            spacing=2,
+            children=[
+                Button(
+                    name="player-switcher-arrow",
+                    image=Image(icon_name="go-previous-symbolic", pixel_size=14),
+                    on_clicked=lambda *_: self.on_player_clicked("prev"),
+                ),
+                self.switcher_label,
+                Button(
+                    name="player-switcher-arrow",
+                    image=Image(icon_name="go-next-symbolic", pixel_size=14),
+                    on_clicked=lambda *_: self.on_player_clicked("next"),
+                ),
+            ],
         )
 
-        super().__init__(
-            orientation="v", children=[self.player_stack, self.buttons_box]
-        )
+        super().__init__(orientation="v", children=[self.player_stack, self.switcher])
         self.hide()
 
         self.mpris_manager = mpris_manager
         self.mpris_manager.connect("player-appeared", self.on_new_player)
         self.mpris_manager.connect("player-vanished", self.on_lost_player)
         for player in self.mpris_manager.players.values():  # type: ignore
-            logger.info(
-                f"[PLAYER MANAGER] player found: {player.player_name}",
-            )
+            logger.info(f"[PLAYER MANAGER] player found: {player.player_name}")
             self.on_new_player(self.mpris_manager, player)
 
-    def on_player_clicked(self, type):
-        # unset active from prev active button
-        self.player_buttons[self.current_stack_pos].remove_style_class("active")
-        if type == "next":
-            self.current_stack_pos = (
-                self.current_stack_pos + 1
-                if self.current_stack_pos != len(self.player_stack.get_children()) - 1
-                else 0
-            )
-        elif type == "prev":
-            self.current_stack_pos = (
-                self.current_stack_pos - 1
-                if self.current_stack_pos != 0
-                else len(self.player_stack.get_children()) - 1
-            )
-        # set new active button
-        self.player_buttons[self.current_stack_pos].add_style_class("active")
-        self.player_stack.set_visible_child(
-            self.player_stack.get_children()[self.current_stack_pos],
-        )
+    def _boxes(self) -> List["PlayerBox"]:
+        return cast(List["PlayerBox"], self.player_stack.get_children())
+
+    def _update_switcher(self):
+        boxes = self._boxes()
+        self.set_visible(bool(boxes))
+        self.switcher.set_visible(len(boxes) > 1)
+        current = self.player_stack.get_visible_child()
+        if isinstance(current, PlayerBox):
+            self.switcher_label.set_label(current.player.player_name.capitalize())
+
+    def on_player_clicked(self, direction: str):
+        boxes = self._boxes()
+        if len(boxes) < 2:
+            return
+        current = self.player_stack.get_visible_child()
+        index = boxes.index(current) if current in boxes else 0  # type: ignore[arg-type]
+        step = 1 if direction == "next" else -1
+        self.player_stack.set_visible_child(boxes[(index + step) % len(boxes)])
 
     def on_new_player(self, mpris_manager, player):
-        self.show()
-        if len(self.player_stack.get_children()) == 0:
-            self.buttons_box.hide()
-        else:
-            self.buttons_box.show()
-
-        self.player_stack.children = self.player_stack.children + [PlayerBox(player)]
-
-        self.make_new_player_button(self.player_stack.get_children()[-1])
-        logger.info(
-            f"[PLAYER MANAGER] adding new player: {player.player_name}",
+        logger.info(f"[PLAYER MANAGER] adding new player: {player.player_name}")
+        box = PlayerBox(player)
+        box.connect(
+            "destroy",
+            lambda *_: GLib.idle_add(lambda: self._update_switcher() or False),
         )
-        self.player_buttons[self.current_stack_pos].style_classes = [
-            "active",
-            "cool-border",
-        ]
+        self.player_stack.add(box)
+        box.show_all()
+        self._update_switcher()
 
     def on_lost_player(self, mpris_manager, bus_name):
-        # the playerBox is automatically removed from mprisbox children on being removed from mprismanager
-        # (player-vanished carries the full bus name, not the short player_name)
+        # the PlayerBox removes itself when its player closes; refresh after
         logger.info(f"[PLAYER_MANAGER] Player Removed {bus_name}")
-        players = cast(List[PlayerBox], self.player_stack.get_children())
-        if not players:
-            self.hide()
-            self.current_stack_pos = 0
-            return
-        if len(players) == 1 and bus_name == players[0].player.bus_name:
-            self.hide()
-            self.current_stack_pos = 0
-            return
-        self.current_stack_pos = min(self.current_stack_pos, len(players) - 1)
-        if players[self.current_stack_pos].player.bus_name == bus_name:
-            self.current_stack_pos = max(0, self.current_stack_pos - 1)
-            self.player_stack.set_visible_child(
-                self.player_stack.get_children()[self.current_stack_pos],
-            )
-        self.player_buttons[self.current_stack_pos].style_classes = [
-            "active",
-            "cool-border",
-        ]
-        self.buttons_box.hide() if len(players) == 2 else self.buttons_box.show()
-
-    def make_new_player_button(self, player_box):
-        new_button = Button(name="player-stack-button", style_classes=["cool-border"])
-
-        def on_player_button_click(button: Button):
-            self.player_buttons[self.current_stack_pos].remove_style_class("active")
-            self.current_stack_pos = self.player_buttons.index(button)
-            button.add_style_class("active")
-            self.player_stack.set_visible_child(player_box)
-
-        new_button.connect(
-            "clicked",
-            on_player_button_click,
-        )
-        self.player_buttons.append(new_button)
-
-        # This will automatically destroy our used button
-        player_box.connect(
-            "destroy",
-            lambda *args: [
-                new_button.destroy(),  # type: ignore
-                self.player_buttons.pop(self.player_buttons.index(new_button)),
-            ],
-        )
-        self.buttons_box.add_center(self.player_buttons[-1])
+        GLib.idle_add(lambda: self._update_switcher() or False)
 
 
-def easeOutBounce(t: float) -> float:
-    if t < 4 / 11:
-        return 121 * t * t / 16
-    elif t < 8 / 11:
-        return (363 / 40.0 * t * t) - (99 / 10.0 * t) + 17 / 5.0
-    elif t < 9 / 10:
-        return (4356 / 361.0 * t * t) - (35442 / 1805.0 * t) + 16061 / 1805.0
-    return (54 / 5.0 * t * t) - (513 / 25.0 * t) + 268 / 25.0
-
-
-def easeInBounce(t: float) -> float:
-    return 1 - easeOutBounce(1 - t)
-
-
-def easeInOutBounce(t: float) -> float:
-    if t < 0.5:
-        return (1 - easeInBounce(1 - t * 2)) / 2
-    return (1 + easeOutBounce(t * 2 - 1)) / 2
-
-
-def easeOutElastic(t: float) -> float:
-    c4 = (2 * math.pi) / 3
-    return math.sin((t * 10 - 0.75) * c4) * math.pow(2, -10 * t) + 1
+def app_icon_name(player_name: str) -> str:
+    """The player's symbolic icon if the theme has one, else a generic one."""
+    theme = Gtk.IconTheme.get_default()
+    for name in (f"{player_name}-symbolic", f"{player_name.lower()}-symbolic"):
+        if theme.has_icon(name):
+            return name
+    return "audio-x-generic-symbolic"
 
 
 # myBezier = CubicBezier(0.65, 0, 0.35, 1)
@@ -262,20 +184,25 @@ class PlayerBox(Box):
             label="No Title",
             name="player-title",
             justfication="left",
-            max_chars_width=24,
+            # fill the row and ellipsize at its edge, not at a fixed length
+            max_chars_width=1,
+            h_expand=True,
             ellipsization="end",
-            h_align="start",
+            h_align="fill",
         )
-        # self.track_title.set_ellipsize(3)
+        self.track_title.set_xalign(0)
 
         self.track_artist = Label(
             label="No Artist",
             name="player-artist",
             justfication="left",
-            max_chars_width=24,
+            # fill the row and ellipsize at its edge, not at a fixed length
+            max_chars_width=1,
+            h_expand=True,
             ellipsization="end",
-            h_align="start",
+            h_align="fill",
         )
+        self.track_artist.set_xalign(0)
         self.player.bind(
             "title",
             "label",
@@ -322,15 +249,16 @@ class PlayerBox(Box):
             name="player-icon",
             pixel_size=icon_size,
         )
+        minor_icon_size = 18
         self.shuffle_icon = Image(
             icon_name="media-playlist-shuffle-symbolic",
             name="player-icon",
-            pixel_size=icon_size,
+            pixel_size=minor_icon_size,
         )
         self.loop_icon = Image(
             icon_name="media-playlist-repeat-symbolic",
             name="player-icon",
-            pixel_size=icon_size,
+            pixel_size=minor_icon_size,
         )
         self.play_icon = Image(
             icon_name="media-playback-start-symbolic",
@@ -348,6 +276,7 @@ class PlayerBox(Box):
 
         self.play_pause_button = Button(
             name="player-button",
+            style_classes=["play"],
             child=self.play_pause_stack,
         )
         self.play_pause_button.connect("clicked", lambda _: self.player.play_pause())
@@ -361,12 +290,16 @@ class PlayerBox(Box):
         self.prev_button.connect("clicked", self.on_player_prev)
         self.player.bind("can-go-previous", "visible", self.prev_button)
 
-        self.shuffle_button = Button(name="player-button", child=self.shuffle_icon)
+        self.shuffle_button = Button(
+            name="player-button", style_classes=["minor"], child=self.shuffle_icon
+        )
         self.shuffle_button.connect(
             "clicked", lambda _: player.set_property("shuffle", not player.shuffle)
         )
 
-        self.loop_button = Button(name="player-button", child=self.loop_icon)
+        self.loop_button = Button(
+            name="player-button", style_classes=["minor"], child=self.loop_icon
+        )
 
         self.loop_button.connect(
             "clicked",
@@ -398,10 +331,10 @@ class PlayerBox(Box):
         self.seek_bar.set_name("seek-bar")
         self.player.bind("can-seek", "visible", self.seek_bar)
 
-        self.time_label = Label(
-            label="0:00 / 0:00",
-            name="player-time",
-            h_align="end",
+        self.elapsed_label = Label(label="0:00", name="player-time", h_align="start")
+        self.total_label = Label(label="0:00", name="player-time", h_align="end")
+        self.time_label = CenterBox(
+            start_children=self.elapsed_label, end_children=self.total_label
         )
         self.player.bind("can-seek", "visible", self.time_label)
 
@@ -414,12 +347,15 @@ class PlayerBox(Box):
             children=[self.track_info, self.seek_bar, self.time_label, self.button_box],
         )
 
+        self._inner_style = (
+            f"margin-left: {self.image_size // 2 - 2}px;"
+            + f"min-width:{self.player_width - self.image_size // 2}px;"
+            + f"min-height:{self.player_height}px;"
+        )
         self.inner_box = Box(
             name="inner-player-box",
             style_classes=["cool-border"],
-            style=f"margin-left: {self.image_size // 2 - 2}px;"
-            + f"min-width:{self.player_width - self.image_size // 2}px;"
-            + f"min-height:{self.player_height}px;",
+            style=self._inner_style,
             v_align="center",
             h_align="start",
         )
@@ -436,7 +372,9 @@ class PlayerBox(Box):
                 self.image_stack,
                 Box(
                     children=Image(
-                        icon_name=f"{self.player.player_name}-symbolic", size=21
+                        name="player-app-icon",
+                        icon_name=app_icon_name(self.player.player_name),
+                        pixel_size=16,
                     ),
                     h_align="end",
                     v_align="start",
@@ -479,12 +417,22 @@ class PlayerBox(Box):
             if self.player.loop_status != "Track"
             else "media-playlist-repeat-song-symbolic"
         )
-        self.loop_icon.style_classes = (
-            ["active"] if self.player.loop_status != "None" else []
-        )
+        on = self.player.loop_status != "None"
+        self.loop_icon.style_classes = ["active"] if on else []
+        (
+            self.loop_button.add_style_class
+            if on
+            else self.loop_button.remove_style_class
+        )("on")
 
     def on_shuffle_update(self, _, __):
-        self.shuffle_icon.style_classes = ["active"] if self.player.shuffle else []
+        on = bool(self.player.shuffle)
+        self.shuffle_icon.style_classes = ["active"] if on else []
+        (
+            self.shuffle_button.add_style_class
+            if on
+            else self.shuffle_button.remove_style_class
+        )("on")
 
     def on_playback_change(self, player, status):
         status = self.player.playback_status
@@ -512,6 +460,10 @@ class PlayerBox(Box):
                 (c + k) / 2 / 255 for c, k in zip((r, g, b), cream)
             )
             self.seek_bar.queue_draw()
+            self.inner_box.set_style(
+                self._inner_style + f"background-image: linear-gradient(120deg,"
+                f" alpha(rgb({r},{g},{b}), 0.30), alpha(rgb({r},{g},{b}), 0.04));"
+            )
             self.art_animator.play()
 
         grab_accent_color_threaded(image_path=self.cover_path, callback=on_accent_color)
@@ -557,5 +509,6 @@ class PlayerBox(Box):
     def update_time_label(self) -> bool:
         length = self.player.length or 0
         position = self.seek_bar.position if length else 0
-        self.time_label.set_label(f"{format_time(position)} / {format_time(length)}")
+        self.elapsed_label.set_label(format_time(position))
+        self.total_label.set_label(format_time(length))
         return True

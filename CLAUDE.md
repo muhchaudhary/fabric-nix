@@ -100,6 +100,8 @@ SCSS, compiled with `sass` (dart-sass) at startup into `~/.cache/fabric/css/main
 
 Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables). Fabric compiles them to `@define-color`/`@name`, and GTK takes a named colour from the highest-priority provider that defines it: `config.wallpaper_accent` overrides `@accent` that way, so the accent follows the wallpaper without recompiling SCSS. Between providers GTK goes by priority, not selector specificity.
 
+Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-sass emit `@charset "UTF-8"`, which GTK rejects as an unknown @ rule (`//` comments are stripped, so they're fine).
+
 `apply_style` DBus action recompiles and hot-reloads CSS without restarting; Python changes need a restart.
 
 ### Utilities (`fabric_config/utils/`)
