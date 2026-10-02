@@ -29,6 +29,9 @@ MEDIA_CACHE = os.path.join(GLib.get_user_cache_dir(), "fabric", "media")
 FRAME_MS = 33
 DRAG_THRESHOLD = 6
 LYRIC_TRANSITION_S = 0.45
+SEEK_BAR_W = 3  # px per level bar in the seek bar (at the 1440p reference)
+SEEK_BAR_GAP = 2.4
+SEEK_BAR_MAX = 14  # half-height of the tallest level bar
 
 # text: Pango, for real weights (cairo's toy text API only has regular/bold);
 # the variable font lets a lyric's weight glide as it becomes current
@@ -187,6 +190,7 @@ class MusicPlayer(Gtk.EventBox):
         self,
         monitor_height: int,
         media,  # MediaState
+        cava,  # Cava, for the seek bar's levels
         on_move_by: Callable[[int, int], None],
         on_moved: Callable[[], None],
         on_resize: Callable[[], None],
@@ -202,6 +206,7 @@ class MusicPlayer(Gtk.EventBox):
             | Gdk.EventMask.SMOOTH_SCROLL_MASK
         )
         self.media = media
+        self.cava = cava
         self._on_move_by = on_move_by
         self._on_moved = on_moved
         self._on_resize = on_resize
@@ -218,7 +223,7 @@ class MusicPlayer(Gtk.EventBox):
         # sizes, from a 1440px-tall reference screen
         u = monitor_height / 1440
         self.card_w = round(560 * u)
-        self.info_h = round(150 * u)
+        self.info_h = round(164 * u)
         self.art = round(196 * u)
         self.overflow = (self.art - self.info_h) // 2  # art above/below the card
         self.strip_w = round(52 * u)
@@ -256,6 +261,9 @@ class MusicPlayer(Gtk.EventBox):
         self._press: tuple[float, float] | None = None
         self._dragged = 0.0
         self._dragging = False
+        self._scrub: float | None = None  # fraction while dragging the seek bar
+        self._seek_rect = (0.0, 0.0, 0.0, 0.0)
+        self._levels: list[float] = []  # eased cava levels, one per seek bar
 
         self._layout()
         GLib.timeout_add_seconds(1, self._second)
@@ -320,6 +328,7 @@ class MusicPlayer(Gtk.EventBox):
             self._set_art(player.arturl)
         self._lyric_index = self.media.lyric_index()
         self._update_lyrics_poll()
+        self._ensure_tick()
         self.queue_draw()
 
     def set_show_lyrics(self, show: bool):
@@ -350,6 +359,8 @@ class MusicPlayer(Gtk.EventBox):
 
     @property
     def progress(self) -> float:
+        if self._scrub is not None:
+            return self._scrub
         return min(1.0, self.position / self.length) if self.length else 0.0
 
     # Lyrics timing
@@ -371,25 +382,63 @@ class MusicPlayer(Gtk.EventBox):
         if index != self._lyric_index:
             self._lyric_index = index
             self._lyric_slide = 1.0
-            if self._tick_id is None and self.visible_on_desktop:
-                self._last_tick = None
-                self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
+            self._ensure_tick()
         return True
+
+    # Animation: lyric slides, and the seek bar moving with the music
+
+    def _levels_live(self) -> bool:
+        return self.status == "Playing" and self.cava.running
+
+    def _levels_settling(self) -> bool:
+        return any(level > 0.01 for level in self._levels)
+
+    def _ensure_tick(self):
+        wanted = self.visible_on_desktop and (
+            self._lyric_slide > 0 or self._levels_live() or self._levels_settling()
+        )
+        if wanted and self._tick_id is None:
+            self._last_tick = None
+            self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
 
     def _tick(self):
         now = GLib.get_monotonic_time() / 1e6
         dt = min(0.1, now - self._last_tick) if self._last_tick else FRAME_MS / 1000
         self._last_tick = now
         self._lyric_slide = max(0.0, self._lyric_slide - dt / LYRIC_TRANSITION_S)
+        self._step_levels()
         self.queue_draw()
-        if self._lyric_slide <= 0:
+        if not self.visible_on_desktop or not (
+            self._lyric_slide > 0 or self._levels_live() or self._levels_settling()
+        ):
             self._tick_id = None
             return False
         return True
 
+    def _step_levels(self):
+        count = len(self._levels)
+        if count == 0:
+            return
+        source = self.cava.bars if self._levels_live() else []
+        for i in range(count):
+            if source:
+                # resample cava's bars onto however many fit in the seek bar
+                pos = i / max(1, count - 1) * (len(source) - 1)
+                low = int(pos)
+                high = min(low + 1, len(source) - 1)
+                target = source[low] + (source[high] - source[low]) * (pos - low)
+            else:
+                target = 0.0
+            level = self._levels[i]
+            # rise quickly, fall gently
+            self._levels[i] = level + (target - level) * (
+                0.55 if target > level else 0.12
+            )
+
     def set_desktop_visible(self, visible: bool):
         self.visible_on_desktop = visible
         self._update_lyrics_poll()
+        self._ensure_tick()
 
     def _second(self):
         # the seek bar and times move on their own
@@ -405,11 +454,27 @@ class MusicPlayer(Gtk.EventBox):
         self._press = (event.x, event.y)
         self._dragged = 0.0
         self._dragging = False
+        if self._in_seek_bar(event.x, event.y) and self.length:
+            # pressing the seek bar scrubs rather than moving the window
+            self._scrub = self._seek_fraction(event.x)
+            self.queue_draw()
         return True
+
+    def _in_seek_bar(self, x: float, y: float) -> bool:
+        sx, sy, sw, sh = self._seek_rect
+        return sx - 6 <= x <= sx + sw + 6 and sy <= y <= sy + sh
+
+    def _seek_fraction(self, x: float) -> float:
+        sx, _sy, sw, _sh = self._seek_rect
+        return max(0.0, min(1.0, (x - sx) / sw)) if sw else 0.0
 
     def _on_motion(self, _widget, event: Gdk.EventMotion):
         if self._press is None:
             return False
+        if self._scrub is not None:
+            self._scrub = self._seek_fraction(event.x)
+            self.queue_draw()
+            return True
         dx, dy = event.x - self._press[0], event.y - self._press[1]
         self._dragged += math.hypot(dx, dy)
         if not self._dragging and self._dragged > DRAG_THRESHOLD:
@@ -424,6 +489,11 @@ class MusicPlayer(Gtk.EventBox):
         if self._press is None:
             return False
         self._press = None
+        if self._scrub is not None:
+            self.media.seek(self._scrub)
+            self._scrub = None
+            self.queue_draw()
+            return True
         if self._dragging:
             self._dragging = False
             self._on_moved()
@@ -450,8 +520,6 @@ class MusicPlayer(Gtk.EventBox):
 
     def _act(self, action: str, fraction: float):
         match action:
-            case "seek":
-                self.media.seek(fraction)
             case "switch":
                 self.media.cycle_player(1)
             case "lyrics":
@@ -526,23 +594,40 @@ class MusicPlayer(Gtk.EventBox):
         cr.move_to(tx, y)
         PangoCairo.show_layout(cr, layout)
 
-        # seek bar
-        bar_y = top + self.info_h * 0.56
-        cr.set_source_rgba(*ink, 0.15)
-        rounded_rect(cr, tx, bar_y - 1.5 * u, tw, 3 * u, 1.5 * u)
+        # seek bar: a row of level bars that move with the music (cava),
+        # solid up to the playhead and faint after it; flat when quiet
+        bar_y = top + self.info_h * 0.55
+        bar_w, bar_gap = SEEK_BAR_W * u, SEEK_BAR_GAP * u
+        count = max(8, int((tw + bar_gap) / (bar_w + bar_gap)))
+        if len(self._levels) != count:
+            self._levels = [0.0] * count
+        step = (tw - bar_w) / (count - 1)
+        played = tw * self.progress
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_width(bar_w)
+        for i, level in enumerate(self._levels):
+            x = tx + bar_w / 2 + i * step
+            half = 1.2 * u + level * SEEK_BAR_MAX * u
+            cr.move_to(x, bar_y - half)
+            cr.line_to(x, bar_y + half)
+            cr.set_source_rgba(*ink, 0.9 if x <= tx + played else 0.2)
+            cr.stroke()
+        # the playhead, a little larger while scrubbing
+        cr.set_source_rgba(*ink, 1)
+        cr.arc(
+            tx + played,
+            bar_y,
+            (7 if self._scrub is not None else 5.5) * u,
+            0,
+            2 * math.pi,
+        )
         cr.fill()
-        filled = tw * self.progress
-        cr.set_source_rgba(*ink, 0.9)
-        rounded_rect(cr, tx, bar_y - 1.5 * u, max(3 * u, filled), 3 * u, 1.5 * u)
-        cr.fill()
-        cr.arc(tx + filled, bar_y, 5 * u, 0, 2 * math.pi)
-        cr.fill()
-        self._hits.append(("seek", (tx, bar_y - 10 * u, tw, 20 * u)))
+        self._seek_rect = (tx, bar_y - 16 * u, tw, 32 * u)
 
         # times
         cr.set_source_rgba(*ink, 0.75)
         for text, align, x in (
-            (format_time(self.position), Pango.Alignment.LEFT, tx),
+            (format_time(self.progress * self.length), Pango.Alignment.LEFT, tx),
             (
                 format_time(self.length) if self.length else "--:--",
                 Pango.Alignment.RIGHT,
@@ -550,11 +635,11 @@ class MusicPlayer(Gtk.EventBox):
             ),
         ):
             layout = text_layout(cr, text, 11.5 * u, 450, tw, align)
-            cr.move_to(x, bar_y + 8 * u)
+            cr.move_to(x, bar_y + 14 * u)
             PangoCairo.show_layout(cr, layout)
 
         # controls
-        cy = top + self.info_h * 0.82
+        cy = top + self.info_h * 0.85
         center = tx + tw / 2
         spacing = 46 * u
         play_r = 17 * u
@@ -692,6 +777,7 @@ class MusicPlayerWindow(WaylandWindow):
         monitor_name: str,
         geometry: Gdk.Rectangle,
         media,
+        cava,
         position: list[int] | None,
         on_moved: Callable[["MusicPlayerWindow"], None],
         on_toggle_lyrics: Callable[["MusicPlayerWindow"], None],
@@ -701,6 +787,7 @@ class MusicPlayerWindow(WaylandWindow):
         self.player = MusicPlayer(
             geometry.height,
             media,
+            cava,
             on_move_by=self.move_by,
             on_moved=lambda: on_moved(self),
             on_resize=self._apply_position,

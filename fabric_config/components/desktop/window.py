@@ -646,6 +646,7 @@ class DesktopManager:
                         name,
                         monitor.get_geometry(),
                         self.media,
+                        self.cava,
                         self.settings.player_positions.get(name),
                         on_moved=self._save_player_position,
                         on_toggle_lyrics=lambda w: self.toggle_widget(
@@ -781,12 +782,16 @@ class DesktopManager:
 
     def _update_cava(self):
         player = self.current_player()
-        # wanted while something plays and a desktop that shows bars is visible
+        # wanted while something plays and a visible desktop shows levels:
+        # the visualizer, or the music card's seek bar
         wanted = (
             player is not None
             and player.playback_status == "Playing"
             and any(
-                self.settings.enabled("visualizer", w.monitor_name)
+                (
+                    self.settings.enabled("visualizer", w.monitor_name)
+                    or self.settings.enabled("music_player", w.monitor_name)
+                )
                 and self.visibility.visible(w.monitor_name)
                 for w in self.windows
             )
