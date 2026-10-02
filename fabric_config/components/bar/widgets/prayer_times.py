@@ -12,10 +12,10 @@ from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
 from gi.repository import GLib
 
-gi.require_version("Geoclue", "2.0")
-from gi.repository import Geoclue
-
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+
+gi.require_version("Geoclue", "2.0")
+from gi.repository import Geoclue  # noqa: E402
 
 CACHE_DIR = GLib.get_user_cache_dir() + "/fabric"
 PRAYER_TIMES_CACHE = os.path.join(CACHE_DIR, "prayer-times")
@@ -79,7 +79,13 @@ class PrayerTimesService(Service):
         if cached:
             self._location_name = cached.get("city", "")
         invoke_repeater(1000 * 60, self.update_prayer_state)
-        invoke_repeater(86400 * 1000, lambda: self.refresh())
+        invoke_repeater(86400 * 1000, self._daily_refresh)
+
+    def _daily_refresh(self) -> bool:
+        # refresh() returns the prayer data, which is falsy until the first
+        # fetch completes; return True so the repeating timer isn't cancelled
+        self.refresh()
+        return True
 
     def notify_next_prayer(self):
         exec_shell_command_async(
@@ -88,8 +94,10 @@ class PrayerTimesService(Service):
         )
 
     def update_prayer_state(self):
+        # always return True: this runs on a repeating timer, and a falsy
+        # return value would cancel it before the first fetch completes
         if not self.prayer_info:
-            return
+            return True
         now = datetime.datetime.now()
         prayer_times = {
             name: datetime.datetime.strptime(time, "%H:%M")
@@ -339,26 +347,13 @@ class PrayerTimes(Box):
             "notify::location-name", self.update_location_label
         )
 
-        self.prayer_labels = {
-            k: (
-                Label(style_classes=["prayer-info-prayer-label"]),
-                Label(style_classes=["prayer-info-time-label"]),
-            )
-            for k in self.prayer_info_service.prayer_data.keys()
-        }
+        # rows are created as prayer data arrives; the data may still be
+        # loading (fetched asynchronously) when this widget is built
+        self.prayer_labels: dict[str, tuple[Label, Label]] = {}
+        self.prayer_rows: dict[str, CenterBox] = {}
+        self.add(Box(style_classes=["prayer-info-separator"]))
         self.on_prayer_update(None, self.prayer_info_service.prayer_data)
         self.prayer_info_service.connect("update", self.on_prayer_update)
-        self.add(Box(style_classes=["prayer-info-separator"]))
-        for i, prayer in enumerate(self.prayer_labels):
-            if i > 0:
-                self.add(Box(style_classes=["prayer-info-separator"]))
-            self.add(
-                CenterBox(
-                    style_classes=["prayer-info-row"],
-                    start_children=self.prayer_labels[prayer][0],
-                    end_children=self.prayer_labels[prayer][1],
-                )
-            )
         self.prayer_info_service.connect(
             "notify::current-prayer", self.update_prayer_label
         )
@@ -373,17 +368,29 @@ class PrayerTimes(Box):
         self.prayer_info_service.force_refresh()
 
     def update_prayer_label(self, *_):
-        for label in self.prayer_labels.values():
-            label[0].get_parent().get_parent().get_parent().style_classes = [
-                "prayer-info-row"
-            ]
-        if self.prayer_info_service.current_prayer in self.prayer_labels:
-            self.prayer_labels[self.prayer_info_service.current_prayer][
-                0
-            ].get_parent().get_parent().get_parent().style_classes = [
-                "prayer-info-row",
-                "urgent",
-            ]
+        current = self.prayer_info_service.current_prayer
+        for name, row in self.prayer_rows.items():
+            row.style_classes = (
+                ["prayer-info-row", "urgent"]
+                if name == current
+                else ["prayer-info-row"]
+            )
+
+    def _add_prayer_row(self, prayer: str):
+        if self.prayer_rows:
+            self.add(Box(style_classes=["prayer-info-separator"]))
+        labels = (
+            Label(style_classes=["prayer-info-prayer-label"]),
+            Label(style_classes=["prayer-info-time-label"]),
+        )
+        row = CenterBox(
+            style_classes=["prayer-info-row"],
+            start_children=labels[0],
+            end_children=labels[1],
+        )
+        self.prayer_labels[prayer] = labels
+        self.prayer_rows[prayer] = row
+        self.add(row)
 
     def on_prayer_update(self, _, prayer_info):
         def time_format(time):
@@ -391,6 +398,8 @@ class PrayerTimes(Box):
             return d.strftime("%I:%M %p")
 
         for info in prayer_info:
+            if info not in self.prayer_labels:
+                self._add_prayer_row(info)
             self.prayer_labels[info][0].set_label(info)
             self.prayer_labels[info][1].set_label(time_format(prayer_info[info]))
 
