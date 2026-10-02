@@ -1,17 +1,99 @@
 @use '../tokens' as *;
+@use '../mixins' as *;
 
-#date label,
-#clock label {
-  font-family: "Oswald";
-  font-weight: bolder;
+// Text sits straight on the wallpaper; the shadow keeps it readable on bright
+// ones. The colour is the fallback until the wallpaper's accent is picked
+// (set inline on #desktop-clock), and every part inherits it.
+$clock-shadow: 0 2px 14px a(black, 0.45), 0 1px 3px a(black, 0.35);
+
+#desktop-clock {
   color: m(var(--accent), white, 0.2);
+  font-family: "Oswald", sans-serif;
+  font-size: 15px;
+
+  // the global `*` rule gives every node its own colour and font; inherit
+  // them here so the accent and Oswald reach every part of the clock
+  * {
+    color: inherit;
+    font-family: inherit;
+    font-size: inherit;
+  }
+
+  label { text-shadow: $clock-shadow; }
 }
 
-#clock label {
-  font-size: 10em;
-  text-decoration: solid underline m(var(--accent), white, 0.2);
+#clock-time  { font-weight: 700; }
+#clock-ampm  { font-weight: 500; opacity: 0.85; }
+#clock-prayer { font-weight: 500; opacity: 0.85; }
+
+#clock-date {
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 2px $gap-md;
+  border-radius: $radius-pill;
+  color: inherit;
+  @include transition(background-color);
+
+  label { font-weight: 600; }
+  &:hover { background-color: a(black, 0.18); }
 }
 
-#date label { font-size: 4em; }
+/* Day progress: a short accent rule that fills through the day */
+#clock-progress {
+  min-height: 4px;
+  border-radius: $radius-pill;
+  background-color: a(currentColor, 0.25);
+  box-shadow: $clock-shadow;
+}
 
-#clockbox { margin-top: 50px; background-color: a(var(--bg-glass), 0.5);}
+#clock-progress-fill {
+  min-height: 4px;
+  border-radius: $radius-pill;
+  background-color: currentColor;
+}
+
+/* Word clock */
+.clock-word {
+  font-weight: 700;
+  letter-spacing: 2px;
+  opacity: 0.16;
+  @include transition(opacity, 0.6s);
+
+  &.lit { opacity: 1; }
+}
+
+/* Calendar (click the date) */
+#clock-calendar {
+  margin-top: $gap-sm;
+  padding: $gap-sm $gap-md;
+  border-radius: $radius-lg;
+  background-color: var(--bg-glass);
+  color: var(--fg);
+  font-family: "Roboto", sans-serif;
+  font-size: 14px;
+
+  &.header { border: none; background: none; }
+  &.button { color: var(--fg-dim); background: none; border: none; box-shadow: none; }
+  &.button:hover { color: var(--fg); }
+  &:indeterminate { color: a(var(--fg-dim), 0.5); }
+  &:selected {
+    background-color: a(var(--fg), 0.2);
+    color: var(--fg);
+    border-radius: $radius-sm;
+  }
+}
+
+/* Sizes (SIZE in desktop_widget.py) */
+@mixin clock-size($time, $words) {
+  // Oswald's line box is tall; pull the progress line up under the digits
+  #clock-time   { font-size: $time; margin-bottom: -$time * 0.2; }
+  #clock-ampm   { font-size: $time * 0.3; margin-top: $time * 0.18; }
+  #clock-date   { font-size: $time * 0.26; }
+  #clock-prayer { font-size: $time * 0.17; }
+  #clock-words .clock-word { font-size: $words; }
+}
+
+.clock-size-small  { @include clock-size(64px, 20px); }
+.clock-size-medium { @include clock-size(96px, 26px); }
+.clock-size-large  { @include clock-size(128px, 34px); }
