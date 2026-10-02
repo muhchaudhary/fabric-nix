@@ -52,13 +52,25 @@
   }
 }
 
-#wallpaper-current-badge {
-  margin: 8px;
-  padding: 4px;
+/* chips naming the monitors that currently show a wallpaper */
+#wallpaper-monitor-chips { margin: 8px; }
+
+#wallpaper-monitor-chip {
+  min-height: 20px;
   border-radius: $radius-pill;
   background-color: var(--accent);
 
-  image { color: var(--bg); }
+  label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--bg);
+    padding: 0px 8px;
+  }
+}
+
+#wallpaper-picker-hint {
+  font-size: 12px;
+  color: var(--fg-dim2);
 }
 
 #wallpaper-empty {

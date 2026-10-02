@@ -1,7 +1,6 @@
-import json
 import mimetypes
 import os
-import subprocess
+from collections.abc import Callable
 
 from fabric.core.service import Signal
 from fabric.widgets.box import Box
@@ -15,6 +14,13 @@ from gi.repository import GdkPixbuf, Gio, GLib, Gtk
 from loguru import logger
 
 from fabric_config.utils.process import run_command_async
+from fabric_config.utils.wallpaper import (
+    apply_wallpaper,
+    list_monitors,
+    query_active_wallpapers,
+    restore_wallpapers,
+    save_wallpaper,
+)
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.widgets.rounded_cover_image import RoundedCoverImage
 
@@ -22,7 +28,6 @@ WALLPAPER_DIR = os.path.join(GLib.get_home_dir(), "wallpapers")
 WALLPAPER_THUMBS_DIR = os.path.join(WALLPAPER_DIR, ".thumbs")
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 WALLPAPER_CACHE = CACHE_DIR + "/wallpaper-picker"
-LAST_WALLPAPER_FILE = WALLPAPER_CACHE + "/last_selected.json"
 
 THUMB_SIZE = 480  # px wide; tiles are drawn at up to 2x, so this stays sharp
 TILE_WIDTH = 256
@@ -41,41 +46,6 @@ if not os.path.exists(CACHE_DIR):
 
 if not os.path.exists(WALLPAPER_CACHE):
     os.makedirs(WALLPAPER_CACHE)
-
-
-def _set_hyprpaper_wallpaper(wp_path: str):
-    try:
-        monitors = json.loads(subprocess.check_output(["hyprctl", "-j", "monitors"]))
-        for monitor in monitors:
-            run_command_async(
-                ["hyprctl", "hyprpaper", "wallpaper", f"{monitor['name']},{wp_path}"]
-            )
-    except Exception:
-        pass
-
-
-def _save_last_wallpaper(wp_path: str):
-    try:
-        with open(LAST_WALLPAPER_FILE, "w") as f:
-            json.dump({"path": wp_path}, f)
-    except Exception:
-        return
-
-
-def _get_last_wallpaper() -> str | None:
-    if not os.path.exists(LAST_WALLPAPER_FILE):
-        return None
-
-    try:
-        with open(LAST_WALLPAPER_FILE, "r") as f:
-            data = json.load(f)
-            path = data.get("path")
-            if path and os.path.exists(path):
-                return path
-    except Exception:
-        return None
-
-    return None
 
 
 def _load_pixbuf_async(path: str, callback):
@@ -108,42 +78,89 @@ def _list_wallpapers() -> list[str]:
 
 
 class WallpaperCard(Button):
-    @Signal
-    def wallpaper_change(self, wp_path: str) -> str: ...
+    """
+    A wallpaper thumbnail. Left click sets it on every monitor; right click
+    opens a menu to set it on one monitor. Chips name the monitors showing it.
+    """
 
-    def __init__(self, wallpaper_name: str, is_current: bool = False, **kwargs):
+    def __init__(
+        self,
+        wallpaper_name: str,
+        on_set: Callable[[str, list[str] | None], None],
+        get_monitors: Callable[[], list[dict]],
+        **kwargs,
+    ):
         self.wallpaper_name = wallpaper_name
         self.wp_path = os.path.join(WALLPAPER_DIR, wallpaper_name)
         self.wp_thumb_path = os.path.join(
             WALLPAPER_THUMBS_DIR, f"{THUMB_SIZE}_{wallpaper_name}"
         )
+        self._on_set = on_set
+        self._get_monitors = get_monitors
+        self._monitors_using: list[str] = []
+        self._menu: Gtk.Menu | None = None
         self.tile = RoundedCoverImage(TILE_WIDTH, TILE_HEIGHT, TILE_RADIUS)
 
-        badge = Box(
-            name="wallpaper-current-badge",
+        # chips naming the monitors that currently show this wallpaper
+        self.chips = Box(
+            name="wallpaper-monitor-chips",
+            spacing=4,
             h_align="end",
             v_align="start",
-            children=Image(icon_name="object-select-symbolic", icon_size=14),
         )
-        # keep the grid's show_all() from revealing the badge on every card
-        badge.set_no_show_all(True)
-        badge.set_visible(is_current)
+        self.chips.set_no_show_all(True)
 
         super().__init__(
             name="wallpaper-card",
-            tooltip_text=wallpaper_name,
-            child=Overlay(child=self.tile, overlays=badge),
-            on_clicked=lambda *_: self._set_wallpaper_from_image(),
+            tooltip_text=f"{wallpaper_name}\nClick: all monitors · Right-click: choose monitor",
+            child=Overlay(child=self.tile, overlays=self.chips),
+            on_clicked=lambda *_: self._on_set(self.wp_path, None),
+            on_button_press_event=self._on_button_press,
             **kwargs,
         )
-        if is_current:
-            self.add_style_class("current")
         self._load_thumbnail()
 
-    def _set_wallpaper_from_image(self):
-        _save_last_wallpaper(self.wp_path)
-        self.wallpaper_change(self.wp_path)
-        _set_hyprpaper_wallpaper(self.wp_path)
+    def set_monitors_using(self, monitor_names: list[str]):
+        self._monitors_using = monitor_names
+        for child in self.chips.get_children():
+            child.destroy()
+        for name in monitor_names:
+            chip = Box(name="wallpaper-monitor-chip", children=Label(label=name))
+            chip.show_all()
+            self.chips.add(chip)
+        self.chips.set_visible(bool(monitor_names))
+        if monitor_names:
+            self.add_style_class("current")
+        else:
+            self.remove_style_class("current")
+
+    def _on_button_press(self, _button, event):
+        if event.button != 3:
+            return False
+        self._show_menu(event)
+        return True
+
+    def _show_menu(self, event):
+        menu = Gtk.Menu()
+        menu.get_style_context().add_class("tray")  # shared menu styling
+        monitors = self._get_monitors()
+        for monitor in monitors:
+            name = monitor["name"]
+            label = f"{name}  ·  {monitor['width']}×{monitor['height']}"
+            if name in self._monitors_using:
+                label = "✓  " + label
+            item = Gtk.MenuItem(label=label)
+            item.connect("activate", lambda _i, n=name: self._on_set(self.wp_path, [n]))
+            menu.append(item)
+        if len(monitors) > 1:
+            menu.append(Gtk.SeparatorMenuItem())
+        all_item = Gtk.MenuItem(label="All monitors")
+        all_item.connect("activate", lambda _i: self._on_set(self.wp_path, None))
+        menu.append(all_item)
+        menu.show_all()
+        # keep a reference, or the menu is garbage collected while open
+        self._menu = menu
+        menu.popup_at_pointer(event)
 
     def _load_thumbnail(self):
         if os.path.exists(self.wp_thumb_path):
@@ -176,7 +193,7 @@ class WallpaperCard(Button):
 
 class WallpaperGrid(ScrolledWindow):
     @Signal
-    def wallpaper_change(self, wp_path: str) -> str: ...
+    def wallpaper_set(self, all_monitors: bool) -> bool: ...
 
     def __init__(self, **kwargs):
         self.flowbox = Gtk.FlowBox(
@@ -204,38 +221,70 @@ class WallpaperGrid(ScrolledWindow):
             **kwargs,
         )
         self._built = False
+        self._cards: dict[str, WallpaperCard] = {}
+        self._monitors: list[dict] = []
 
     def build(self) -> int:
         """Populate the grid (once until cleared); returns the image count."""
         if self._built:
-            return len(self.flowbox.get_children())
+            return len(self._cards)
         self._built = True
+        self._monitors = list_monitors()
 
-        current = _get_last_wallpaper()
         names = _list_wallpapers()
         for name in names:
             card = WallpaperCard(
-                name,
-                is_current=os.path.join(WALLPAPER_DIR, name) == current,
-                on_wallpaper_change=lambda _, wp_path: self.wallpaper_change(wp_path),
+                name, on_set=self._set_wallpaper, get_monitors=lambda: self._monitors
             )
+            self._cards[card.wp_path] = card
             self.flowbox.add(card)
         self.flowbox.show_all()
         self.empty_label.set_visible(not names)
         self.get_vadjustment().set_value(0)
+        self.refresh_assignments()
         return len(names)
+
+    def refresh_assignments(self):
+        """Ask hyprpaper what each monitor shows and update the chips."""
+
+        def on_active(active: dict[str, str]):
+            by_path: dict[str, list[str]] = {}
+            # keep monitors in layout order (left to right)
+            for monitor in sorted(self._monitors, key=lambda m: (m["x"], m["y"])):
+                path = active.get(monitor["name"])
+                if path:
+                    by_path.setdefault(path, []).append(monitor["name"])
+            for path, card in self._cards.items():
+                card.set_monitors_using(by_path.get(path, []))
+
+        query_active_wallpapers(on_active)
+
+    def _set_wallpaper(self, path: str, monitor_names: list[str] | None):
+        targets = (
+            [m["name"] for m in self._monitors]
+            if monitor_names is None
+            else monitor_names
+        )
+        save_wallpaper(path, monitor_names)
+        apply_wallpaper(path, targets, on_done=self.refresh_assignments)
+        self.wallpaper_set(monitor_names is None)
 
     def clear(self):
         # free the pixbufs while hidden; rebuilt on next open
         for child in self.flowbox.get_children():
             child.destroy()
+        self._cards.clear()
         self._built = False
 
 
 class WallPaperPickerOverlay(PopupWindow):
     def __init__(self):
+        # left click (all monitors) closes the picker; setting a single
+        # monitor keeps it open so the other monitors can be set next
         self.wallpaper_grid = WallpaperGrid(
-            on_wallpaper_change=lambda *_: self.toggle_popup()
+            on_wallpaper_set=lambda _grid, all_monitors: (
+                self.toggle_popup() if all_monitors else None
+            )
         )
         self.count_label = Label(name="wallpaper-picker-subtitle", h_align="start")
         open_folder_button = Button(
@@ -261,7 +310,17 @@ class WallPaperPickerOverlay(PopupWindow):
                     self.count_label,
                 ],
             ),
-            end_children=open_folder_button,
+            end_children=Box(
+                spacing=12,
+                children=[
+                    Label(
+                        "Click: all monitors · Right-click: choose monitor",
+                        name="wallpaper-picker-hint",
+                        v_align="center",
+                    ),
+                    open_folder_button,
+                ],
+            ),
         )
         super().__init__(
             layer="top",
@@ -287,10 +346,8 @@ class WallPaperPickerOverlay(PopupWindow):
         self._apply_last_selected_wallpaper()
 
     def _apply_last_selected_wallpaper(self):
-        last_wallpaper = _get_last_wallpaper()
-        if not last_wallpaper:
-            return
-        _set_hyprpaper_wallpaper(last_wallpaper)
+        # each monitor gets its own saved wallpaper back
+        restore_wallpapers()
 
     def toggle_popup(self, monitor: bool = False):
         super().toggle_popup(monitor=True)
