@@ -1,32 +1,50 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
+// rounding of the panel's left side; keep in step with CORNER_SIZE in system_osd.py
+$osd-radius: 32px;
+
 #osd {
-  min-height: 280px;
+  min-height: 260px;
+  min-width: 44px;
   background-color: var(--bg-glass);
-  padding: 20px;
-  border-top-left-radius: $radius-pill;
-  border-bottom-left-radius: $radius-pill;
-  border-color: a(var(--fg), 0.1);
+  padding: $gap-lg $gap-sm $gap-md;
+  border-top-left-radius: $osd-radius;
+  border-bottom-left-radius: $osd-radius;
 }
 
 .osd-corner {
-  padding-left: 36px;
+  padding-left: $osd-radius;
   * { background-color: var(--bg-glass); }
 }
 
-#osd-icon image { color: var(--fg); }
+#osd-icon { color: var(--fg); }
 
-levelbar.osd-level-bar {
-  margin: $gap-sm $gap-xs;
+#osd-value {
+  color: var(--fg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+levelbar.osd-level {
+  trough {
+    min-width: 10px;
+    border-radius: $radius-pill;
+    background-color: a(var(--fg-dim), 0.2);
+  }
 
   block {
-    border-radius: 24px;
-    min-height: 8px;
-    margin: 2px 0;
+    border-radius: $radius-pill;
+    min-width: 10px;
     @include transition(background-color, 0.2s);
 
-    &.filled { background-color: var(--accent); }
-    &.empty  { background-color: a(var(--fg-dim), 0.25); }
+    &.filled { background-color: var(--fg); }
+    &.empty  { background-color: transparent; }
   }
+}
+
+/* muted: the level stays visible but reads as off */
+#osd.muted {
+  levelbar.osd-level block.filled { background-color: a(var(--fg-dim), 0.35); }
+  #osd-icon, #osd-value { color: var(--fg-dim); }
 }

@@ -61,7 +61,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `overview.py` | Workspace overview with live window previews (`toplevel-streamer-rs`) |
 | `dock.py` | Auto-hiding dock (Glace) with hover window previews |
 | `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
-| `system_osd.py` | On-screen display for volume/brightness |
+| `system_osd.py` | On-screen display for volume, mic mute, brightness and keyboard backlight; pops up on service changes (the `toggle_system_osd` action still works), hover to keep open, scroll to adjust, click to mute |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
 | `desktop_widget.py` | Desktop clock (`ClockWidget`) |
 
