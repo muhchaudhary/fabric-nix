@@ -44,6 +44,18 @@ class Brightness(Service):
         if os.path.exists(self.kbd_backlight_path + "/max_brightness"):
             with open(self.kbd_backlight_path + "/max_brightness") as f:
                 self.max_kbd = int(f.read())
+            # the kernel signals hardware (Fn key) changes on brightness_hw_changed;
+            # plain sysfs attributes don't raise inotify events
+            hw_changed = self.kbd_backlight_path + "/brightness_hw_changed"
+            self.kbd_monitor = monitor_file(
+                hw_changed
+                if os.path.exists(hw_changed)
+                else self.kbd_backlight_path + "/brightness"
+            )
+            self.kbd_monitor.connect(
+                "changed",
+                lambda *_: self.notify("keyboard-brightness"),
+            )
 
         super().__init__(**kwargs)
 
