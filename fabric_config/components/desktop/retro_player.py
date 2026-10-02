@@ -27,6 +27,8 @@ FRAME_MS = 33
 DRAG_THRESHOLD = 6
 VINYL_SPEED = 2 * math.pi * 33.3 / 60  # 33⅓ rpm, in radians per second
 REEL_SPEED = 2.2
+# the record's centre label (the album art), as a fraction of its radius
+VINYL_LABEL = 0.6
 
 
 # Drawing helpers
@@ -167,7 +169,7 @@ class RetroPlayer(Gtk.EventBox):
         self,
         monitor_height: int,
         theme: str,
-        get_player: Callable[[], object],
+        media,  # MediaState
         on_move: Callable[[int, int], None],
         on_moved: Callable[[], None],
         on_cycle_theme: Callable[[], None],
@@ -179,9 +181,11 @@ class RetroPlayer(Gtk.EventBox):
             Gdk.EventMask.BUTTON_PRESS_MASK
             | Gdk.EventMask.BUTTON_RELEASE_MASK
             | Gdk.EventMask.POINTER_MOTION_MASK
+            | Gdk.EventMask.SCROLL_MASK
+            | Gdk.EventMask.SMOOTH_SCROLL_MASK
         )
         self.monitor_height = monitor_height
-        self.get_player = get_player
+        self.media = media
         self._on_move = on_move
         self._on_moved = on_moved
         self._on_cycle_theme = on_cycle_theme
@@ -192,16 +196,17 @@ class RetroPlayer(Gtk.EventBox):
         self.connect("button-press-event", self._on_press)
         self.connect("motion-notify-event", self._on_motion)
         self.connect("button-release-event", self._on_release)
+        self.connect("scroll-event", self._on_scroll)
 
         # track state
         self.title = ""
         self.artist = ""
         self.status = "Stopped"
         self.length = 0
+        self.source = ""  # the player's name, e.g. "spotify"
+        self.source_count = 0
         self._art_url: str | None = None
         self.art: GdkPixbuf.Pixbuf | None = None
-        self._pos_base = 0.0
-        self._pos_time = 0.0
 
         # animation
         self.visible_on_desktop = True
@@ -228,27 +233,25 @@ class RetroPlayer(Gtk.EventBox):
         w, h = THEME_SIZES[self.theme]
         self.width = round(self.monitor_height * w)
         self.height = round(self.monitor_height * h)
-        self.area.set_size_request(self.width, self.height)
+        # a strip above the device for the source chip (player switcher)
+        self.chip_h = round(self.monitor_height * 0.028)
+        self.area.set_size_request(self.width, self.height + self.chip_h)
         self.queue_draw()
 
     def update_track(self):
-        player = self.get_player()
+        player = self.media.current_player()
+        self.source_count = len(self.media.players())
         if player is None:
             self.title, self.artist, self.status, self.length = "", "", "Stopped", 0
+            self.source = ""
             self._set_art(None)
         else:
-            title = getattr(player, "title", "") or ""
-            status = getattr(player, "playback_status", "Stopped")
-            changed_track = title != self.title
-            self.title = title
-            self.artist = ", ".join(
-                a for a in (getattr(player, "artist", None) or []) if a
-            )
-            self.length = getattr(player, "length", 0) or 0
-            if changed_track or status != self.status:
-                self._resync_position(player, reset=changed_track)
-            self.status = status
-            self._set_art(getattr(player, "arturl", None))
+            self.title = player.title or ""
+            self.artist = ", ".join(a for a in (player.artist or []) if a)
+            self.status = player.playback_status
+            self.length = player.length or 0
+            self.source = player.player_name
+            self._set_art(player.arturl)
         self._update_animation()
         self.queue_draw()
 
@@ -265,27 +268,15 @@ class RetroPlayer(Gtk.EventBox):
 
         load_art(url, done)
 
-    def _resync_position(self, player, reset: bool):
-        if reset:
-            self._pos_base, self._pos_time = 0.0, GLib.get_monotonic_time() / 1e6
-
-        def done(position: int):
-            self._pos_base = float(position)
-            self._pos_time = GLib.get_monotonic_time() / 1e6
-            self.queue_draw()
-
-        fetch = getattr(player, "fetch_position", None)
-        if fetch is not None:
-            fetch(done)
+    @property
+    def total_height(self) -> int:
+        """The device plus the source chip above it."""
+        return self.height + self.chip_h
 
     @property
     def position(self) -> float:
         """Estimated position in microseconds."""
-        if self.status != "Playing":
-            return self._pos_base
-        elapsed = GLib.get_monotonic_time() / 1e6 - self._pos_time
-        position = self._pos_base + elapsed * 1_000_000
-        return min(position, self.length) if self.length else position
+        return self.media.position
 
     @property
     def progress(self) -> float:
@@ -395,7 +386,10 @@ class RetroPlayer(Gtk.EventBox):
         if action == "menu":
             self._on_cycle_theme()
             return
-        player = self.get_player()
+        if action in ("prev_source", "next_source"):
+            self.media.cycle_player(-1 if action == "prev_source" else 1)
+            return
+        player = self.media.current_player()
         if player is None:
             return
         method = getattr(player, action, None)
@@ -404,15 +398,73 @@ class RetroPlayer(Gtk.EventBox):
 
     # Drawing
 
+    def _on_scroll(self, _widget, event: Gdk.EventScroll):
+        match event.direction:
+            case Gdk.ScrollDirection.UP:
+                step = -1
+            case Gdk.ScrollDirection.DOWN:
+                step = 1
+            case Gdk.ScrollDirection.SMOOTH:
+                step = 1 if event.delta_y > 0 else -1 if event.delta_y < 0 else 0
+            case _:
+                step = 0
+        if step:
+            self.media.cycle_player(step)
+        return True
+
     def _on_draw(self, _widget, cr: cairo.Context):
         self._hits = []
-        w, h = self.width, self.height
+        self._draw_chip(cr)
+        # the device sits under the chip strip; shift its hit areas to match
+        cr.save()
+        cr.translate(0, self.chip_h)
         {
             "mp3": self._draw_mp3,
             "cassette": self._draw_cassette,
             "vinyl": self._draw_vinyl,
-        }[self.theme](cr, w, h)
+        }[self.theme](cr, self.width, self.height)
+        cr.restore()
+        shifted = []
+        for action, shape in self._hits:
+            if shape[0] == "source":
+                shifted.append((action, ("rect", *shape[1:])))
+                continue
+            kind, x, y, *rest = shape
+            shifted.append((action, (kind, x, y + self.chip_h, *rest)))
+        self._hits = shifted
         return False
+
+    def _draw_chip(self, cr: cairo.Context):
+        """The player's name, with arrows to switch when there are several."""
+        if not self.source:
+            return
+        h = self.chip_h
+        font(cr, h * 0.5, bold=True)
+        label = self.source.capitalize()
+        arrows = self.source_count > 1
+        text_w = cr.text_extents(label).x_advance
+        pad = h * 0.6
+        chip_w = text_w + pad * 2 + (h * 1.6 if arrows else 0)
+        x = (self.width - chip_w) / 2
+        rounded_rect(cr, x, 1, chip_w, h - 4, (h - 4) / 2)
+        cr.set_source_rgba(0, 0, 0, 0.45)
+        cr.fill()
+        cr.set_source_rgba(1, 1, 1, 0.9)
+        text_at(cr, label, self.width / 2, h * 0.62, "center")
+        if arrows:
+            cy = (h - 2) / 2
+            for action, ax, direction in (
+                ("prev_source", x + pad * 0.9, -1),
+                ("next_source", x + chip_w - pad * 0.9, 1),
+            ):
+                cr.move_to(ax - direction * h * 0.12, cy - h * 0.18)
+                cr.line_to(ax + direction * h * 0.12, cy)
+                cr.line_to(ax - direction * h * 0.12, cy + h * 0.18)
+                cr.set_line_width(2)
+                cr.set_line_cap(cairo.LINE_CAP_ROUND)
+                cr.set_line_join(cairo.LINE_JOIN_ROUND)
+                cr.stroke()
+                self._hits.append((action, ("source", ax - h * 0.5, 0, h, h)))
 
     def _track_lines(self) -> tuple[str, str]:
         if not self.title:
@@ -703,8 +755,9 @@ class RetroPlayer(Gtk.EventBox):
         cr.set_source_rgb(*rgb("#121214"))
         cr.fill()
         cr.set_line_width(0.6)
-        for i in range(14):
-            cr.arc(cx, cy, pr * (0.42 + i * 0.04), 0, 2 * math.pi)
+        # grooves fill the band between the label and the rim
+        for i in range(10):
+            cr.arc(cx, cy, pr * (VINYL_LABEL + 0.04 + i * 0.033), 0, 2 * math.pi)
             cr.set_source_rgba(1, 1, 1, 0.045 if i % 2 else 0.025)
             cr.stroke()
         # sheen that turns with the record
@@ -718,7 +771,7 @@ class RetroPlayer(Gtk.EventBox):
             cr.set_source_rgba(1, 1, 1, 0.06)
             cr.fill()
         # label: the album art, turning
-        label_r = pr * 0.36
+        label_r = pr * VINYL_LABEL
         cr.arc(0, 0, label_r, 0, 2 * math.pi)
         cr.clip()
         if self.art is not None:
@@ -738,7 +791,9 @@ class RetroPlayer(Gtk.EventBox):
         # the outer groove inward as the song plays
         px, py = cx + pr * 1.18, h * 0.16
         if self.title and (self.status == "Playing" or self.progress > 0):
-            groove = pr * (0.93 - 0.48 * self.progress)
+            # outer groove to just outside the label
+            inner = VINYL_LABEL + 0.06
+            groove = pr * (0.93 - (0.93 - inner) * self.progress)
             theta = math.radians(28)
             ex, ey = cx + groove * math.cos(theta), cy + groove * math.sin(theta)
         else:

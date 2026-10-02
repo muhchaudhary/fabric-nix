@@ -28,13 +28,14 @@ import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
 from fabric_config.components.desktop.fx import Cava, FxLayer, season_mode
+from fabric_config.components.desktop.media import MediaState
 from fabric_config.components.desktop.info import (
     OnThisDay,
     WeatherService,
     greeting,
     hijri_date,
 )
-from fabric_config.components.desktop.notes import NotesLayer, NotesStore
+from fabric_config.components.desktop.notes import NotesLayer, NotesStore, place
 from fabric_config.components.desktop.retro_player import (
     THEME_LABELS,
     THEMES,
@@ -100,6 +101,7 @@ def _sizes_css(cls: str, sizes: ClockSizes) -> str:
 {root} .clock-date {{ font-size: {sizes.date}px; }}
 {root} .clock-info {{ font-size: {sizes.info}px; }}
 {root} #clock-memory {{ font-size: {sizes.memory}px; }}
+{root} #clock-lyric-next {{ font-size: {sizes.memory}px; }}
 {root} #clock-words .clock-word {{ font-size: {sizes.words}px; }}
 """
 
@@ -213,26 +215,31 @@ class DesktopWindow(WaylandWindow):
         self.background.connect("button-press-event", self._on_background_press)
         self.fx.connect("size-allocate", lambda *_: self.update_fx())
 
-        self.notes = NotesLayer(manager.notes, monitor_name)
+        # Each piece is its own overlay child covering only its own area, so
+        # it gets clicks directly and the bare desktop still reaches the
+        # background. (Full-screen click-through layers also pass through
+        # the clicks meant for their children.)
+        self.overlay = Gtk.Overlay()
+        self.overlay.add(self.background)
 
-        # the retro player sits on its own layer so it can be dragged anywhere
+        # the retro player, dragged anywhere
         self.monitor_height = monitor_height
-        self.objects = Gtk.Fixed()
         self.player = RetroPlayer(
             monitor_height,
             manager.settings.player_theme,
-            manager.current_player,
+            manager.media,
             on_move=self._move_player,
             on_moved=self._save_player_position,
             on_cycle_theme=manager.cycle_player_theme,
         )
-        self.objects.put(self.player, 0, 0)
-        # moving a child from inside its parent's allocation has no effect;
-        # place it once the layout pass is done
-        self.objects.connect(
+        self.overlay.add_overlay(self.player)
+        # its default spot depends on the screen size; place it once laid out
+        self.background.connect(
             "size-allocate",
             lambda *_: GLib.idle_add(lambda: self._place_player() or False),
         )
+
+        self.notes = NotesLayer(manager.notes, monitor_name, self.overlay)
 
         # clock
         self.digital = DigitalFace(manager.focus.toggle, self.show_menu)
@@ -283,6 +290,21 @@ class DesktopWindow(WaylandWindow):
         )
         self.playing.connect("button-press-event", self._on_playing_press)
         self.playing.connect("scroll-event", self._on_playing_scroll)
+        self.lyric_label = Label(
+            name="clock-lyric",
+            style_classes=["clock-info"],
+            max_chars_width=60,
+            ellipsization="end",
+        )
+        self.lyric_next_label = Label(
+            name="clock-lyric-next", max_chars_width=60, ellipsization="end"
+        )
+        self.lyrics = Box(
+            name="clock-lyrics",
+            orientation="v",
+            children=[self.lyric_label, self.lyric_next_label],
+        )
+        self._lyrics_tick: int | None = None
         self.meta_label = Label(name="clock-meta", style_classes=["clock-info"])
         self.memory_label = Label(
             name="clock-memory", max_chars_width=70, ellipsization="end"
@@ -306,6 +328,7 @@ class DesktopWindow(WaylandWindow):
                     children=[
                         self.prayer_label,
                         self.playing,
+                        self.lyrics,
                         self.meta_label,
                         self.memory,
                     ],
@@ -313,13 +336,7 @@ class DesktopWindow(WaylandWindow):
             ],
         )
 
-        overlay = Gtk.Overlay()
-        overlay.add(self.background)
-        for layer in (self.objects, self.notes, self.column):
-            overlay.add_overlay(layer)
-            # the layer's own window lets clicks through; its widgets still
-            # take them
-            overlay.set_overlay_pass_through(layer, True)
+        self.overlay.add_overlay(self.column)
 
         super().__init__(
             layer="bottom",
@@ -328,7 +345,7 @@ class DesktopWindow(WaylandWindow):
             # notes need typing; the desktop only takes the keyboard on click
             keyboard_mode="on-demand",
             monitor=monitor,
-            child=overlay,
+            child=self.overlay,
         )
         self.show_all()
         self.apply_settings()
@@ -362,7 +379,7 @@ class DesktopWindow(WaylandWindow):
         if self._player_placed:
             return
         saved = self.manager.settings.player_positions.get(self.monitor_name)
-        alloc = self.objects.get_allocation()
+        alloc = self.background.get_allocation()
         if alloc.height <= 1:
             return  # not laid out yet
         if saved:
@@ -371,16 +388,20 @@ class DesktopWindow(WaylandWindow):
             # bottom-left, above the visualizer
             margin = self.sizes.margin
             x = margin
-            y = alloc.height - self.player.height - round(self.monitor_height * 0.11)
+            y = (
+                alloc.height
+                - self.player.total_height
+                - round(self.monitor_height * 0.11)
+            )
         # keep it on screen if the theme or monitor changed size
         x = max(0, min(x, alloc.width - self.player.width))
-        y = max(0, min(y, alloc.height - self.player.height))
+        y = max(0, min(y, alloc.height - self.player.total_height))
         self._move_player(x, y)
         self._player_placed = True
 
     def _move_player(self, x: int, y: int):
         self.player.x, self.player.y = x, y
-        self.objects.move(self.player, x, y)
+        place(self.player, x, y)
 
     def _save_player_position(self):
         self.manager.settings.player_positions[self.monitor_name] = [
@@ -420,6 +441,7 @@ class DesktopWindow(WaylandWindow):
         self.update_focus()
         self.update_prayer()
         self.update_playing()
+        self.update_lyrics()
         self.update_meta()
         self.update_memory()
         self.update_color(now, prayer_times)
@@ -438,6 +460,41 @@ class DesktopWindow(WaylandWindow):
             return
         self.prayer_label.set_label(f"{name} in {str(remaining).removeprefix('0h ')}")
         self.prayer_label.show()
+
+    def update_lyrics(self):
+        """Show the synced lyric line, ticking only while it can change."""
+        media = self.manager.media
+        lines = media.lyric_lines()
+        player = media.current_player()
+        showing = (
+            self.manager.settings.enabled("lyrics")
+            and lines is not None
+            and player is not None
+        )
+        self.lyrics.set_visible(showing)
+        if showing and lines is not None:
+            current, upcoming = lines
+            if self.lyric_label.get_label() != current:
+                self.lyric_label.set_label(current or "♪")
+                self.lyric_next_label.set_label(upcoming)
+        ticking = (
+            showing
+            and player is not None
+            and player.playback_status == "Playing"
+            and self.manager.visibility.visible(self.monitor_name)
+        )
+        if ticking and self._lyrics_tick is None:
+            self._lyrics_tick = GLib.timeout_add(250, self._on_lyrics_tick)
+        elif not ticking and self._lyrics_tick is not None:
+            GLib.source_remove(self._lyrics_tick)
+            self._lyrics_tick = None
+
+    def _on_lyrics_tick(self):
+        lines = self.manager.media.lyric_lines()
+        if lines is not None and self.lyric_label.get_label() != (lines[0] or "♪"):
+            self.lyric_label.set_label(lines[0] or "♪")
+            self.lyric_next_label.set_label(lines[1])
+        return True
 
     def update_playing(self):
         text = self.manager.now_playing_text()
@@ -694,6 +751,7 @@ class DesktopManager:
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
+        self.media = MediaState()
         self.windows: list[DesktopWindow] = []
         self._hidden_since: dict[str, float] = {}
 
@@ -726,11 +784,11 @@ class DesktopManager:
         self.cava.connect("frame", lambda *_: None)
         self.visibility.connect("changed", lambda *_: self._on_visibility_changed())
 
-        players = config.mprisplayer
-        players.connect("player-appeared", lambda _m, p: self._watch_player(p))
-        players.connect("player-vanished", lambda *_: self._on_players_changed())
-        for player in players.players.values():
-            self._watch_player(player)
+        self.media.connect("changed", lambda *_: self._on_players_changed())
+        self.media.connect(
+            "lyrics-changed", lambda *_: self._each(DesktopWindow.update_lyrics)
+        )
+        self._on_players_changed()
 
         # say hello once the desktop is up
         GLib.timeout_add(1500, lambda: self._each(DesktopWindow.show_greeting) or False)
@@ -849,23 +907,19 @@ class DesktopManager:
                 self._hidden_since.setdefault(name, now)
         self._update_cava()
         self._each(DesktopWindow.update_fx)
+        self._each(DesktopWindow.update_lyrics)
 
     # Media
-
-    def _watch_player(self, player):
-        player.connect("changed", lambda *_: self._on_players_changed())
-        self._on_players_changed()
 
     def _on_players_changed(self):
         self._update_cava()
         self._each(DesktopWindow.update_playing)
+        self._each(DesktopWindow.update_lyrics)
         self._each(lambda w: w.player.update_track())
         self._each(DesktopWindow.update_fx)
 
     def current_player(self):
-        players = list(config.mprisplayer.players.values())
-        playing = [p for p in players if p.playback_status == "Playing"]
-        return (playing or players or [None])[0]
+        return self.media.current_player()
 
     def now_playing_text(self) -> str | None:
         player = self.current_player()

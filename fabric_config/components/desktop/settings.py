@@ -24,6 +24,7 @@ POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right
 WIDGETS: dict[str, tuple[str, bool]] = {
     "prayer": ("Next prayer", True),
     "now_playing": ("Now playing", True),
+    "lyrics": ("Lyrics", True),
     "retro_player": ("Retro player", True),
     "weather": ("Weather", True),
     "hijri": ("Hijri date", True),

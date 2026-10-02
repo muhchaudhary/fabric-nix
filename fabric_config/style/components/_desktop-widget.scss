@@ -36,6 +36,11 @@
 #desktop-clock #clock-memory { font-weight: 400; font-style: italic; opacity: 0.65; }
 #clock-lines { margin-top: $gap-sm; }
 
+// synced lyrics: the current line, the next one fainter
+#clock-lyrics { margin: $gap-xs 0; }
+#desktop-clock #clock-lyric { font-weight: 600; opacity: 0.95; }
+#desktop-clock #clock-lyric-next { font-weight: 500; opacity: 0.45; }
+
 // a running focus timer: the countdown takes the stage
 #desktop-clock.focus #clock-time { opacity: 1; }
 
