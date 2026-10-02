@@ -59,6 +59,30 @@ def fit(cr: cairo.Context, text: str, max_width: float) -> str:
     return text.rstrip() + "…"
 
 
+def wrap(cr: cairo.Context, text: str, max_width: float) -> list[str]:
+    """Break `text` into rows no wider than `max_width` (current font)."""
+    rows: list[str] = []
+    row = ""
+    for word in text.split():
+        candidate = f"{row} {word}" if row else word
+        if cr.text_extents(candidate).x_advance <= max_width:
+            row = candidate
+            continue
+        if row:
+            rows.append(row)
+        # a single word wider than the row: split it by characters
+        while cr.text_extents(word).x_advance > max_width and len(word) > 1:
+            cut = len(word)
+            while cut > 1 and cr.text_extents(word[:cut]).x_advance > max_width:
+                cut -= 1
+            rows.append(word[:cut])
+            word = word[cut:]
+        row = word
+    if row:
+        rows.append(row)
+    return rows or [""]
+
+
 def font(cr: cairo.Context, size: float, bold: bool = False, family: str = "Inter"):
     cr.select_font_face(
         family,
@@ -253,7 +277,8 @@ class RetroPlayer(Gtk.EventBox):
         # the card around it
         self.pad = round(mh * 0.018)
         self.chip_h = round(mh * 0.03)
-        self.lyrics_h = round(mh * 0.115)
+        # room for the current line on two rows with a line either side
+        self.lyrics_h = round(mh * 0.15)
         self.card_w = max(round(mh * 0.36), self.width) + 2 * self.pad
         self.card_h = (
             self.pad + self.chip_h + self.pad + self.height + self.pad
@@ -573,28 +598,72 @@ class RetroPlayer(Gtk.EventBox):
             text_at(cr, message, self.card_w / 2, center + line_h * 0.15, "center")
             cr.restore()
             return
-        eased = self._lyric_slide * self._lyric_slide * (3 - 2 * self._lyric_slide)
-        offset = eased * line_h
+        # draw into a group, then fade it out toward the panel's top and
+        # bottom so lines leaving the panel dissolve rather than get cut
+        cr.push_group()
+        # lay the lines out at full length, wrapped onto as many rows as
+        # they need, stacked around the current line
         index = self._lyric_index
+        blocks: dict[int, tuple[list[str], float, float]] = {}
         for delta in (-2, -1, 0, 1, 2):
             text = self.media.lyric_at(index + delta)
             if delta == 0 and not text:
                 text = "♪"
             if not text:
                 continue
-            y = center + delta * line_h + offset
-            distance = abs((y - center) / line_h)
+            size = line_h * (0.5 if delta == 0 else 0.38)
+            font(cr, size, bold=delta == 0)
+            rows = wrap(cr, text, width)
+            row_h = size * 1.25
+            blocks[delta] = (rows, size, row_h * len(rows))
+        gap = line_h * 0.18
+
+        # the current block is centred; neighbours stack above and below
+        tops: dict[int, float] = {}
+        if 0 in blocks:
+            tops[0] = center - blocks[0][2] / 2
+        y = tops.get(0, center)
+        for delta in (-1, -2):
+            if delta in blocks:
+                y -= gap + blocks[delta][2]
+                tops[delta] = y
+        y = tops.get(0, center) + (blocks[0][2] if 0 in blocks else 0)
+        for delta in (1, 2):
+            if delta in blocks:
+                tops[delta] = y + gap
+                y += gap + blocks[delta][2]
+
+        # a new line slides up by the height of the one that just finished
+        eased = self._lyric_slide * self._lyric_slide * (3 - 2 * self._lyric_slide)
+        previous_h = blocks[-1][2] + gap if -1 in blocks else line_h
+        offset = eased * previous_h
+
+        for delta, (rows, size, block_h) in blocks.items():
+            block_top = tops[delta] + offset
+            distance = abs((block_top + block_h / 2 - center) / line_h)
             current = delta == 0
-            size = line_h * (0.52 if current else 0.4)
             font(cr, size, bold=current)
-            alpha = max(0.0, 1 - distance * 0.6) * (1 if current else 0.75)
+            alpha = max(0.0, 1 - distance * 0.45) * (1 if current else 0.75)
             if current:
                 cr.set_source_rgba(*self.accent, alpha)
             else:
                 cr.set_source_rgba(*self.ink, alpha * 0.7)
-            text_at(
-                cr, fit(cr, text, width), self.card_w / 2, y + size * 0.35, "center"
-            )
+            row_h = block_h / len(rows)
+            for i, row in enumerate(rows):
+                text_at(
+                    cr,
+                    row,
+                    self.card_w / 2,
+                    block_top + row_h * i + size * 0.95,
+                    "center",
+                )
+        cr.pop_group_to_source()
+        fade = cairo.LinearGradient(0, top, 0, top + h)
+        fade.add_color_stop_rgba(0, 0, 0, 0, 0)
+        fade.add_color_stop_rgba(0.22, 0, 0, 0, 1)
+        fade.add_color_stop_rgba(0.78, 0, 0, 0, 1)
+        fade.add_color_stop_rgba(1, 0, 0, 0, 0)
+        cr.mask(fade)
         cr.restore()
 
     def _track_lines(self) -> tuple[str, str]:
