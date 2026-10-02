@@ -47,17 +47,8 @@ class SystemTemps(Button):
     def get_data(self, fab: Fabricator):
         while True:
             yield {
-                "cpu-temp": round(
-                    (
-                        psutil.sensors_temperatures()["coretemp"]
-                        if ("coretemp" in psutil.sensors_temperatures())
-                        else psutil.sensors_temperatures()["k10temp"]
-                    )[0].current,
-                    1,
-                ),
-                "fan-speed": psutil.sensors_fans()["thinkpad"][0].current
-                if ("thinkpad" in psutil.sensors_fans())
-                else None,
+                "cpu-temp": self._read_cpu_temp(),
+                "fan-speed": self._read_fan_speed(),
                 "gpu-temp": exec_shell_command(
                     "nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader"
                 ).strip("\n")  # type: ignore
@@ -66,10 +57,28 @@ class SystemTemps(Button):
             }
             sleep(1)
 
-    def update_labels(self, data):
-        self.fan_speed_label.set_label(f"{data['fan-speed']} RPM") if data[
-            "fan-speed"
-        ] is not None else self.fan_speed_label.set_label(f"{data['gpu-temp']}°C   ")
+    @staticmethod
+    def _read_cpu_temp() -> float | None:
+        # a missing sensor must not raise: that would end this polling thread
+        temps = psutil.sensors_temperatures()
+        for chip in ("coretemp", "k10temp"):
+            if temps.get(chip):
+                return round(temps[chip][0].current, 1)
+        return None
 
-        self.cpu_temp_label.set_label(f"{data['cpu-temp']}°C")
+    @staticmethod
+    def _read_fan_speed() -> int | None:
+        fans = psutil.sensors_fans()
+        return fans["thinkpad"][0].current if fans.get("thinkpad") else None
+
+    def update_labels(self, data):
+        if data["fan-speed"] is not None:
+            self.fan_speed_label.set_label(f"{data['fan-speed']} RPM")
+        elif data["gpu-temp"] is not None:
+            self.fan_speed_label.set_label(f"{data['gpu-temp']}°C   ")
+        else:
+            self.fan_speed_label.set_label("--")
+
+        cpu_temp = data["cpu-temp"]
+        self.cpu_temp_label.set_label(f"{cpu_temp}°C" if cpu_temp is not None else "--")
         return True
