@@ -40,7 +40,9 @@ pkgs.mkShell {
               build
               pyopengl
               numpy
-              pygobject-stubs
+              # pygobject-stubs comes from python-depends (via python-fabric), pinned
+              # to GTK3 in flake.nix; listing ps.pygobject-stubs here would add the
+              # unpinned GTK4 build and conflict with it
             ]
             ++ python-depends
       ))

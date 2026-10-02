@@ -35,6 +35,11 @@
                     hash = "sha256-jYNudbWogdRX7hYiyuSjK826KKC6ViGTrbO7tHJHIhI=";
                   };
                 });
+                # Stubs default to GTK4; this project (and Fabric) use GTK3.
+                # Overridden in the scope so transitive users get the same build.
+                pygobject-stubs = pyprev.pygobject-stubs.overridePythonAttrs (_: {
+                  PYGOBJECT_STUB_CONFIG = "Gtk3,Gdk3";
+                });
                 python-fabric = final.callPackage "${inputs.fabric}/default.nix" {
                   python312Packages = pyfinal;
                 };
@@ -92,15 +97,8 @@
           inherit pkgs python pythonPackages python-depends astal-depends;
         };
         packages.default = pythonPackages.callPackage ./derivation.nix {
-          inherit (pkgs) lib astal-depends;
-          python-fabric = pythonPackages.python-fabric;
-          psutil = pythonPackages.psutil;
-          requests = pythonPackages.requests;
-          lxml = pythonPackages.lxml;
-          pam = pythonPackages.python-pam;
-          thefuzz = pythonPackages.thefuzz;
-          colorthief = pythonPackages.colorthief;
-          pywayland-custom = pythonPackages.callPackage ./nix/pywayland.nix {};
+          inherit astal-depends;
+          toplevel-streamer = inputs.toplevel-streamer-rs.lib.${system}.pythonPackage pythonPackages;
         };
         apps.default = {
           type = "app";
