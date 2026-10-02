@@ -91,11 +91,20 @@ class MinuteTicker:
         return False
 
 
-def readable_accent(rgb: tuple[int, int, int]) -> str:
-    """A light, not too saturated tint of a wallpaper colour, for text."""
-    h, light, s = colorsys.rgb_to_hls(*(c / 255 for c in rgb))
-    r, g, b = colorsys.hls_to_rgb(h, max(light, 0.8), min(s, 0.55))
-    return f"rgb({round(r * 255)}, {round(g * 255)}, {round(b * 255)})"
+# (css colour, wallpaper is light)
+Accent = tuple[str, bool]
+
+
+def readable_accent(rgb: tuple[int, int, int]) -> Accent:
+    """
+    A tint of a wallpaper's dominant colour that reads against it: light on
+    dark wallpapers, dark on light ones.
+    """
+    red, green, blue = (c / 255 for c in rgb)
+    on_light = 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.55
+    h, _light, s = colorsys.rgb_to_hls(red, green, blue)
+    r, g, b = colorsys.hls_to_rgb(h, 0.2 if on_light else 0.82, min(s, 0.5))
+    return f"rgb({round(r * 255)}, {round(g * 255)}, {round(b * 255)})", on_light
 
 
 # Faces
@@ -136,6 +145,8 @@ class AnalogFace(Gtk.DrawingArea):
         self.set_halign(Gtk.Align.CENTER)
         self.get_style_context().add_class("clock-analog")
         self._now = datetime.datetime.now()
+        # dial fill and hand shadows contrast with the wallpaper
+        self.on_light = False
         self.connect("draw", self._on_draw)
 
     def update(self, now: datetime.datetime, _use_24h: bool):
@@ -150,7 +161,8 @@ class AnalogFace(Gtk.DrawingArea):
 
         # dial
         cr.arc(cx, cy, radius, 0, 2 * math.pi)
-        cr.set_source_rgba(0, 0, 0, 0.25)
+        shade = 1.0 if self.on_light else 0.0
+        cr.set_source_rgba(shade, shade, shade, 0.08)
         cr.fill_preserve()
         cr.set_source_rgba(color.red, color.green, color.blue, 0.35)
         cr.set_line_width(2)
@@ -178,10 +190,10 @@ class AnalogFace(Gtk.DrawingArea):
         for angle, length, width in hands:
             x, y = cx + length * math.sin(angle), cy - length * math.cos(angle)
             # soft shadow first, so the hands stand off the wallpaper
-            cr.set_source_rgba(0, 0, 0, 0.35)
-            cr.set_line_width(width + 3)
-            cr.move_to(cx + 2, cy + 3)
-            cr.line_to(x + 2, y + 3)
+            cr.set_source_rgba(shade, shade, shade, 0.3)
+            cr.set_line_width(width + 2)
+            cr.move_to(cx + 1, cy + 2)
+            cr.line_to(x + 1, y + 2)
             cr.stroke()
             cr.set_source_rgba(color.red, color.green, color.blue, 1)
             cr.set_line_width(width)
@@ -362,8 +374,17 @@ class ClockWidget(WaylandWindow):
     def show_face(self, face: str):
         self.face_stack.set_visible_child_name(face)
 
-    def set_accent(self, color: str | None):
+    def set_accent(self, accent: Accent | None):
+        color, on_light = accent if accent else (None, False)
         self.root.set_style(f"color: {color};" if color else "")
+        if on_light:
+            self.root.add_style_class("on-light")
+        else:
+            self.root.remove_style_class("on-light")
+        analog = self.faces["analog"]
+        assert isinstance(analog, AnalogFace)
+        analog.on_light = on_light
+        analog.queue_draw()
 
     def _on_scroll(self, _widget, event: Gdk.EventScroll):
         match event.direction:
@@ -395,7 +416,7 @@ class DesktopClocks:
     def __init__(self):
         self.settings = ClockSettings()
         self.windows: list[ClockWidget] = []
-        self._accent_cache: dict[str, str | None] = {}
+        self._accent_cache: dict[str, Accent | None] = {}
 
         display = Gdk.Display.get_default()
         if display is None:
@@ -485,9 +506,9 @@ class DesktopClocks:
             return
 
         def on_color(rgb):
-            color = readable_accent(rgb) if rgb else None
-            self._accent_cache[path] = color
+            accent = readable_accent(rgb) if rgb else None
+            self._accent_cache[path] = accent
             if window in self.windows:
-                window.set_accent(color)
+                window.set_accent(accent)
 
         grab_accent_color_threaded(path, on_color)
