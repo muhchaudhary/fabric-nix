@@ -3,7 +3,6 @@ import json
 import cairo
 import gi
 from fabric.hyprland.service import Hyprland
-from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
@@ -13,16 +12,33 @@ from fabric.widgets.overlay import Overlay
 from hyprland_toplevel_streamer import HyprlandFrameCapture
 from loguru import logger
 
-from fabric_config.utils.icon_resolver import IconResolver
+from fabric_config.utils.icon_resolver import get_icon_resolver
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("Gtk", "3.0")
-from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk  # noqa: E402
 
-icon_resolver = IconResolver()
+icon_resolver = get_icon_resolver()
 connection = Hyprland()
-SCALE = 0.2
+# Every workspace preview is this tall; its width follows the aspect ratio of
+# the monitor the workspace is on, and its windows are scaled to match. This
+# keeps previews consistent when monitors differ in size, scale or rotation.
+PREVIEW_HEIGHT = 216
+
+
+# Hyprland 0.56+ (Lua config) only accepts hl.dsp.* dispatches. Always pass an
+# explicit `window`: without one, window dispatchers act on the focused window.
+def move_window_to_workspace(address: str, workspace_id: int):
+    if not address.startswith("0x"):
+        logger.error(f"[Overview] Ignoring drop with unexpected data: {address!r}")
+        return
+    connection.send_command(
+        "/dispatch hl.dsp.window.move({ "
+        f"workspace = {workspace_id}, window = 'address:{address}', follow = false"
+        " })"
+    )
+
 
 # Credit to Aylur for the drag and drop code
 TARGET = [Gtk.TargetEntry.new("text/plain", Gtk.TargetFlags.SAME_APP, 0)]
@@ -67,7 +83,9 @@ class HyprlandWindowButton(Button):
             size=size,
             on_clicked=self.on_button_click,
             on_button_press_event=lambda _, event: (
-                connection.send_command(f"/dispatch closewindow address:{address}")
+                connection.send_command(
+                    f"/dispatch hl.dsp.window.close({{ window = 'address:{address}' }})"
+                )
                 if event.button == 3
                 else None
             ),
@@ -100,17 +118,50 @@ class HyprlandWindowButton(Button):
         )
 
     def on_button_click(self, *_):
-        connection.send_command(f"/dispatch focuswindow address:{self.address}")
+        # Hyprland 0.56+ (Lua config) rejects the old "focuswindow address:..." form
+        connection.send_command(
+            f"/dispatch hl.dsp.focus({{ window = 'address:{self.address}' }})"
+        )
         self.window.toggle_popup()
 
 
+class MonitorGeometry:
+    """A monitor's logical layout rectangle (after scale and rotation)."""
+
+    def __init__(self, monitor: dict):
+        self.id: int = monitor["id"]
+        self.x: int = monitor["x"]
+        self.y: int = monitor["y"]
+        self.transform: int = monitor["transform"]
+        width = monitor["width"] / monitor["scale"]
+        height = monitor["height"] / monitor["scale"]
+        # odd transforms are 90/270 degree rotations
+        if self.transform % 2 == 1:
+            width, height = height, width
+        self.width: float = width
+        self.height: float = height
+
+    @property
+    def preview_scale(self) -> float:
+        return PREVIEW_HEIGHT / self.height
+
+    @property
+    def preview_size(self) -> tuple[int, int]:
+        return (round(self.width * self.preview_scale), PREVIEW_HEIGHT)
+
+
 class WorkspaceEventBox(EventBox):
-    def __init__(self, workspace_id: int, fixed: Gtk.Fixed | None = None):
+    def __init__(
+        self,
+        workspace_id: int,
+        size: tuple[int, int],
+        fixed: Gtk.Fixed | None = None,
+    ):
         self.fixed = fixed
         super().__init__(
-            h_expand=True,
-            v_expand=True,
-            size=(int(1920 * SCALE), int(1080 * SCALE)),
+            h_expand=False,
+            v_expand=False,
+            size=size,
             name="overview-workspace-bg",
             style_classes=["cool-border"],
             child=fixed
@@ -124,9 +175,7 @@ class WorkspaceEventBox(EventBox):
                 .load_icon("list-add", 64, Gtk.IconLookupFlags.FORCE_SIZE),
             ),
             on_drag_data_received=lambda _w, _c, _x, _y, data, *_: (
-                connection.send_command(
-                    f"/dispatch movetoworkspacesilent {workspace_id},address:{data.get_data().decode()}"
-                )
+                move_window_to_workspace(data.get_data().decode(), workspace_id)
             ),
         )
         self.drag_dest_set(
@@ -137,7 +186,6 @@ class WorkspaceEventBox(EventBox):
         fixed.show_all() if fixed else None
 
 
-# TODO update with monitors for later....
 class Overview(PopupWindow):
     def __init__(self):
         self._capture = HyprlandFrameCapture()
@@ -150,6 +198,7 @@ class Overview(PopupWindow):
         )
         self.workspace_boxes: dict[int, Box] = {}
         self.clients: dict[str, HyprlandWindowButton] = {}
+        self._update_timeout_id: int | None = None
 
         connection.connect("event::openwindow", self.do_update)
         connection.connect("event::closewindow", self.do_update)
@@ -177,35 +226,56 @@ class Overview(PopupWindow):
         self.overview_box_rows = [Box(), Box()]
         self.overview_box.children = self.overview_box_rows
 
-        monitors = {
-            monitor["id"]: (monitor["x"], monitor["y"], monitor["transform"])
-            for monitor in json.loads(
-                connection.send_command("j/monitors").reply.decode()
-            )
+        monitor_list = json.loads(connection.send_command("j/monitors").reply.decode())
+        monitors = {m["id"]: MonitorGeometry(m) for m in monitor_list}
+        focused_monitor = next(
+            (m["id"] for m in monitor_list if m.get("focused")),
+            monitor_list[0]["id"],
+        )
+        # existing workspaces report their monitor; a workspace that doesn't
+        # exist yet would be created on the focused monitor
+        workspace_monitors: dict[int, int] = {
+            ws["id"]: ws["monitorID"]
+            for ws in json.loads(connection.send_command("j/workspaces").reply.decode())
+            if ws["monitorID"] in monitors
         }
+
+        def monitor_for(workspace_id: int) -> MonitorGeometry:
+            return monitors[workspace_monitors.get(workspace_id, focused_monitor)]
 
         for client in json.loads(
             str(connection.send_command("j/clients").reply.decode())
         ):
+            workspace_id = client["workspace"]["id"]
             # We don't want any special workspaces to be included
-            if client["workspace"]["id"] > 0:
-                self.clients[client["address"]] = HyprlandWindowButton(
-                    window=self,
-                    title=client["title"],
-                    address=client["address"],
-                    app_id=client["initialClass"],
-                    size=(client["size"][0] * SCALE, client["size"][1] * SCALE),
-                    transform=monitors[client["monitor"]][2],
-                )
-                if client["workspace"]["id"] not in self.workspace_boxes:
-                    self.workspace_boxes.update(
-                        {client["workspace"]["id"]: Gtk.Fixed.new()}
-                    )
-                self.workspace_boxes[client["workspace"]["id"]].put(
-                    self.clients[client["address"]],
-                    abs(client["at"][0] - monitors[client["monitor"]][0]) * SCALE,
-                    abs(client["at"][1] - monitors[client["monitor"]][1]) * SCALE,
-                )
+            if workspace_id <= 0:
+                continue
+            monitor = monitor_for(workspace_id)
+            scale = monitor.preview_scale
+            box_width, box_height = monitor.preview_size
+
+            # position relative to the monitor, clamped so a window that hangs
+            # off-screen can't grow the preview beyond its box
+            x = min(max(0, round((client["at"][0] - monitor.x) * scale)), box_width - 1)
+            y = min(
+                max(0, round((client["at"][1] - monitor.y) * scale)), box_height - 1
+            )
+            width = max(8, min(round(client["size"][0] * scale), box_width - x))
+            height = max(8, min(round(client["size"][1] * scale), box_height - y))
+
+            self.clients[client["address"]] = HyprlandWindowButton(
+                window=self,
+                title=client["title"],
+                address=client["address"],
+                app_id=client["initialClass"],
+                size=(width, height),
+                transform=monitor.transform,
+            )
+            if workspace_id not in self.workspace_boxes:
+                self.workspace_boxes[workspace_id] = Gtk.Fixed.new()
+            self.workspace_boxes[workspace_id].put(
+                self.clients[client["address"]], x, y
+            )
         # total_workspaces = (
         #     range(1, max(self.workspace_boxes.keys()) + 2)
         #     if len(self.workspace_boxes) != 0
@@ -223,9 +293,8 @@ class Overview(PopupWindow):
                     children=[
                         WorkspaceEventBox(
                             w_id,
-                            self.workspace_boxes[w_id]
-                            if w_id in self.workspace_boxes
-                            else None,
+                            monitor_for(w_id).preview_size,
+                            self.workspace_boxes.get(w_id),
                         ),
                         Label(f"Workspace {w_id}"),
                     ],
@@ -240,8 +309,8 @@ class Overview(PopupWindow):
                     name="overview-frame",
                     pixbuf=GdkPixbuf.Pixbuf.scale_simple(
                         pixbuf,
-                        self.clients[address].size[0] - 7,
-                        self.clients[address].size[1] - 7,
+                        max(1, self.clients[address].size[0] - 7),
+                        max(1, self.clients[address].size[1] - 7),
                         GdkPixbuf.InterpType.BILINEAR,
                     ).rotate_simple(
                         {
@@ -278,9 +347,19 @@ class Overview(PopupWindow):
                 logger.error(f"Error capturing client {client_addr}: {e}")
 
     def do_update(self, *_):
+        # Window events often arrive in bursts (e.g. moving a window emits
+        # several), and update() recaptures every window synchronously, so
+        # coalesce them into a single update.
+        if not self.popup_visible or self._update_timeout_id is not None:
+            return
+        logger.info(f"[Overview] Updating for :{_[1].name}")
+        self._update_timeout_id = GLib.timeout_add(100, self._do_scheduled_update)
+
+    def _do_scheduled_update(self):
+        self._update_timeout_id = None
         if self.popup_visible:
-            logger.info(f"[Overview] Updating for :{_[1].name}")
             self.update(signal_update=True)
+        return False
 
     def toggle_popup(self, monitor: bool | None = None):
         self.update() if not self.popup_visible else None
