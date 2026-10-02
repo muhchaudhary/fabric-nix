@@ -75,7 +75,7 @@ uniform float     iSampleRate;           // sound sample rate (i.e., 44100)
 class ShadertoyCompileError(Exception): ...
 
 
-class Shadertoy(Gtk.GLArea, Widget):
+class Shadertoy(Gtk.GLArea, Widget):  # pyright: ignore[reportIncompatibleVariableOverride]
     def __init__(
         self,
         shader_buffer: str,

@@ -12,7 +12,7 @@ from gi.repository import Gdk, GdkPixbuf, Gtk  # noqa: E402
 # TODO: Fix edge cases
 
 
-class CircleImage(Gtk.DrawingArea, Widget):
+class CircleImage(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibleVariableOverride]
     @Property(int, "read-write")
     def angle(self) -> int:  # type: ignore
         return self._angle

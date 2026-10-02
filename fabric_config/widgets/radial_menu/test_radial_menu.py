@@ -83,7 +83,7 @@ class RadialMenuSegment(Widget):
         )
 
 
-class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
+class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibleVariableOverride]
     def __init__(
         self,
         # Radial menu specific props
@@ -395,7 +395,7 @@ class RadialMenuDrawingArea(Gtk.DrawingArea, Widget):
         return self.segments[index].get_style_context()
 
 
-class RadialMenu(Gtk.Fixed, Widget):
+class RadialMenu(Gtk.Fixed, Widget):  # pyright: ignore[reportIncompatibleVariableOverride, reportIncompatibleMethodOverride]
     def __init__(
         self,
         # Radial menu specific props
@@ -475,21 +475,21 @@ class RadialMenu(Gtk.Fixed, Widget):
         for i in range(len(self.segments)):
             self.move_segment_child(i, shift_x, shift_y)
         if self.center_child is not None:
-            child_size = self.center_child.get_preferred_size()
+            _, natural_size = self.center_child.get_preferred_size()
             center_x = self.drawing_area.center_x + shift_x
             center_y = self.drawing_area.center_y + shift_y
 
             if self.center_child in super().get_children():
                 super().move(
                     self.center_child,
-                    center_x - child_size.natural_size.width / 2,
-                    center_y - child_size.natural_size.height / 2,
+                    center_x - natural_size.width / 2,
+                    center_y - natural_size.height / 2,
                 )
                 return
             super().put(
                 self.center_child,
-                center_x - child_size.natural_size.width / 2,
-                center_y - child_size.natural_size.height / 2,
+                center_x - natural_size.width / 2,
+                center_y - natural_size.height / 2,
             )
 
     def move_segment_child(self, i: int, shift_x: float = 0, shift_y: float = 0):
@@ -500,7 +500,7 @@ class RadialMenu(Gtk.Fixed, Widget):
         start_angle = i * angle_step
         end_angle = (i + 1) * angle_step
 
-        child_size = child.get_preferred_size()
+        _, natural_size = child.get_preferred_size()
         segment_center_x, segment_center_y = polar_to_cartesian(
             self.drawing_area.center_x + shift_x,
             self.drawing_area.center_y + shift_y,
@@ -510,14 +510,14 @@ class RadialMenu(Gtk.Fixed, Widget):
         if child in super().get_children():
             super().move(
                 child,
-                segment_center_x - child_size.natural_size.width / 2,
-                segment_center_y - child_size.natural_size.height / 2,
+                segment_center_x - natural_size.width / 2,
+                segment_center_y - natural_size.height / 2,
             )
             return
         super().put(
             child,
-            segment_center_x - child_size.natural_size.width / 2,
-            segment_center_y - child_size.natural_size.height / 2,
+            segment_center_x - natural_size.width / 2,
+            segment_center_y - natural_size.height / 2,
         )
 
 

@@ -148,7 +148,7 @@ class PrayerTimesService(Service):
         return True
 
     @Property(object, "read-write")
-    def current_prayer(self):
+    def current_prayer(self) -> str:
         return self._current_prayer
 
     @current_prayer.setter
@@ -157,7 +157,7 @@ class PrayerTimesService(Service):
         self.notify("current-prayer")
 
     @Property(object, "read-write")
-    def next_prayer(self):
+    def next_prayer(self) -> str:
         return self._next_prayer
 
     @next_prayer.setter
@@ -166,7 +166,7 @@ class PrayerTimesService(Service):
         self.notify("next-prayer")
 
     @Property(object, "read-write")
-    def time_to_next_prayer(self):
+    def time_to_next_prayer(self) -> str:
         return self._time_to_next_prayer
 
     @time_to_next_prayer.setter

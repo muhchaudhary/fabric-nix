@@ -37,7 +37,7 @@ class TestWidget(Box):
         )
 
 
-class CustomRevealer(Gtk.DrawingArea, Widget):
+class CustomRevealer(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibleVariableOverride]
     def __init__(
         self,
         child: Widget,

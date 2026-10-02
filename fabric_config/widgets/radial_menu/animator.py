@@ -19,7 +19,7 @@ class Animator(Service):
         return
 
     @Property(float, "read-write")
-    def value(self):
+    def value(self) -> float:
         return self._value
 
     @value.setter
@@ -28,7 +28,7 @@ class Animator(Service):
         return
 
     @Property(float, "read-write")
-    def max_value(self):
+    def max_value(self) -> float:
         return self._max_value
 
     @max_value.setter
@@ -37,7 +37,7 @@ class Animator(Service):
         return
 
     @Property(float, "read-write")
-    def min_value(self):
+    def min_value(self) -> float:
         return self._min_value
 
     @min_value.setter
@@ -46,7 +46,7 @@ class Animator(Service):
         return
 
     @Property(bool, "read-write", default_value=False)
-    def playing(self):
+    def playing(self) -> bool:
         return self._playing
 
     @playing.setter
@@ -55,7 +55,7 @@ class Animator(Service):
         return
 
     @Property(bool, "read-write", default_value=False)
-    def repeat(self):
+    def repeat(self) -> bool:
         return self._repeat
 
     @repeat.setter

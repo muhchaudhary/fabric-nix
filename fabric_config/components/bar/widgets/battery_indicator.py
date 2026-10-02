@@ -95,7 +95,7 @@ class BatteryIndicator(Box):
                 self.battery_body.style_classes = ["default"]
 
 
-class BatteryBodyWidget(Gtk.DrawingArea, Widget):
+class BatteryBodyWidget(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibleVariableOverride]
     @Property(float, "read-write", default_value=0.0)
     def percentage(self) -> float:
         return self._percent
