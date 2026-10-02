@@ -189,7 +189,6 @@ def load_art(url: str | None, callback: Callable[[GdkPixbuf.Pixbuf | None], None
 class MusicPlayer(Gtk.EventBox):
     def __init__(
         self,
-        monitor_height: int,
         media,  # MediaState
         cava,  # Cava, for the seek bar's levels
         on_move_by: Callable[[int, int], None],
@@ -223,17 +222,7 @@ class MusicPlayer(Gtk.EventBox):
         self.connect("scroll-event", self._on_scroll)
         self.connect("leave-notify-event", self._on_leave)
 
-        # sizes, from a 1440px-tall reference screen
-        u = monitor_height / 1440
-        self.card_w = round(560 * u)
-        self.info_h = round(164 * u)
-        self.art = round(196 * u)
-        self.overflow = (self.art - self.info_h) // 2  # art above/below the card
-        self.strip_w = round(52 * u)
-        self.radius = round(16 * u)
-        self.gap = round(26 * u)
-        self.lyrics_h = round(132 * u)
-        self.u = u
+        self._set_sizes(1.0)
 
         # track state
         self.title = ""
@@ -277,6 +266,34 @@ class MusicPlayer(Gtk.EventBox):
         GLib.timeout_add_seconds(1, self._second)
 
     # Layout
+
+    def _set_sizes(self, scale: float):
+        """
+        Sizes in pixels at `scale`. The card is the same size on every
+        screen (not shrunk on smaller ones); the scale is a per-display
+        choice from the desktop menu.
+        """
+        u = scale
+        self.card_w = round(560 * u)
+        self.info_h = round(172 * u)
+        self.art = round(200 * u)
+        self.overflow = (self.art - self.info_h) // 2  # art above/below the card
+        self.strip_w = round(52 * u)
+        self.radius = round(16 * u)
+        self.gap = round(26 * u)
+        self.lyrics_h = round(132 * u)
+        self.u = u
+
+    def set_scale(self, scale: float):
+        if abs(scale - self.u) < 1e-3:
+            return
+        self._set_sizes(scale)
+        self._levels = []  # recomputed for the new width
+        before = self.total_h
+        self._layout()
+        if self.total_h != before:
+            self._on_resize()
+        self.queue_draw()
 
     def _layout(self):
         """Size the card; the lyrics section only exists when there are lyrics."""
@@ -680,7 +697,7 @@ class MusicPlayer(Gtk.EventBox):
 
         # seek bar: a row of level bars that move with the music (cava),
         # solid up to the playhead and faint after it; flat when quiet
-        bar_y = top + self.info_h * 0.55
+        bar_y = top + self.info_h * 0.585
         bar_w, bar_gap = SEEK_BAR_W * u, SEEK_BAR_GAP * u
         count = max(8, int((tw + bar_gap) / (bar_w + bar_gap)))
         if len(self._levels) != count:
@@ -718,8 +735,8 @@ class MusicPlayer(Gtk.EventBox):
             layout = text_layout(cr, label, 10.5 * u, 600)
             lw, lh = layout.get_pixel_size()
             bx = max(tx, min(tx + tw - lw - 10 * u, ghost_x - lw / 2 - 5 * u))
-            # in the times row, clear of the artist line above
-            by = bar_y + 12 * u
+            # above the bar, under the artist line
+            by = bar_y - head_half - lh - 7 * u
             rounded_rect(cr, bx, by, lw + 10 * u, lh + 4 * u, (lh + 4 * u) / 2)
             cr.set_source_rgba(*ink, 0.9 * glow)
             cr.fill()
@@ -742,7 +759,7 @@ class MusicPlayer(Gtk.EventBox):
             PangoCairo.show_layout(cr, layout)
 
         # controls
-        cy = top + self.info_h * 0.85
+        cy = top + self.info_h * 0.86
         center = tx + tw / 2
         spacing = 46 * u
         play_r = (17 + 2.5 * self._hovered("play_pause")) * u
@@ -892,7 +909,6 @@ class MusicPlayerWindow(WaylandWindow):
         self.monitor_name = monitor_name
         self.geometry = geometry
         self.player = MusicPlayer(
-            geometry.height,
             media,
             cava,
             on_move_by=self.move_by,

@@ -39,6 +39,7 @@ from fabric_config.components.desktop.notes import NotesLayer, NotesStore
 from fabric_config.components.desktop.music_player import MusicPlayerWindow
 from fabric_config.components.desktop.settings import (
     FACES,
+    PLAYER_SIZES,
     POSITIONS,
     WIDGETS,
     DesktopSettings,
@@ -523,6 +524,17 @@ class DesktopWindow(WaylandWindow):
                 radio=True,
             )
 
+        player_size = submenu("Music player size")
+        current_size = settings.player_size(self.monitor_name)
+        for size in PLAYER_SIZES:
+            check(
+                size.capitalize(),
+                current_size == size,
+                lambda z=size: manager.set_player_size(self.monitor_name, z),
+                player_size,
+                radio=True,
+            )
+
         # widgets are chosen per display; the menu edits this one
         widgets = submenu(f"Widgets on {self.monitor_name}")
         for name, (label, _default) in WIDGETS.items():
@@ -696,6 +708,7 @@ class DesktopManager:
         for window in self.player_windows:
             name = window.monitor_name
             window.player.set_show_lyrics(self.settings.enabled("lyrics", name))
+            window.player.set_scale(PLAYER_SIZES[self.settings.player_size(name)])
             window.set_visible(self.settings.enabled("music_player", name))
         self.update_player_palette()
 
@@ -726,6 +739,10 @@ class DesktopManager:
 
     def set_position(self, position):
         self.settings.position = position
+        self._changed()
+
+    def set_player_size(self, monitor: str, size: str):
+        self.settings.player_sizes[monitor] = size
         self._changed()
 
     def toggle_widget(self, name: str, monitor: str):
