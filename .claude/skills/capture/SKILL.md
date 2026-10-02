@@ -42,6 +42,7 @@ Options:
 | `--scale N` | `1` | render scale; use `2` for sharp detail |
 | `--eval CODE` | — | Python run after opening and before the delay; `obj` is the target, `widget` the captured widget |
 | `--transparent` | off | skip the background fill |
+| `--screen` | off | photograph the real on-screen pixels with `grim` instead of drawing offscreen. Use it for anything with a scrolled list. |
 
 Then **view the PNG with the Read tool** to inspect it.
 
@@ -80,6 +81,7 @@ python .claude/skills/capture/scripts/capture_component.py \
 
 - **Importing a component runs its side effects.** The wallpaper picker re-applies the last wallpaper, the overview captures live window frames, and clipboard/prayer services start. Nothing destructive, but be aware of it.
 - **Don't send compositor commands** (e.g. via `--eval`) as part of a capture. Hyprland window dispatchers without an explicit `window` act on the *focused* window.
+- **Scrolled content can render wrongly offscreen.** The default mode draws with `widget.draw()`, which can paint a `ScrolledWindow`'s viewport with a stale offset (rows shifted, a stray separator at the top). The real popup is fine. Use `--screen` for an exact picture. It briefly shows the component on your screen, and `grim` is fetched with `nix build` if it isn't installed.
 - **Async content needs time.** If thumbnails or previews are missing, raise `--delay`.
 - **"widget has no size" errors** usually mean the component didn't open. Check the target or open it via `--eval`.
 - **Python changes show up immediately** because the capture imports the working tree. The running bar still needs a restart.

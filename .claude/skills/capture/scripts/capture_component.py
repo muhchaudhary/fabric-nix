@@ -17,6 +17,7 @@ bare widget is placed in a window first.
 import argparse
 import importlib
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -62,6 +63,12 @@ def parse_args() -> argparse.Namespace:
         "--eval", dest="setup", help="python run before capture; `obj` is the target"
     )
     parser.add_argument("--transparent", action="store_true", help="no background fill")
+    parser.add_argument(
+        "--screen",
+        action="store_true",
+        help="photograph the real on-screen pixels with grim instead of drawing "
+        "offscreen (exact, incl. scrolled content; needs a visible surface)",
+    )
     return parser.parse_args()
 
 
@@ -73,6 +80,62 @@ def compile_css(theme: str) -> str:
     css = os.path.join(tempfile.gettempdir(), f"fabric-capture-{os.getpid()}.css")
     subprocess.run(["sass", "--no-source-map", scss, css], check=True)
     return css
+
+
+def find_grim() -> str:
+    grim = shutil.which("grim")
+    if grim:
+        return grim
+    out = subprocess.run(
+        ["nix", "build", "--no-link", "--print-out-paths", "nixpkgs#grim"],
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout.strip()
+    return os.path.join(out, "bin", "grim")
+
+
+def surface_origin(toplevel: Gtk.Widget) -> tuple[int, int] | None:
+    import json
+
+    try:
+        layers = json.loads(
+            subprocess.run(
+                ["hyprctl", "layers", "-j"], capture_output=True, text=True, check=True
+            ).stdout
+        )
+    except (OSError, subprocess.CalledProcessError, ValueError):
+        return None
+    size = (toplevel.get_allocated_width(), toplevel.get_allocated_height())
+    for monitor in layers.values():
+        for level in monitor["levels"].values():
+            for layer in level:
+                if layer["pid"] == os.getpid() and (layer["w"], layer["h"]) == size:
+                    return layer["x"], layer["y"]
+    return None
+
+
+def grab_screen(widget: Gtk.Widget, out: str):
+    """
+    Screenshot the widget's on-screen rectangle. Offscreen widget.draw()
+    mis-renders scrolled content (viewports draw with a stale offset), so this
+    is the faithful mode. GTK can't see where a layer-shell surface sits (it
+    may start below the bar's exclusive zone), so ask Hyprland for this
+    process's surface of the toplevel's size; fall back to the monitor origin.
+    """
+    toplevel = widget.get_toplevel()
+    x, y = widget.translate_coordinates(toplevel, 0, 0)
+    alloc = widget.get_allocation()
+    origin = surface_origin(toplevel)
+    if origin is None:
+        geo = (
+            widget.get_display()
+            .get_monitor_at_window(toplevel.get_window())
+            .get_geometry()
+        )
+        origin = (geo.x, geo.y)
+    region = f"{origin[0] + x},{origin[1] + y} {alloc.width}x{alloc.height}"
+    subprocess.run([find_grim(), "-g", region, out], check=True)
 
 
 def resolve_target(spec: str):
@@ -142,6 +205,13 @@ def main():
             print(
                 f"error: widget has no size ({alloc.width}x{alloc.height}); is it visible?",
                 file=sys.stderr,
+            )
+            app.quit()
+            return False
+        if args.screen:
+            grab_screen(widget, out)
+            print(
+                f"captured {alloc.width}x{alloc.height} (screen) -> {os.path.abspath(out)}"
             )
             app.quit()
             return False
