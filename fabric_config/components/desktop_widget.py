@@ -24,7 +24,6 @@ class ClockWidget(WaylandWindow):
             layer="bottom",
             anchor="left top right",
             all_visible=True,
-            exclusive=False,
             child=self.center_box,
         )
 

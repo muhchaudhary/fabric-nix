@@ -23,13 +23,14 @@ from fabric.widgets.wayland import WaylandWindow
 from loguru import logger
 
 from fabric_config.snippits.animator import Animator
+from fabric_config.utils.uri import file_uri_to_path
 from fabric_config.widgets.rounded_image import CustomImage
 
 gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
 gi.require_version("Pango", "1.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk, Pango
+from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
 
 # TODO: make a notification center
 # TODO: group notifications by type
@@ -219,7 +220,11 @@ class NotificationBox(Box):
     def get_icon(self, app_icon) -> Image:
         match app_icon:
             case str(x) if x.startswith("file://"):
-                return Image(name="notification-icon", image_file=app_icon[7:], size=16)
+                return Image(
+                    name="notification-icon",
+                    image_file=file_uri_to_path(app_icon),
+                    size=16,
+                )
             case str(x) if len(x) > 0 and "/" == x[0]:
                 return Image(name="notification-icon", image_file=app_icon, size=16)
             case _:
@@ -418,7 +423,6 @@ class NotificationPopup(WaylandWindow):
             layer="overlay",
             all_visible=True,
             visible=True,
-            exclusive=False,
         )
 
     def on_notification_closed(self, fabric_notif, id, reason):
