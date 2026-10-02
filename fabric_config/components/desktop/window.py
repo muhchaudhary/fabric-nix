@@ -35,6 +35,11 @@ from fabric_config.components.desktop.info import (
     hijri_date,
 )
 from fabric_config.components.desktop.notes import NotesLayer, NotesStore
+from fabric_config.components.desktop.retro_player import (
+    THEME_LABELS,
+    THEMES,
+    RetroPlayer,
+)
 from fabric_config.components.desktop.settings import (
     FACES,
     PARTICLE_MODES,
@@ -210,6 +215,25 @@ class DesktopWindow(WaylandWindow):
 
         self.notes = NotesLayer(manager.notes, monitor_name)
 
+        # the retro player sits on its own layer so it can be dragged anywhere
+        self.monitor_height = monitor_height
+        self.objects = Gtk.Fixed()
+        self.player = RetroPlayer(
+            monitor_height,
+            manager.settings.player_theme,
+            manager.current_player,
+            on_move=self._move_player,
+            on_moved=self._save_player_position,
+            on_cycle_theme=manager.cycle_player_theme,
+        )
+        self.objects.put(self.player, 0, 0)
+        # moving a child from inside its parent's allocation has no effect;
+        # place it once the layout pass is done
+        self.objects.connect(
+            "size-allocate",
+            lambda *_: GLib.idle_add(lambda: self._place_player() or False),
+        )
+
         # clock
         self.digital = DigitalFace(manager.focus.toggle, self.show_menu)
         self.words = WordFace()
@@ -291,7 +315,7 @@ class DesktopWindow(WaylandWindow):
 
         overlay = Gtk.Overlay()
         overlay.add(self.background)
-        for layer in (self.notes, self.column):
+        for layer in (self.objects, self.notes, self.column):
             overlay.add_overlay(layer)
             # the layer's own window lets clicks through; its widgets still
             # take them
@@ -322,8 +346,48 @@ class DesktopWindow(WaylandWindow):
         settings = self.manager.settings
         self.face_stack.set_visible_child_name(settings.face)
         self.notes.set_visible(settings.enabled("notes"))
+        if self.player.theme != settings.player_theme:
+            self.player.set_theme(settings.player_theme)
+            self._player_placed = False
+        self.player.set_visible(settings.enabled("retro_player"))
+        self._place_player()
         self._place_column()
         self.refresh()
+
+    # Retro player
+
+    _player_placed = False
+
+    def _place_player(self):
+        if self._player_placed:
+            return
+        saved = self.manager.settings.player_positions.get(self.monitor_name)
+        alloc = self.objects.get_allocation()
+        if alloc.height <= 1:
+            return  # not laid out yet
+        if saved:
+            x, y = saved
+        else:
+            # bottom-left, above the visualizer
+            margin = self.sizes.margin
+            x = margin
+            y = alloc.height - self.player.height - round(self.monitor_height * 0.11)
+        # keep it on screen if the theme or monitor changed size
+        x = max(0, min(x, alloc.width - self.player.width))
+        y = max(0, min(y, alloc.height - self.player.height))
+        self._move_player(x, y)
+        self._player_placed = True
+
+    def _move_player(self, x: int, y: int):
+        self.player.x, self.player.y = x, y
+        self.objects.move(self.player, x, y)
+
+    def _save_player_position(self):
+        self.manager.settings.player_positions[self.monitor_name] = [
+            self.player.x,
+            self.player.y,
+        ]
+        self.manager.settings.save()
 
     def _place_column(self):
         margin = self.sizes.margin
@@ -452,6 +516,7 @@ class DesktopWindow(WaylandWindow):
         self.fx.show_arc = settings.enabled("prayer_arc")
         self.fx.show_bars = settings.enabled("visualizer") and self.manager.cava.running
         self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
+        self.player.set_desktop_visible(visible)
         self.fx.queue_draw()
 
     # Greeting
@@ -577,6 +642,16 @@ class DesktopWindow(WaylandWindow):
                 settings.particles == mode,
                 lambda m=mode: manager.set_particles(m),
                 particles,
+                radio=True,
+            )
+
+        player = submenu("Retro player")
+        for theme in THEMES:
+            check(
+                THEME_LABELS[theme],
+                settings.player_theme == theme,
+                lambda t=theme: manager.set_player_theme(t),
+                player,
                 radio=True,
             )
 
@@ -732,6 +807,18 @@ class DesktopManager:
         self.settings.particles = mode
         self._changed()
 
+    def set_player_theme(self, theme: str):
+        self.settings.player_theme = theme
+        self._changed()
+
+    def cycle_player_theme(self):
+        index = (
+            THEMES.index(self.settings.player_theme)
+            if self.settings.player_theme in THEMES
+            else -1
+        )
+        self.set_player_theme(THEMES[(index + 1) % len(THEMES)])
+
     def toggle_widget(self, name: str):
         self.settings.widgets[name] = not self.settings.enabled(name)
         self._changed()
@@ -772,6 +859,7 @@ class DesktopManager:
     def _on_players_changed(self):
         self._update_cava()
         self._each(DesktopWindow.update_playing)
+        self._each(lambda w: w.player.update_track())
         self._each(DesktopWindow.update_fx)
 
     def current_player(self):

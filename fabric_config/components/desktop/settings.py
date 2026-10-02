@@ -24,6 +24,7 @@ POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right
 WIDGETS: dict[str, tuple[str, bool]] = {
     "prayer": ("Next prayer", True),
     "now_playing": ("Now playing", True),
+    "retro_player": ("Retro player", True),
     "weather": ("Weather", True),
     "hijri": ("Hijri date", True),
     "greeting": ("Greeting", True),
@@ -42,6 +43,9 @@ class DesktopSettings:
         self.particles = "auto"
         self.position: Position = "top"
         self.widgets = {name: default for name, (_, default) in WIDGETS.items()}
+        self.player_theme = "mp3"
+        # monitor name -> [x, y] of the retro player
+        self.player_positions: dict[str, list[int]] = {}
         try:
             with open(SETTINGS_FILE) as f:
                 data = json.load(f)
@@ -56,6 +60,15 @@ class DesktopSettings:
             self.particles = data["particles"]
         if data.get("position") in POSITIONS:
             self.position = data["position"]
+        if isinstance(data.get("player_theme"), str):
+            self.player_theme = data["player_theme"]
+        positions = data.get("player_positions")
+        if isinstance(positions, dict):
+            self.player_positions = {
+                str(k): [int(v[0]), int(v[1])]
+                for k, v in positions.items()
+                if isinstance(v, list) and len(v) == 2
+            }
         saved = data.get("widgets")
         if isinstance(saved, dict):
             for name in self.widgets:
@@ -77,6 +90,8 @@ class DesktopSettings:
                         "particles": self.particles,
                         "position": self.position,
                         "widgets": self.widgets,
+                        "player_theme": self.player_theme,
+                        "player_positions": self.player_positions,
                     },
                     f,
                 )

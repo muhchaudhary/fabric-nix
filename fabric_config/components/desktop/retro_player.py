@@ -1,0 +1,806 @@
+"""
+A retro media player for the desktop, drawn with cairo in one of several
+themes: a click-wheel MP3 player, a cassette tape, a turntable. It shows the
+current MPRIS player's track and art, and its controls work: click the
+buttons (or the wheel), drag it anywhere else to move it.
+"""
+
+import math
+import os
+import threading
+import urllib.request
+from collections.abc import Callable
+
+import cairo
+from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
+from loguru import logger
+
+from fabric_config.utils.uri import file_uri_to_path
+
+THEMES = ("mp3", "cassette", "vinyl")
+THEME_LABELS = {"mp3": "MP3 player", "cassette": "Cassette", "vinyl": "Turntable"}
+# (width, height) as fractions of the monitor height
+THEME_SIZES = {"mp3": (0.17, 0.29), "cassette": (0.33, 0.25), "vinyl": (0.44, 0.25)}
+
+MEDIA_CACHE = os.path.join(GLib.get_user_cache_dir(), "fabric", "media")
+FRAME_MS = 33
+DRAG_THRESHOLD = 6
+VINYL_SPEED = 2 * math.pi * 33.3 / 60  # 33⅓ rpm, in radians per second
+REEL_SPEED = 2.2
+
+
+# Drawing helpers
+
+
+def rounded_rect(cr: cairo.Context, x: float, y: float, w: float, h: float, r: float):
+    r = min(r, w / 2, h / 2)
+    cr.new_sub_path()
+    cr.arc(x + w - r, y + r, r, -math.pi / 2, 0)
+    cr.arc(x + w - r, y + h - r, r, 0, math.pi / 2)
+    cr.arc(x + r, y + h - r, r, math.pi / 2, math.pi)
+    cr.arc(x + r, y + r, r, math.pi, 3 * math.pi / 2)
+    cr.close_path()
+
+
+def rgb(hex_color: str) -> tuple[float, float, float]:
+    value = hex_color.lstrip("#")
+    return tuple(int(value[i : i + 2], 16) / 255 for i in (0, 2, 4))  # type: ignore[return-value]
+
+
+def fit(cr: cairo.Context, text: str, max_width: float) -> str:
+    """`text`, cut short with an ellipsis to fit `max_width`."""
+    if cr.text_extents(text).x_advance <= max_width:
+        return text
+    while text and cr.text_extents(text + "…").x_advance > max_width:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
+def font(cr: cairo.Context, size: float, bold: bool = False, family: str = "Inter"):
+    cr.select_font_face(
+        family,
+        cairo.FONT_SLANT_NORMAL,
+        cairo.FONT_WEIGHT_BOLD if bold else cairo.FONT_WEIGHT_NORMAL,
+    )
+    cr.set_font_size(size)
+
+
+def text_at(cr: cairo.Context, text: str, x: float, y: float, align: str = "left"):
+    extents = cr.text_extents(text)
+    if align == "center":
+        x -= extents.x_advance / 2
+    elif align == "right":
+        x -= extents.x_advance
+    cr.move_to(x, y)
+    cr.show_text(text)
+
+
+def paint_pixbuf(
+    cr: cairo.Context, pixbuf: GdkPixbuf.Pixbuf, x: float, y: float, size: float
+):
+    """Paint `pixbuf` cover-scaled into the square at (x, y)."""
+    scale = size / min(pixbuf.get_width(), pixbuf.get_height())
+    cr.save()
+    cr.translate(x, y)
+    cr.scale(scale, scale)
+    Gdk.cairo_set_source_pixbuf(
+        cr,
+        pixbuf,
+        (size / scale - pixbuf.get_width()) / 2,
+        (size / scale - pixbuf.get_height()) / 2,
+    )
+    cr.paint()
+    cr.restore()
+
+
+def icon(cr: cairo.Context, kind: str, cx: float, cy: float, size: float):
+    """
+    Draw a media icon centred on (cx, cy) in the current source. Shapes, not
+    glyphs: Inter has no media symbols, and cairo's toy text API can't fall
+    back to a font that does.
+    """
+    s = size / 2
+    match kind:
+        case "play":
+            cr.move_to(cx - s * 0.6, cy - s)
+            cr.line_to(cx + s * 0.9, cy)
+            cr.line_to(cx - s * 0.6, cy + s)
+            cr.close_path()
+        case "pause":
+            cr.rectangle(cx - s * 0.75, cy - s, s * 0.5, s * 2)
+            cr.rectangle(cx + s * 0.25, cy - s, s * 0.5, s * 2)
+        case "stop":
+            cr.rectangle(cx - s * 0.8, cy - s * 0.8, s * 1.6, s * 1.6)
+        case "next" | "previous":
+            d = 1 if kind == "next" else -1
+            cr.move_to(cx - d * s, cy - s * 0.85)
+            cr.line_to(cx + d * s * 0.45, cy)
+            cr.line_to(cx - d * s, cy + s * 0.85)
+            cr.close_path()
+            bar_x = cx + d * s * 0.45 - (s * 0.3 if d > 0 else 0)
+            cr.rectangle(bar_x, cy - s * 0.85, s * 0.3, s * 1.7)
+        case "play_pause":
+            icon(cr, "play", cx - s * 0.55, cy, size * 0.6)
+            icon(cr, "pause", cx + s * 0.6, cy, size * 0.6)
+            return
+    cr.fill()
+
+
+def format_time(microseconds: float) -> str:
+    seconds = max(0, int(microseconds // 1_000_000))
+    return f"{seconds // 60}:{seconds % 60:02}"
+
+
+# Album art
+
+
+def load_art(url: str | None, callback: Callable[[GdkPixbuf.Pixbuf | None], None]):
+    """Load (downloading and caching remote art) off the main thread."""
+    if not url:
+        callback(None)
+        return
+    if url.startswith("file://"):
+        path = file_uri_to_path(url)
+    else:
+        digest = GLib.compute_checksum_for_string(GLib.ChecksumType.SHA1, url, -1)
+        path = os.path.join(MEDIA_CACHE, digest or "art")
+
+    def work():
+        pixbuf = None
+        try:
+            if not os.path.exists(path):
+                os.makedirs(MEDIA_CACHE, exist_ok=True)
+                urllib.request.urlretrieve(url, path)
+            pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(path, 300, 300, True)
+        except Exception as e:
+            logger.debug(f"[Retro player] No art from {url}: {e}")
+        GLib.idle_add(lambda: callback(pixbuf) or False)
+
+    threading.Thread(target=work, daemon=True).start()
+
+
+# The widget
+
+
+class RetroPlayer(Gtk.EventBox):
+    def __init__(
+        self,
+        monitor_height: int,
+        theme: str,
+        get_player: Callable[[], object],
+        on_move: Callable[[int, int], None],
+        on_moved: Callable[[], None],
+        on_cycle_theme: Callable[[], None],
+    ):
+        super().__init__()
+        self.set_name("retro-player")
+        self.set_visible_window(False)
+        self.add_events(
+            Gdk.EventMask.BUTTON_PRESS_MASK
+            | Gdk.EventMask.BUTTON_RELEASE_MASK
+            | Gdk.EventMask.POINTER_MOTION_MASK
+        )
+        self.monitor_height = monitor_height
+        self.get_player = get_player
+        self._on_move = on_move
+        self._on_moved = on_moved
+        self._on_cycle_theme = on_cycle_theme
+
+        self.area = Gtk.DrawingArea()
+        self.add(self.area)
+        self.area.connect("draw", self._on_draw)
+        self.connect("button-press-event", self._on_press)
+        self.connect("motion-notify-event", self._on_motion)
+        self.connect("button-release-event", self._on_release)
+
+        # track state
+        self.title = ""
+        self.artist = ""
+        self.status = "Stopped"
+        self.length = 0
+        self._art_url: str | None = None
+        self.art: GdkPixbuf.Pixbuf | None = None
+        self._pos_base = 0.0
+        self._pos_time = 0.0
+
+        # animation
+        self.visible_on_desktop = True
+        self._angle = 0.0
+        self._speed = 0.0
+        self._tick_id: int | None = None
+        self._last_tick: float | None = None
+
+        # input
+        self._hits: list[tuple[str, tuple]] = []
+        self._press: tuple[float, float, int, int] | None = None
+        self._dragging = False
+        self.x = 0
+        self.y = 0
+
+        self.theme = ""
+        self.set_theme(theme)
+        GLib.timeout_add_seconds(1, self._second)
+
+    # State
+
+    def set_theme(self, theme: str):
+        self.theme = theme if theme in THEMES else THEMES[0]
+        w, h = THEME_SIZES[self.theme]
+        self.width = round(self.monitor_height * w)
+        self.height = round(self.monitor_height * h)
+        self.area.set_size_request(self.width, self.height)
+        self.queue_draw()
+
+    def update_track(self):
+        player = self.get_player()
+        if player is None:
+            self.title, self.artist, self.status, self.length = "", "", "Stopped", 0
+            self._set_art(None)
+        else:
+            title = getattr(player, "title", "") or ""
+            status = getattr(player, "playback_status", "Stopped")
+            changed_track = title != self.title
+            self.title = title
+            self.artist = ", ".join(
+                a for a in (getattr(player, "artist", None) or []) if a
+            )
+            self.length = getattr(player, "length", 0) or 0
+            if changed_track or status != self.status:
+                self._resync_position(player, reset=changed_track)
+            self.status = status
+            self._set_art(getattr(player, "arturl", None))
+        self._update_animation()
+        self.queue_draw()
+
+    def _set_art(self, url: str | None):
+        if url == self._art_url:
+            return
+        self._art_url = url
+        self.art = None
+
+        def done(pixbuf):
+            if url == self._art_url:
+                self.art = pixbuf
+                self.queue_draw()
+
+        load_art(url, done)
+
+    def _resync_position(self, player, reset: bool):
+        if reset:
+            self._pos_base, self._pos_time = 0.0, GLib.get_monotonic_time() / 1e6
+
+        def done(position: int):
+            self._pos_base = float(position)
+            self._pos_time = GLib.get_monotonic_time() / 1e6
+            self.queue_draw()
+
+        fetch = getattr(player, "fetch_position", None)
+        if fetch is not None:
+            fetch(done)
+
+    @property
+    def position(self) -> float:
+        """Estimated position in microseconds."""
+        if self.status != "Playing":
+            return self._pos_base
+        elapsed = GLib.get_monotonic_time() / 1e6 - self._pos_time
+        position = self._pos_base + elapsed * 1_000_000
+        return min(position, self.length) if self.length else position
+
+    @property
+    def progress(self) -> float:
+        return min(1.0, self.position / self.length) if self.length else 0.0
+
+    # Animation
+
+    def set_desktop_visible(self, visible: bool):
+        self.visible_on_desktop = visible
+        self._update_animation()
+
+    def _update_animation(self):
+        spinning = self.theme in ("cassette", "vinyl")
+        moving = self.status == "Playing" or self._speed > 0.01
+        wanted = spinning and moving and self.visible_on_desktop
+        if wanted and self._tick_id is None:
+            self._last_tick = None
+            self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
+        elif not wanted and self._tick_id is not None:
+            GLib.source_remove(self._tick_id)
+            self._tick_id = None
+
+    def _tick(self):
+        now = GLib.get_monotonic_time() / 1e6
+        dt = min(0.1, now - self._last_tick) if self._last_tick else FRAME_MS / 1000
+        self._last_tick = now
+        target = (VINYL_SPEED if self.theme == "vinyl" else REEL_SPEED) * (
+            1 if self.status == "Playing" else 0
+        )
+        # a record takes a moment to come up to speed and to wind down
+        self._speed += (target - self._speed) * min(1.0, dt * 3)
+        self._angle = (self._angle + self._speed * dt) % (2 * math.pi)
+        self.queue_draw()
+        if self.status != "Playing" and self._speed < 0.01:
+            self._speed = 0.0
+            self._tick_id = None
+            return False
+        return True
+
+    def _second(self):
+        # progress bars move on their own between track updates
+        if (
+            self.status == "Playing"
+            and self.visible_on_desktop
+            and self._tick_id is None
+        ):
+            self.queue_draw()
+        return True
+
+    # Input
+
+    def _on_press(self, _widget, event: Gdk.EventButton):
+        if event.button != 1:
+            return False
+        self._press = (event.x_root, event.y_root, self.x, self.y)
+        self._dragging = False
+        return True
+
+    def _on_motion(self, _widget, event: Gdk.EventMotion):
+        if self._press is None:
+            return False
+        sx, sy, x, y = self._press
+        dx, dy = event.x_root - sx, event.y_root - sy
+        if not self._dragging and math.hypot(dx, dy) > DRAG_THRESHOLD:
+            self._dragging = True
+        if self._dragging:
+            self._on_move(max(0, round(x + dx)), max(0, round(y + dy)))
+        return True
+
+    def _on_release(self, _widget, event: Gdk.EventButton):
+        if self._press is None:
+            return False
+        self._press = None
+        if self._dragging:
+            self._dragging = False
+            self._on_moved()
+            return True
+        if action := self._hit(event.x, event.y):
+            self._act(action)
+        return True
+
+    def _hit(self, x: float, y: float) -> str | None:
+        for action, shape in self._hits:
+            match shape:
+                case ("rect", rx, ry, rw, rh) if (
+                    rx <= x <= rx + rw and ry <= y <= ry + rh
+                ):
+                    return action
+                case ("circle", cx, cy, r) if math.hypot(x - cx, y - cy) <= r:
+                    return action
+                case ("wheel", cx, cy, inner, outer):
+                    distance = math.hypot(x - cx, y - cy)
+                    if distance <= inner:
+                        return "play_pause"
+                    if distance <= outer:
+                        angle = math.degrees(math.atan2(y - cy, x - cx))
+                        if -45 <= angle < 45:
+                            return "next"
+                        if 45 <= angle < 135:
+                            return "play_pause"
+                        if -135 <= angle < -45:
+                            return "menu"
+                        return "previous"
+        return None
+
+    def _act(self, action: str):
+        if action == "menu":
+            self._on_cycle_theme()
+            return
+        player = self.get_player()
+        if player is None:
+            return
+        method = getattr(player, action, None)
+        if callable(method):
+            method()
+
+    # Drawing
+
+    def _on_draw(self, _widget, cr: cairo.Context):
+        self._hits = []
+        w, h = self.width, self.height
+        {
+            "mp3": self._draw_mp3,
+            "cassette": self._draw_cassette,
+            "vinyl": self._draw_vinyl,
+        }[self.theme](cr, w, h)
+        return False
+
+    def _track_lines(self) -> tuple[str, str]:
+        if not self.title:
+            return "Nothing playing", "Play something to begin"
+        return self.title, self.artist or "Unknown artist"
+
+    # MP3 player: white body, LCD, click wheel
+
+    def _draw_mp3(self, cr: cairo.Context, w: float, h: float):
+        pad = w * 0.07
+        rounded_rect(cr, 1, 1, w - 2, h - 2, w * 0.1)
+        body = cairo.LinearGradient(0, 0, w, h)
+        body.add_color_stop_rgb(0, *rgb("#fbfbfc"))
+        body.add_color_stop_rgb(1, *rgb("#d9dbe0"))
+        cr.set_source(body)
+        cr.fill_preserve()
+        cr.set_source_rgba(0, 0, 0, 0.18)
+        cr.set_line_width(1)
+        cr.stroke()
+
+        # screen
+        sx, sy, sw, sh = pad, pad, w - 2 * pad, h * 0.4
+        rounded_rect(cr, sx - 2, sy - 2, sw + 4, sh + 4, w * 0.035)
+        cr.set_source_rgb(*rgb("#2a2c31"))
+        cr.fill()
+        rounded_rect(cr, sx, sy, sw, sh, w * 0.025)
+        lcd = cairo.LinearGradient(0, sy, 0, sy + sh)
+        lcd.add_color_stop_rgb(0, *rgb("#eef4fb"))
+        lcd.add_color_stop_rgb(1, *rgb("#cfdcea"))
+        cr.set_source(lcd)
+        cr.fill()
+
+        ink = rgb("#1d2733")
+        unit = sh / 10
+        # header bar
+        cr.set_source_rgba(*ink, 0.1)
+        cr.rectangle(sx, sy, sw, unit * 1.6)
+        cr.fill()
+        cr.set_source_rgb(*ink)
+        font(cr, unit * 0.95, bold=True)
+        text_at(cr, "Now Playing", sx + sw / 2, sy + unit * 1.15, "center")
+        icon(
+            cr,
+            "play" if self.status == "Playing" else "pause",
+            sx + unit * 0.9,
+            sy + unit * 0.8,
+            unit * 0.75,
+        )
+        # battery
+        bx, by = sx + sw - unit * 2.1, sy + unit * 0.45
+        cr.set_line_width(1)
+        cr.rectangle(bx, by, unit * 1.4, unit * 0.7)
+        cr.stroke()
+        cr.rectangle(bx + 1.5, by + 1.5, unit * 1.0, unit * 0.7 - 3)
+        cr.fill()
+        cr.rectangle(bx + unit * 1.4, by + unit * 0.2, 2, unit * 0.3)
+        cr.fill()
+
+        # art + text
+        art = unit * 3.9
+        ax, ay = sx + unit * 0.6, sy + unit * 2.2
+        if self.art is not None:
+            cr.save()
+            rounded_rect(cr, ax, ay, art, art, 3)
+            cr.clip()
+            paint_pixbuf(cr, self.art, ax, ay, art)
+            cr.restore()
+        else:
+            rounded_rect(cr, ax, ay, art, art, 3)
+            cr.set_source_rgba(*ink, 0.12)
+            cr.fill()
+            cr.set_source_rgba(*ink, 0.5)
+            font(cr, art * 0.5)
+            text_at(cr, "♪", ax + art / 2, ay + art * 0.68, "center")
+        title, artist = self._track_lines()
+        tx = ax + art + unit * 0.6
+        text_width = sx + sw - tx - unit * 0.5
+        cr.set_source_rgb(*ink)
+        font(cr, unit * 1.05, bold=True)
+        text_at(cr, fit(cr, title, text_width), tx, ay + unit * 1.2)
+        font(cr, unit * 0.9)
+        cr.set_source_rgba(*ink, 0.75)
+        text_at(cr, fit(cr, artist, text_width), tx, ay + unit * 2.5)
+
+        # progress
+        py = sy + sh - unit * 1.9
+        cr.set_source_rgba(*ink, 0.15)
+        rounded_rect(cr, sx + unit * 0.6, py, sw - unit * 1.2, unit * 0.55, unit * 0.27)
+        cr.fill()
+        cr.set_source_rgba(*rgb("#3c7bd6"), 0.9)
+        rounded_rect(
+            cr,
+            sx + unit * 0.6,
+            py,
+            max(unit * 0.55, (sw - unit * 1.2) * self.progress),
+            unit * 0.55,
+            unit * 0.27,
+        )
+        cr.fill()
+        cr.set_source_rgba(*ink, 0.8)
+        font(cr, unit * 0.75)
+        if self.length:
+            text_at(cr, format_time(self.position), sx + unit * 0.6, py + unit * 1.45)
+            text_at(
+                cr,
+                "-" + format_time(self.length - self.position),
+                sx + sw - unit * 0.6,
+                py + unit * 1.45,
+                "right",
+            )
+
+        # click wheel
+        cx, cy = w / 2, sy + sh + (h - sy - sh) / 2
+        outer = min(w - 2 * pad, h - sy - sh - pad) / 2
+        inner = outer * 0.38
+        cr.arc(cx, cy, outer, 0, 2 * math.pi)
+        wheel = cairo.LinearGradient(0, cy - outer, 0, cy + outer)
+        wheel.add_color_stop_rgb(0, *rgb("#f1f2f4"))
+        wheel.add_color_stop_rgb(1, *rgb("#e1e3e7"))
+        cr.set_source(wheel)
+        cr.fill_preserve()
+        cr.set_source_rgba(0, 0, 0, 0.1)
+        cr.stroke()
+        cr.arc(cx, cy, inner, 0, 2 * math.pi)
+        center = cairo.LinearGradient(0, cy - inner, 0, cy + inner)
+        center.add_color_stop_rgb(0, *rgb("#dfe1e5"))
+        center.add_color_stop_rgb(1, *rgb("#fafbfc"))
+        cr.set_source(center)
+        cr.fill_preserve()
+        cr.set_source_rgba(0, 0, 0, 0.12)
+        cr.stroke()
+
+        label = rgb("#9aa0a8")
+        cr.set_source_rgb(*label)
+        font(cr, outer * 0.16, bold=True)
+        text_at(cr, "MENU", cx, cy - outer * 0.66, "center")
+        icon(cr, "previous", cx - outer * 0.7, cy, outer * 0.16)
+        icon(cr, "next", cx + outer * 0.7, cy, outer * 0.16)
+        icon(cr, "play_pause", cx, cy + outer * 0.7, outer * 0.16)
+        self._hits.append(("wheel", ("wheel", cx, cy, inner, outer)))
+
+    # Cassette: smoky shell, label, spinning reels, piano keys
+
+    def _draw_cassette(self, cr: cairo.Context, w: float, h: float):
+        keys_h = h * 0.16
+        bh = h - keys_h - 4
+        r = w * 0.04
+        rounded_rect(cr, 1, 1, w - 2, bh, r)
+        shell = cairo.LinearGradient(0, 0, 0, bh)
+        shell.add_color_stop_rgba(0, *rgb("#3b3b42"), 0.96)
+        shell.add_color_stop_rgba(1, *rgb("#202025"), 0.96)
+        cr.set_source(shell)
+        cr.fill()
+        # screws
+        cr.set_source_rgba(1, 1, 1, 0.25)
+        for sx, sy in (
+            (r * 1.2, r * 1.2),
+            (w - r * 1.2, r * 1.2),
+            (r * 1.2, bh - r * 1.2),
+            (w - r * 1.2, bh - r * 1.2),
+        ):
+            cr.arc(sx, sy, w * 0.009, 0, 2 * math.pi)
+            cr.fill()
+
+        # label
+        lx, ly, lw, lh = w * 0.07, bh * 0.08, w * 0.86, bh * 0.62
+        rounded_rect(cr, lx, ly, lw, lh, r * 0.6)
+        cr.set_source_rgb(*rgb("#f3ead2"))
+        cr.fill()
+        stripe_y = ly + lh * 0.8
+        for i, color in enumerate(("#e2603b", "#f0a63a", "#3f8fb3")):
+            cr.set_source_rgb(*rgb(color))
+            cr.rectangle(lx, stripe_y + i * lh * 0.05, lw, lh * 0.05)
+            cr.fill()
+        title, artist = self._track_lines()
+        ink = rgb("#2b2620")
+        cr.set_source_rgb(*ink)
+        font(cr, lh * 0.14, bold=True)
+        text_at(cr, fit(cr, title, lw * 0.8), lx + lw * 0.06, ly + lh * 0.2)
+        font(cr, lh * 0.1)
+        cr.set_source_rgba(*ink, 0.75)
+        text_at(cr, fit(cr, artist, lw * 0.82), lx + lw * 0.06, ly + lh * 0.34)
+        font(cr, lh * 0.12, bold=True)
+        cr.set_source_rgba(*ink, 0.8)
+        text_at(cr, "A", lx + lw * 0.94, ly + lh * 0.2, "right")
+
+        # window with reels
+        wx, wy, ww, wh = w * 0.27, ly + lh * 0.43, w * 0.46, lh * 0.3
+        rounded_rect(cr, wx, wy, ww, wh, wh / 2)
+        cr.set_source_rgba(0.08, 0.08, 0.1, 0.92)
+        cr.fill()
+        reel_r = wh * 0.32
+        left = (wx + wh * 0.5, wy + wh / 2)
+        right = (wx + ww - wh * 0.5, wy + wh / 2)
+        progress = self.progress
+        tape_max = wh * 0.95
+        for (cx, cy), amount in ((left, 1 - progress), (right, progress)):
+            # wound tape
+            cr.arc(cx, cy, reel_r + (tape_max - reel_r) * amount * 0.55, 0, 2 * math.pi)
+            cr.set_source_rgb(*rgb("#4a3424"))
+            cr.fill()
+        cr.save()
+        rounded_rect(cr, wx, wy, ww, wh, wh / 2)
+        cr.clip()
+        for cx, cy in (left, right):
+            cr.arc(cx, cy, reel_r, 0, 2 * math.pi)
+            cr.set_source_rgb(*rgb("#eeeeee"))
+            cr.fill()
+            cr.set_source_rgb(*rgb("#1a1a1e"))
+            cr.arc(cx, cy, reel_r * 0.42, 0, 2 * math.pi)
+            cr.fill()
+            cr.set_line_width(reel_r * 0.16)
+            cr.set_source_rgb(*rgb("#eeeeee"))
+            for i in range(6):
+                a = self._angle + i * math.pi / 3
+                cr.move_to(
+                    cx + math.cos(a) * reel_r * 0.15, cy + math.sin(a) * reel_r * 0.15
+                )
+                cr.line_to(
+                    cx + math.cos(a) * reel_r * 0.42, cy + math.sin(a) * reel_r * 0.42
+                )
+                cr.stroke()
+        cr.restore()
+
+        # bottom trapezoid with tape guides
+        tx = w * 0.2
+        cr.move_to(tx, bh)
+        cr.line_to(tx + w * 0.05, bh * 0.8)
+        cr.line_to(w - tx - w * 0.05, bh * 0.8)
+        cr.line_to(w - tx, bh)
+        cr.close_path()
+        cr.set_source_rgba(1, 1, 1, 0.08)
+        cr.fill()
+        cr.set_source_rgba(0, 0, 0, 0.6)
+        for gx in (0.32, 0.45, 0.55, 0.68):
+            cr.arc(w * gx, bh * 0.9, w * 0.012, 0, 2 * math.pi)
+            cr.fill()
+
+        # piano keys
+        key_w = w * 0.18
+        gap = w * 0.02
+        start = (w - (3 * key_w + 2 * gap)) / 2
+        for i, (action, glyph) in enumerate(
+            (
+                ("previous", "previous"),
+                ("play_pause", "pause" if self.status == "Playing" else "play"),
+                ("next", "next"),
+            )
+        ):
+            kx = start + i * (key_w + gap)
+            ky = bh + 4
+            pressed = action == "play_pause" and self.status == "Playing"
+            rounded_rect(
+                cr, kx, ky + (2 if pressed else 0), key_w, keys_h - 2, keys_h * 0.2
+            )
+            key = cairo.LinearGradient(0, ky, 0, ky + keys_h)
+            key.add_color_stop_rgb(0, *rgb("#d8d8dc" if not pressed else "#b8b8bd"))
+            key.add_color_stop_rgb(1, *rgb("#a9a9af" if not pressed else "#9a9aa0"))
+            cr.set_source(key)
+            cr.fill()
+            cr.set_source_rgb(*rgb("#2a2a2e"))
+            icon(
+                cr,
+                glyph,
+                kx + key_w / 2,
+                ky + keys_h * 0.5 + (2 if pressed else 0),
+                keys_h * 0.32,
+            )
+            self._hits.append((action, ("rect", kx, ky, key_w, keys_h)))
+
+    # Turntable: plinth, spinning record with the art as its label, tonearm
+
+    def _draw_vinyl(self, cr: cairo.Context, w: float, h: float):
+        rounded_rect(cr, 1, 1, w - 2, h - 2, w * 0.04)
+        plinth = cairo.LinearGradient(0, 0, 0, h)
+        plinth.add_color_stop_rgba(0, *rgb("#3a2e26"), 0.97)
+        plinth.add_color_stop_rgba(1, *rgb("#241c17"), 0.97)
+        cr.set_source(plinth)
+        cr.fill()
+
+        pr = h * 0.42
+        cx, cy = h * 0.5, h * 0.5
+        # platter and record
+        cr.arc(cx, cy, pr * 1.03, 0, 2 * math.pi)
+        cr.set_source_rgb(*rgb("#8b8f94"))
+        cr.fill()
+        cr.arc(cx, cy, pr, 0, 2 * math.pi)
+        cr.set_source_rgb(*rgb("#121214"))
+        cr.fill()
+        cr.set_line_width(0.6)
+        for i in range(14):
+            cr.arc(cx, cy, pr * (0.42 + i * 0.04), 0, 2 * math.pi)
+            cr.set_source_rgba(1, 1, 1, 0.045 if i % 2 else 0.025)
+            cr.stroke()
+        # sheen that turns with the record
+        cr.save()
+        cr.translate(cx, cy)
+        cr.rotate(self._angle)
+        for sign in (1, -1):
+            cr.move_to(0, 0)
+            cr.arc(0, 0, pr * 0.98, sign * 0.15 - 0.12, sign * 0.15 + 0.12)
+            cr.close_path()
+            cr.set_source_rgba(1, 1, 1, 0.06)
+            cr.fill()
+        # label: the album art, turning
+        label_r = pr * 0.36
+        cr.arc(0, 0, label_r, 0, 2 * math.pi)
+        cr.clip()
+        if self.art is not None:
+            paint_pixbuf(cr, self.art, -label_r, -label_r, label_r * 2)
+        else:
+            cr.set_source_rgb(*rgb("#d9533b"))
+            cr.paint()
+            cr.set_source_rgba(1, 1, 1, 0.85)
+            font(cr, label_r * 0.28, bold=True)
+            text_at(cr, "♪", 0, label_r * 0.1, "center")
+        cr.restore()
+        cr.arc(cx, cy, pr * 0.03, 0, 2 * math.pi)
+        cr.set_source_rgb(*rgb("#cfd3d8"))
+        cr.fill()
+
+        # tonearm: resting beside the record when idle, then tracking from
+        # the outer groove inward as the song plays
+        px, py = cx + pr * 1.18, h * 0.16
+        if self.title and (self.status == "Playing" or self.progress > 0):
+            groove = pr * (0.93 - 0.48 * self.progress)
+            theta = math.radians(28)
+            ex, ey = cx + groove * math.cos(theta), cy + groove * math.sin(theta)
+        else:
+            ex, ey = px + h * 0.03, py + h * 0.62
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_width(h * 0.02)
+        cr.set_source_rgb(*rgb("#c9cdd2"))
+        cr.move_to(px, py)
+        cr.line_to(ex, ey)
+        cr.stroke()
+        # headshell, turned along the arm
+        cr.save()
+        cr.translate(ex, ey)
+        cr.rotate(math.atan2(ey - py, ex - px) - math.pi / 2)
+        cr.rectangle(-h * 0.022, -h * 0.01, h * 0.044, h * 0.06)
+        cr.set_source_rgb(*rgb("#2c2c30"))
+        cr.fill()
+        cr.restore()
+        cr.arc(px, py, h * 0.05, 0, 2 * math.pi)
+        cr.set_source_rgb(*rgb("#9da2a8"))
+        cr.fill()
+        cr.arc(px, py, h * 0.022, 0, 2 * math.pi)
+        cr.set_source_rgb(*rgb("#3a3a3e"))
+        cr.fill()
+
+        # title on the plinth
+        title, artist = self._track_lines()
+        tx = px + h * 0.12
+        text_w = w - tx - w * 0.04
+        cr.set_source_rgba(1, 1, 1, 0.92)
+        font(cr, h * 0.06, bold=True)
+        text_at(cr, fit(cr, title, text_w), tx, h * 0.36)
+        cr.set_source_rgba(1, 1, 1, 0.65)
+        font(cr, h * 0.048)
+        text_at(cr, fit(cr, artist, text_w), tx, h * 0.45)
+        if self.length:
+            cr.set_source_rgba(1, 1, 1, 0.45)
+            font(cr, h * 0.04)
+            text_at(
+                cr,
+                f"{format_time(self.position)} / {format_time(self.length)}",
+                tx,
+                h * 0.54,
+            )
+
+        # buttons: start/stop and skip
+        by = h * 0.82
+        br = h * 0.045
+        for i, (action, glyph) in enumerate(
+            (
+                ("previous", "previous"),
+                ("play_pause", "stop" if self.status == "Playing" else "play"),
+                ("next", "next"),
+            )
+        ):
+            bx = tx + br + i * br * 2.8
+            cr.arc(bx, by, br, 0, 2 * math.pi)
+            cr.set_source_rgb(*rgb("#d7dade" if action != "play_pause" else "#e2603b"))
+            cr.fill()
+            cr.set_source_rgb(*rgb("#1e1e22"))
+            icon(cr, glyph, bx, by, br * 0.85)
+            self._hits.append((action, ("circle", bx, by, br * 1.2)))
+        cr.set_source_rgba(1, 1, 1, 0.4)
+        font(cr, h * 0.035, bold=True)
+        text_at(cr, "33 ⅓", w - w * 0.05, h * 0.95, "right")
