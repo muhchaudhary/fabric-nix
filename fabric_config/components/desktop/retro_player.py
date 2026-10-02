@@ -31,6 +31,7 @@ FRAME_MS = 33
 DRAG_THRESHOLD = 6
 VINYL_SPEED = 2 * math.pi * 33.3 / 60  # 33⅓ rpm, in radians per second
 REEL_SPEED = 2.2
+LYRIC_TRANSITION_S = 0.45
 # the record's centre label (the album art), as a fraction of its radius
 VINYL_LABEL = 0.6
 
@@ -63,23 +64,25 @@ def fit(cr: cairo.Context, text: str, max_width: float) -> str:
 
 
 # lyrics: real weights need Pango (cairo's toy text API only has regular and
-# bold, which reads chunky at these sizes)
-LYRIC_FONT_CURRENT = "Inter Display, Roboto Medium"
-LYRIC_WEIGHT_CURRENT = Pango.Weight.MEDIUM
-LYRIC_FONT_OTHER = "Inter, Roboto"
-LYRIC_WEIGHT_OTHER = Pango.Weight.LIGHT
+# bold, which reads chunky). The variable font lets a line's weight glide
+# between the two as it becomes, or stops being, the current line.
+LYRIC_FONT = "Inter Variable, Inter Display, Roboto"
+LYRIC_WEIGHT_CURRENT = 500
+LYRIC_WEIGHT_OTHER = 300
+LYRIC_SIZE_CURRENT = 0.42  # of a line slot
+LYRIC_SIZE_OTHER = 0.32
 
 
 def lyric_layout(
-    cr: cairo.Context, text: str, size: float, width: float, current: bool
+    cr: cairo.Context, text: str, size: float, width: float, weight: float
 ) -> Pango.Layout:
     """A centred, word-wrapped Pango layout for one lyric line."""
     layout = PangoCairo.create_layout(cr)
-    description = Pango.FontDescription.from_string(
-        LYRIC_FONT_CURRENT if current else LYRIC_FONT_OTHER
-    )
-    description.set_weight(LYRIC_WEIGHT_CURRENT if current else LYRIC_WEIGHT_OTHER)
+    description = Pango.FontDescription.from_string(LYRIC_FONT)
     description.set_absolute_size(size * Pango.SCALE)
+    # the axis for variable fonts; static fallbacks get the nearest weight
+    description.set_variations(f"wght={round(weight)}")
+    description.set_weight(Pango.Weight.MEDIUM if weight >= 400 else Pango.Weight.LIGHT)
     layout.set_font_description(description)
     layout.set_width(int(width * Pango.SCALE))
     layout.set_wrap(Pango.WrapMode.WORD_CHAR)
@@ -402,7 +405,7 @@ class RetroPlayer(Gtk.EventBox):
         # a record takes a moment to come up to speed and to wind down
         self._speed += (target - self._speed) * min(1.0, dt * 3)
         self._angle = (self._angle + self._speed * dt) % (2 * math.pi)
-        self._lyric_slide = max(0.0, self._lyric_slide - dt / 0.35)
+        self._lyric_slide = max(0.0, self._lyric_slide - dt / LYRIC_TRANSITION_S)
         self.queue_draw()
         spinning = self.theme in ("cassette", "vinyl") and (
             self.status == "Playing" or self._speed > 0.01
@@ -606,50 +609,51 @@ class RetroPlayer(Gtk.EventBox):
         # draw into a group, then fade it out toward the panel's top and
         # bottom so lines leaving the panel dissolve rather than get cut
         cr.push_group()
-        # lay the lines out at full length, wrapped onto as many rows as
-        # they need, stacked around the current line
+        # Everything about a change is continuous: as the new line takes
+        # over, the outgoing one shrinks, lightens and dims while the new one
+        # grows into the accent, and the view scrolls from one to the other.
+        # `t` is how far into that change we are (0 at the start, 1 when done).
+        t = 1 - self._lyric_slide
+        t = t * t * (3 - 2 * t)  # smoothstep
         index = self._lyric_index
-        blocks: dict[int, tuple[Pango.Layout, float]] = {}
+        blocks: list[tuple[int, Pango.Layout, float, float]] = []
         for delta in (-2, -1, 0, 1, 2):
             text = self.media.lyric_at(index + delta)
             if delta == 0 and not text:
                 text = "♪"
             if not text:
                 continue
-            size = line_h * (0.42 if delta == 0 else 0.32)
-            layout = lyric_layout(cr, text, size, width, current=delta == 0)
-            blocks[delta] = (layout, float(layout.get_pixel_size()[1]))
+            # how "current" this line is right now
+            focus = t if delta == 0 else (1 - t) if delta == -1 else 0.0
+            size = line_h * (
+                LYRIC_SIZE_OTHER + (LYRIC_SIZE_CURRENT - LYRIC_SIZE_OTHER) * focus
+            )
+            weight = (
+                LYRIC_WEIGHT_OTHER + (LYRIC_WEIGHT_CURRENT - LYRIC_WEIGHT_OTHER) * focus
+            )
+            layout = lyric_layout(cr, text, size, width, weight)
+            blocks.append((delta, layout, float(layout.get_pixel_size()[1]), focus))
+
+        # stack the lines, then scroll so the focus point sits mid-panel:
+        # from the outgoing line's middle to the new line's as `t` goes 0 -> 1
         gap = line_h * 0.18
+        positions: dict[int, float] = {}
+        y = 0.0
+        for delta, _layout, block_h, _focus in blocks:
+            positions[delta] = y
+            y += block_h + gap
+        middles = {d: positions[d] + bh / 2 for d, _l, bh, _f in blocks}
+        new_middle = middles.get(0, 0.0)
+        old_middle = middles.get(-1, new_middle - line_h)
+        offset = center - (old_middle + (new_middle - old_middle) * t)
 
-        # the current block is centred; neighbours stack above and below
-        tops: dict[int, float] = {}
-        if 0 in blocks:
-            tops[0] = center - blocks[0][1] / 2
-        y = tops.get(0, center)
-        for delta in (-1, -2):
-            if delta in blocks:
-                y -= gap + blocks[delta][1]
-                tops[delta] = y
-        y = tops.get(0, center) + (blocks[0][1] if 0 in blocks else 0)
-        for delta in (1, 2):
-            if delta in blocks:
-                tops[delta] = y + gap
-                y += gap + blocks[delta][1]
-
-        # a new line slides up by the height of the one that just finished
-        eased = self._lyric_slide * self._lyric_slide * (3 - 2 * self._lyric_slide)
-        previous_h = blocks[-1][1] + gap if -1 in blocks else line_h
-        offset = eased * previous_h
-
-        for delta, (layout, block_h) in blocks.items():
-            block_top = tops[delta] + offset
-            distance = abs((block_top + block_h / 2 - center) / line_h)
-            current = delta == 0
-            alpha = max(0.0, 1 - distance * 0.45) * (1 if current else 0.75)
-            if current:
-                cr.set_source_rgba(*self.accent, alpha)
-            else:
-                cr.set_source_rgba(*self.ink, alpha * 0.8)
+        for delta, layout, block_h, focus in blocks:
+            block_top = positions[delta] + offset
+            r, g, b = (
+                self.ink[i] + (self.accent[i] - self.ink[i]) * focus for i in range(3)
+            )
+            alpha = 0.55 + 0.45 * focus
+            cr.set_source_rgba(r, g, b, alpha)
             cr.move_to(x0, block_top)
             PangoCairo.show_layout(cr, layout)
         cr.pop_group_to_source()
