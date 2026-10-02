@@ -151,8 +151,9 @@ class ClipboardItemRow(Box):
             self._on_pin_changed()
 
     def _on_delete(self, _):
-        config.clipboard_history.cliphist_delete(self.cliphist_id)
-        config.clipboard_history.cliphist_list()
+        config.clipboard_history.cliphist_delete(
+            self.cliphist_id, on_done=config.clipboard_history.cliphist_list
+        )
 
     def _on_destroy(self, _):
         if self._signal_id is not None:
@@ -228,6 +229,11 @@ class ClipboardHistoryPanel(Box):
         config.clipboard_history.cliphist_list()
 
     def _on_history_changed(self, *_):
+        # The history changes on every copy. Only rebuild while the popup is
+        # open or about to open: each row decodes its item, which may spawn a
+        # `cliphist decode` process. Opening the popup always refreshes.
+        if not ClipboardHistoryPopup.popup_visible and not self._on_refresh_done:
+            return
         self._rebuild_sections()
         if self._on_refresh_done:
             cb, self._on_refresh_done = self._on_refresh_done, None
@@ -240,9 +246,16 @@ class ClipboardHistoryPanel(Box):
             child.destroy()
 
         has_pinned = False
-        for cliphist_id in list(config.clipboard_history.clipboard_history.keys())[:50]:
+        unpinned_shown = 0
+        for cliphist_id in config.clipboard_history.clipboard_history:
+            # pinned items are always shown; the rest are capped at 50
+            is_pinned = cliphist_id in _pinned_ids
+            if not is_pinned:
+                if unpinned_shown >= 50:
+                    continue
+                unpinned_shown += 1
             row = ClipboardItemRow(cliphist_id, on_pin_changed=self._rebuild_sections)
-            if cliphist_id in _pinned_ids:
+            if is_pinned:
                 self._pinned_list.add(row)
                 has_pinned = True
             else:
@@ -251,10 +264,14 @@ class ClipboardHistoryPanel(Box):
         self._pinned_section.set_visible(has_pinned)
 
     def _on_clear_all(self, _):
-        for cliphist_id in list(config.clipboard_history.clipboard_history.keys()):
-            if cliphist_id not in _pinned_ids:
-                config.clipboard_history.cliphist_delete(cliphist_id)
-        config.clipboard_history.cliphist_list()
+        config.clipboard_history.cliphist_delete(
+            [
+                cliphist_id
+                for cliphist_id in config.clipboard_history.clipboard_history
+                if cliphist_id not in _pinned_ids
+            ],
+            on_done=config.clipboard_history.cliphist_list,
+        )
 
 
 _panel = ClipboardHistoryPanel()

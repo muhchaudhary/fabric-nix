@@ -8,6 +8,8 @@ import gi
 from fabric import Fabricator, Property, Service, Signal
 from loguru import logger
 
+from fabric_config.utils.uri import file_uri_to_path
+
 gi.require_version("GdkPixbuf", "2.0")
 from gi.repository import GdkPixbuf, Gio, GLib  # noqa: E402
 
@@ -85,10 +87,17 @@ class ClipboardHistory(Service):
             try:
                 _, stdout, stderr = proc.communicate_utf8_finish(task)
                 self._clipboard_history = {
-                    key: value[7:] if value.startswith("file://") else value
+                    key: file_uri_to_path(value)
+                    if value.startswith("file://")
+                    else value
                     for x in stdout.split("\n")[:-1]
                     for key, value in [x.split("\t", 1)]
                 }
+                # drop decoded data (pixbufs) for entries that no longer exist
+                for stale in set(self._decoded_clipboard_history) - set(
+                    self._clipboard_history
+                ):
+                    del self._decoded_clipboard_history[stale]
                 self.notify("clipboard-history")
             except Exception as _:
                 logger.error("[CLIPBOARD] Failed to read from `cliphist list`")
@@ -124,25 +133,42 @@ class ClipboardHistory(Service):
         )
         process.wait_async(None, on_done)
 
-    def cliphist_delete(self, cliphist_id: str):
-        self.cliphist_id = cliphist_id
+    def cliphist_delete(self, cliphist_ids: str | list[str], on_done=None):
+        """
+        Delete one or more items with a single `cliphist delete` process.
+
+        cliphist reads entries from stdin until EOF, so stdin is passed in full
+        and closed via communicate; `on_done` runs once the process exits.
+        """
+        ids = [cliphist_ids] if isinstance(cliphist_ids, str) else cliphist_ids
+        lines = "".join(
+            f"{cliphist_id}\t{self._clipboard_history[cliphist_id]}\n"
+            for cliphist_id in ids
+            if cliphist_id in self._clipboard_history
+        )
+        if not lines:
+            return
+
+        def callback(proc: Gio.Subprocess, task: Gio.Task):
+            try:
+                proc.communicate_utf8_finish(task)
+            except Exception as e:
+                logger.error(f"[CLIPBOARD] Failed to delete items {ids}: {e}")
+                return
+            if not proc.get_successful():
+                logger.error(f"[CLIPBOARD] cliphist delete failed for {ids}")
+                return
+            for cliphist_id in ids:
+                self._decoded_clipboard_history.pop(cliphist_id, None)
+                self.emit("clipboard-deleted", cliphist_id)
+            if on_done:
+                on_done()
 
         process: Gio.Subprocess = Gio.Subprocess.new(
             ["cliphist", "delete"],
-            Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDERR_PIPE,
+            Gio.SubprocessFlags.STDIN_PIPE | Gio.SubprocessFlags.STDERR_SILENCE,
         )  # type: ignore
-
-        in_pipe: Gio.OutputStream = process.get_stdin_pipe()
-        try:
-            out_stream: Gio.DataOutputStream = Gio.DataOutputStream.new(in_pipe)
-            out_stream.put_string(
-                f"{cliphist_id}\t{self._clipboard_history[cliphist_id]}\n", None
-            )
-            self.emit("clipboard-deleted", self.cliphist_id)
-        except Exception as _:
-            logger.error(
-                f"[CLIPBOARD] Failed to delete item with cliphist id: {cliphist_id}"
-            )
+        process.communicate_utf8_async(lines, None, callback)
 
     def parse_data_binary(self, cliphist_id: str):
         preview = self._clipboard_history[cliphist_id]
@@ -235,7 +261,7 @@ class ClipboardHistory(Service):
                 _, stdout, stderr = proc.communicate_finish(task)
                 decoded_string = str(stdout.get_data().decode("utf-8"))
                 if decoded_string.startswith("file://"):
-                    decoded_string = decoded_string[7:]
+                    decoded_string = file_uri_to_path(decoded_string.strip())
 
                 content_type, _ = Gio.content_type_guess(None, stdout.get_data())
                 if content_type in SUPPORTED_MIME_TYPES:
@@ -289,6 +315,10 @@ class ClipboardHistory(Service):
     def decode_item(self, cliphist_id: str):
         preview = self._clipboard_history.get(cliphist_id)
         if preview is None:
+            return
+        if cliphist_id in self._decoded_clipboard_history:
+            # already decoded; cliphist ids are stable, so reuse the result
+            self.emit("clipboard-data-ready", cliphist_id)
             return
         if _BINARY_RE.match(preview):
             self.parse_data_binary(cliphist_id)
