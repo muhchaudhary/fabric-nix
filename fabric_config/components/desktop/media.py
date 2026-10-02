@@ -23,6 +23,10 @@ LYRICS_CACHE = os.path.join(GLib.get_user_cache_dir(), "fabric", "lyrics")
 LRCLIB = "https://lrclib.net/api"
 USER_AGENT = "fabric-config (https://github.com/muhchaudhary/fabric-nix)"
 
+# a paused selection gives way to another player that starts playing, but
+# only once you haven't touched it for this long
+AUTO_SWITCH_AFTER_S = 20
+
 _LRC_LINE = re.compile(r"\[(\d+):(\d+(?:\.\d+)?)\]")
 
 
@@ -46,7 +50,11 @@ class MediaState(Service):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self._selected: str | None = None  # bus name picked by the user
+        # the player being shown and controlled (a bus name). It sticks:
+        # following "whichever is playing" would hand the next click to a
+        # different player as soon as you paused this one
+        self._selected: str | None = None
+        self._last_interaction = 0.0
         self._track_key: tuple | None = None
         self._status = "Stopped"
         self._pos_base = 0.0
@@ -66,13 +74,28 @@ class MediaState(Service):
         return sorted(config.mprisplayer.players.values(), key=lambda p: p.bus_name)
 
     def current_player(self):
+        for player in self.players():
+            if player.bus_name == self._selected:
+                return player
+        return None
+
+    def _choose_player(self):
+        """Keep the selection unless it's gone, or idle while another plays."""
         players = self.players()
-        if self._selected:
-            for player in players:
-                if player.bus_name == self._selected:
-                    return player
+        current = self.current_player()
         playing = [p for p in players if p.playback_status == "Playing"]
-        return (playing or players or [None])[0]
+        now = GLib.get_monotonic_time() / 1e6
+        if current is None:
+            chosen = (playing or players or [None])[0]
+        elif (
+            current.playback_status != "Playing"
+            and playing
+            and now - self._last_interaction > AUTO_SWITCH_AFTER_S
+        ):
+            chosen = playing[0]
+        else:
+            return
+        self._selected = chosen.bus_name if chosen else None
 
     def cycle_player(self, step: int):
         players = self.players()
@@ -81,13 +104,25 @@ class MediaState(Service):
         current = self.current_player()
         index = players.index(current) if current in players else 0
         self._selected = players[(index + step) % len(players)].bus_name
+        self._last_interaction = GLib.get_monotonic_time() / 1e6
         self._on_change()
+
+    def act(self, action: str):
+        """Run a player method (play_pause, next, previous) on the shown player."""
+        player = self.current_player()
+        if player is None:
+            return
+        self._last_interaction = GLib.get_monotonic_time() / 1e6
+        method = getattr(player, action, None)
+        if callable(method):
+            method()
 
     def _watch(self, player):
         player.connect("changed", lambda *_: self._on_change())
         self._on_change()
 
     def _on_change(self):
+        self._choose_player()
         player = self.current_player()
         key = (
             (player.bus_name, player.title, tuple(player.artist or []))

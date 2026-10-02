@@ -474,12 +474,7 @@ class RetroPlayer(Gtk.EventBox):
         if action in ("prev_source", "next_source"):
             self.media.cycle_player(-1 if action == "prev_source" else 1)
             return
-        player = self.media.current_player()
-        if player is None:
-            return
-        method = getattr(player, action, None)
-        if callable(method):
-            method()
+        self.media.act(action)
 
     # Drawing
 
