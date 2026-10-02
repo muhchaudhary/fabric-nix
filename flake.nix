@@ -60,11 +60,6 @@
             );
             fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
             fabric-libgray = inputs.fabric-libgray.packages.${system}.default;
-            gengir = final.${pythonPackagesAttr}.callPackage ./nix/gengir.nix {
-              typer = final.${pythonPackagesAttr}.typer;
-              astor = final.${pythonPackagesAttr}.astor;
-              lxml = final.${pythonPackagesAttr}.lxml;
-            };
             rlottie-python = final.${pythonPackagesAttr}.callPackage ./nix/rolttie-python.nix {
               distlib = final.${pythonPackagesAttr}.distlib;
               flit-core = final.${pythonPackagesAttr}.flit-core;
@@ -97,7 +92,6 @@
             magic
           ]
           ++ [
-            pkgs.gengir
             # Hyprland window frame capture (Rust/pyo3 extension). abi3 wheel, so
             # this prebuilt module imports under whatever Python this flake uses.
             (inputs.toplevel-streamer-rs.lib.${system}.pythonPackage pythonPackages)
