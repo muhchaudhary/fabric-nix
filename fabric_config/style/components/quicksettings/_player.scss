@@ -1,28 +1,30 @@
 @use '../../tokens' as *;
 @use '../../mixins' as *;
 
-/* Player switcher: "< Spotify >" under the player when there are several */
-#player-switcher {
-  margin: $gap-xs 0 $gap-sm;
-  padding: 2px $gap-xs;
+/* The player's source chip, at the end of the title row: icon, name, and
+   arrows to switch players when there are several */
+#player-source {
+  margin-right: 12px;
+  padding: 1px 6px;
   border-radius: $radius-pill;
-  background-color: a(var(--fg), 0.06);
+  background-color: a(var(--fg), 0.07);
 }
 
-#player-switcher-name {
-  font-size: 12px;
+#player-source-name {
+  font-size: 11px;
   font-weight: 600;
-  color: var(--fg);
-  min-width: 70px;
+  color: var(--fg-dim);
 }
 
-#player-switcher-arrow {
-  padding: 3px 6px;
-  border-radius: $radius-pill;
+#player-source-arrow {
+  min-width: 16px;
+  min-height: 16px;
+  padding: 0;
+  border-radius: 50%;
   @include transition(background-color);
 
   image { color: var(--fg-dim); }
-  &:hover { background-color: a(var(--fg), 0.1); }
+  &:hover { background-color: a(var(--fg), 0.12); }
 }
 
 #inner-player-box {
@@ -47,9 +49,11 @@
 }
 
 #player-box   { margin: 6px; }
-#button-box   { margin-bottom: 6px; margin-right: 6px; }
+#button-box   { margin: 2px 0 8px; }
 
-#player-title  { font-weight: 700; font-size: 16px; color: var(--fg); }
+// breathing room between the card's top edge and the title
+#player-info   { margin-top: 16px; }
+#player-title  { font-weight: 700; font-size: 16px; color: var(--fg); margin-bottom: 2px; }
 #player-artist { font-weight: 500; font-size: 13px; color: var(--fg-dim); }
 
 #player-icon {
@@ -66,10 +70,11 @@
   opacity: 0.8;
 }
 
+// square buttons with no padding, so circles stay circles
 #player-button {
-  min-width: 28px;
-  min-height: 28px;
-  padding: $gap-sm;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
   border-radius: 50%;
   @include transition(background-color color);
 
@@ -81,13 +86,13 @@
   &:active { background-color: a(var(--accent), 0.4); }
 
   // shuffle / repeat: smaller, and a soft accent tint while on
-  &.minor { min-width: 22px; min-height: 22px; padding: 6px; }
+  &.minor { min-width: 30px; min-height: 30px; }
   &.minor.on { background-color: a(var(--accent), 0.16); }
 
   // play / pause: a filled circle, the main control
   &.play {
-    min-width: 34px;
-    min-height: 34px;
+    min-width: 44px;
+    min-height: 44px;
     background-color: var(--fg);
 
     #player-icon { color: var(--bg); }

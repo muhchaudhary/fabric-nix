@@ -1,6 +1,7 @@
 import os
 import threading
 import urllib.request
+from collections.abc import Callable
 from typing import List, cast
 
 from fabric.utils import (
@@ -39,7 +40,10 @@ PLAYER_ASSETS_PATH = "../assets/player/"
 
 
 class PlayerBoxStack(Box):
-    """One PlayerBox per MPRIS player, switched with a small "‹ name ›" chip."""
+    """
+    One PlayerBox per MPRIS player. Each card switches between them from the
+    chip in its corner, so the switcher is part of the card.
+    """
 
     def __init__(self, mpris_manager: MprisPlayerManager, **kwargs):
         self.player_stack = Stack(
@@ -47,31 +51,7 @@ class PlayerBoxStack(Box):
             transition_duration=400,
             name="player-stack",
         )
-        self.player_stack.connect(
-            "notify::visible-child", lambda *_: self._update_switcher()
-        )
-
-        self.switcher_label = Label(name="player-switcher-name")
-        self.switcher = Box(
-            name="player-switcher",
-            h_align="center",
-            spacing=2,
-            children=[
-                Button(
-                    name="player-switcher-arrow",
-                    image=Image(icon_name="go-previous-symbolic", pixel_size=14),
-                    on_clicked=lambda *_: self.on_player_clicked("prev"),
-                ),
-                self.switcher_label,
-                Button(
-                    name="player-switcher-arrow",
-                    image=Image(icon_name="go-next-symbolic", pixel_size=14),
-                    on_clicked=lambda *_: self.on_player_clicked("next"),
-                ),
-            ],
-        )
-
-        super().__init__(orientation="v", children=[self.player_stack, self.switcher])
+        super().__init__(orientation="v", children=[self.player_stack])
         self.hide()
 
         self.mpris_manager = mpris_manager
@@ -84,38 +64,34 @@ class PlayerBoxStack(Box):
     def _boxes(self) -> List["PlayerBox"]:
         return cast(List["PlayerBox"], self.player_stack.get_children())
 
-    def _update_switcher(self):
+    def _refresh(self):
         boxes = self._boxes()
         self.set_visible(bool(boxes))
-        self.switcher.set_visible(len(boxes) > 1)
-        current = self.player_stack.get_visible_child()
-        if isinstance(current, PlayerBox):
-            self.switcher_label.set_label(current.player.player_name.capitalize())
+        for box in boxes:
+            box.set_switchable(len(boxes) > 1)
 
-    def on_player_clicked(self, direction: str):
+    def switch(self, step: int):
         boxes = self._boxes()
         if len(boxes) < 2:
             return
         current = self.player_stack.get_visible_child()
         index = boxes.index(current) if current in boxes else 0  # type: ignore[arg-type]
-        step = 1 if direction == "next" else -1
         self.player_stack.set_visible_child(boxes[(index + step) % len(boxes)])
 
     def on_new_player(self, mpris_manager, player):
         logger.info(f"[PLAYER MANAGER] adding new player: {player.player_name}")
-        box = PlayerBox(player)
+        box = PlayerBox(player, on_switch=self.switch)
         box.connect(
-            "destroy",
-            lambda *_: GLib.idle_add(lambda: self._update_switcher() or False),
+            "destroy", lambda *_: GLib.idle_add(lambda: self._refresh() or False)
         )
         self.player_stack.add(box)
         box.show_all()
-        self._update_switcher()
+        self._refresh()
 
     def on_lost_player(self, mpris_manager, bus_name):
         # the PlayerBox removes itself when its player closes; refresh after
         logger.info(f"[PLAYER_MANAGER] Player Removed {bus_name}")
-        GLib.idle_add(lambda: self._update_switcher() or False)
+        GLib.idle_add(lambda: self._refresh() or False)
 
 
 def app_icon_name(player_name: str) -> str:
@@ -131,15 +107,22 @@ def app_icon_name(player_name: str) -> str:
 
 
 class PlayerBox(Box):
-    def __init__(self, player: MprisPlayer, **kwargs):
+    def __init__(
+        self,
+        player: MprisPlayer,
+        on_switch: Callable[[int], None] | None = None,
+        **kwargs,
+    ):
         super().__init__(h_align="start", name="player-box", **kwargs)
+        self._on_switch = on_switch
         # Setup
         self.player: MprisPlayer = player
         self.cover_path = get_relative_path(PLAYER_ASSETS_PATH + "no_image.jpg")
 
         self.player_width = 450
         self.image_size = 160
-        self.player_height = 140
+        # tall enough for the title block, seek bar, times and controls
+        self.player_height = 176
 
         # State
         self.exit = False
@@ -158,7 +141,7 @@ class PlayerBox(Box):
         self.image_stack = Box(
             children=self.image_box,
             h_align="start",
-            v_align="start",
+            v_align="center",
             style_classes=["cool-border"],
             style="border-radius: 100%;border-width: 2px;",
         )
@@ -224,7 +207,12 @@ class PlayerBox(Box):
             h_align="start",
             style=f"min-width: {self.player_width - self.image_size - 20}px;",
             children=[
-                self.track_title,
+                # the source chip shares the title's row, so a long title
+                # ellipsizes before it instead of running underneath
+                Box(
+                    spacing=8,
+                    children=[self.track_title, self._make_source_chip()],
+                ),
                 self.track_artist,
             ],
         )
@@ -234,9 +222,7 @@ class PlayerBox(Box):
         self.player.connect("notify::loop-status", self.on_loop_update)
 
         # Buttons
-        self.button_box = CenterBox(
-            name="button-box",
-        )
+        self.button_box = Box(name="button-box", h_align="center", spacing=10)
 
         icon_size = 24
         self.skip_next_icon = Image(
@@ -322,12 +308,21 @@ class PlayerBox(Box):
         self.player.bind("can-control", "visible", self.shuffle_button)
         self.player.bind("can-control", "visible", self.loop_button)
 
-        self.button_box.center_children = [self.play_pause_button]
-        self.button_box.start_children = [self.prev_button, self.shuffle_button]
-        self.button_box.end_children = [self.loop_button, self.next_button]
+        # shuffle, previous, play, next, repeat: one evenly spaced row; each
+        # button keeps its own square size instead of stretching to the row
+        for button in (
+            self.shuffle_button,
+            self.prev_button,
+            self.play_pause_button,
+            self.next_button,
+            self.loop_button,
+        ):
+            button.set_valign(Gtk.Align.CENTER)
+            button.set_halign(Gtk.Align.CENTER)
+            self.button_box.add(button)
 
         # Seek bar: level bars driven by cava; click or drag to scrub
-        self.seek_bar = LevelSeekBar(self.player)
+        self.seek_bar = LevelSeekBar(self.player, height=34)
         self.seek_bar.set_name("seek-bar")
         self.player.bind("can-seek", "visible", self.seek_bar)
 
@@ -362,7 +357,8 @@ class PlayerBox(Box):
         # resize the inner box
         self.outer_box = Box(
             h_align="start",
-            style=f"min-width:{self.player_width}px; min-height:{self.image_size}px;",
+            style=f"min-width:{self.player_width}px;"
+            f" min-height:{max(self.image_size, self.player_height)}px;",
         )
         self.overlay_box = Overlay(
             child=self.outer_box,
@@ -370,24 +366,53 @@ class PlayerBox(Box):
                 self.inner_box,
                 self.player_info_box,
                 self.image_stack,
-                Box(
-                    children=Image(
-                        name="player-app-icon",
-                        icon_name=app_icon_name(self.player.player_name),
-                        pixel_size=16,
-                    ),
-                    h_align="end",
-                    v_align="start",
-                    style="margin-top: 20px; margin-right: 10px;",
-                    tooltip_text=self.player.player_name,  # type: ignore
-                ),
             ],
         )
         self.children = self.children + [self.overlay_box]
-        self.set_style(f"min-height:{self.image_size + 4}px")
+        self.set_style(f"min-height:{max(self.image_size, self.player_height) + 4}px")
 
         self._seekbar_timer_id = invoke_repeater(1000, self.update_time_label)
         self.connect("destroy", self._on_destroy)
+
+    def _make_source_chip(self) -> Box:
+        """The player's icon and name; arrows switch players when there are several."""
+
+        def arrow(icon: str, step: int) -> Button:
+            button = Button(
+                name="player-source-arrow",
+                image=Image(icon_name=icon, pixel_size=10),
+                v_align="center",
+                on_clicked=lambda *_: (
+                    self._on_switch(step) if self._on_switch else None
+                ),
+            )
+            button.set_no_show_all(True)
+            return button
+
+        self._source_arrows = [
+            arrow("pan-start-symbolic", -1),
+            arrow("pan-end-symbolic", 1),
+        ]
+        return Box(
+            name="player-source",
+            h_align="end",
+            v_align="center",
+            spacing=4,
+            children=[
+                self._source_arrows[0],
+                Image(
+                    name="player-app-icon",
+                    icon_name=app_icon_name(self.player.player_name),
+                    pixel_size=12,
+                ),
+                Label(self.player.player_name.capitalize(), name="player-source-name"),
+                self._source_arrows[1],
+            ],
+        )
+
+    def set_switchable(self, switchable: bool):
+        for button in self._source_arrows:
+            button.set_visible(switchable)
 
     def _on_destroy(self, *_):
         # stop polling a player that has gone away
