@@ -199,7 +199,7 @@ def make_layout(anchor: str, name: str, popup: PopupRevealer, **kwargs) -> Box:
                 ]
             )
         case _:
-            return None
+            raise ValueError(f"unknown popup anchor: {anchor!r}")
 
 
 class PopupWindow(WaylandWindow):
@@ -216,8 +216,7 @@ class PopupWindow(WaylandWindow):
             "slide-left",
             "slide-up",
             "slide-down",
-        ]
-        | None = None,
+        ] = "slide-down",
         transition_duration: int = 100,
         popup_visible: bool = False,
         anchor: Literal[

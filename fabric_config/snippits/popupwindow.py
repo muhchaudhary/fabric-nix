@@ -46,8 +46,9 @@ class PopupWindow(WaylandWindow):
             self.set_pointing_to(widget)
             return
 
-        if getattr(self, "_anim_id", None) is not None:
-            GLib.source_remove(self._anim_id)
+        anim_id: int | None = getattr(self, "_anim_id", None)
+        if anim_id is not None:
+            GLib.source_remove(anim_id)
             self._anim_id = None
 
         try:
@@ -171,30 +172,28 @@ class PopupWindow(WaylandWindow):
             )
 
         if self._is_centered:
+            # center on the focused monitor; if it can't be resolved, fall back
+            # to centering on the parent
+            monitor_id = self._hyprland.get_current_gdk_monitor_id()
+            monitor = (
+                self._hyprland.display.get_monitor(monitor_id)
+                if monitor_id is not None
+                else None
+            )
+            parent_width = self._parent.get_allocated_width()
+            monitor_width = (
+                monitor.get_geometry().width if monitor is not None else parent_width
+            )
             self.margin = tuple(
                 a + b
                 for a, b in zip(
                     (
-                        (
-                            0,
-                            0,
-                            0,
-                            (
-                                (
-                                    (
-                                        self._hyprland.display.get_monitor(
-                                            self._hyprland.get_current_gdk_monitor_id()
-                                        )
-                                    )
-                                    .get_geometry()
-                                    .width
-                                    / 2
-                                    - self._parent.get_allocated_width() / 2
-                                )
-                                - width / 2
-                            )
-                            + coords_centered[0],
-                        )
+                        0,
+                        0,
+                        0,
+                        (monitor_width / 2 - parent_width / 2)
+                        - width / 2
+                        + coords_centered[0],
                     ),
                     self._base_margin.values(),
                 )

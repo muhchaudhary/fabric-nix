@@ -23,8 +23,9 @@ class SystemTrayWidget(Box):
         self.watcher.connect("item-added", self.on_item_added)
 
     def on_item_added(self, _, identifier: str):
-        item: Gray.Item = self.watcher.get_item_for_identifier(identifier)
-        if item.get_status() is None:
+        # the item can vanish before this handler runs
+        item = self.watcher.get_item_for_identifier(identifier)
+        if item is None or item.get_status() is None:
             return
 
         # some tray items re-register themselves on the same bus name/path

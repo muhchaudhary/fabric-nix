@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
@@ -10,7 +12,7 @@ class QuickSettingsToggleButton(Box):
         action_label: str = "Toggle",
         action_icon: str = "package-x-generic-symbolic",
         active: bool = False,
-        on_toggle: callable | None = None,
+        on_toggle: Callable[[bool], object] | None = None,
         pixel_size: int = 20,
         **kwargs,
     ):

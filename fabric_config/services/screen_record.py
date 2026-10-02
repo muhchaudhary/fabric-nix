@@ -1,10 +1,11 @@
 import datetime
 import os
 import shlex
+import subprocess
 from typing import Any, Callable
 
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import exec_shell_command, exec_shell_command_async
+from fabric.utils import exec_shell_command_async
 from gi.repository import Gio, GLib
 from loguru import logger
 
@@ -228,5 +229,7 @@ class ScreenRecorder(Service):
         proc.communicate_utf8_async(None, None, do_callback)
 
     @Property(bool, "readable", default_value=False)
-    def is_recording(self):
-        return False if len(exec_shell_command("pidof wf-recorder")) == 0 else True
+    def is_recording(self) -> bool:
+        # exec_shell_command returns False (not "") when it fails, and stderr
+        # output when pidof finds nothing, so use the exit status instead
+        return subprocess.run(["pidof", "-q", "wf-recorder"]).returncode == 0

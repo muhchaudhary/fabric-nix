@@ -51,11 +51,17 @@ class MprisPlayer(Service):
 
     @Property(str, "readable")
     def playback_status(self) -> Literal["Playing", "Paused", "Stopped"]:
-        return self._proxy.get_cached_property("PlaybackStatus").get_string()  # type: ignore
+        return cast(
+            Literal["Playing", "Paused", "Stopped"],
+            self._cached_string("PlaybackStatus", "Stopped"),
+        )
 
     @Property(str, "read-write", default_value="None")
     def loop_status(self) -> Literal["None", "Track", "Playlist"]:
-        return self._proxy.get_cached_property("LoopStatus").get_string()  # type: ignore
+        return cast(
+            Literal["None", "Track", "Playlist"],
+            self._cached_string("LoopStatus", "None"),
+        )
 
     @loop_status.setter
     def loop_status(self, status: Literal["None", "Track", "Playlist"]) -> None:
@@ -70,9 +76,7 @@ class MprisPlayer(Service):
 
     @Property(bool, "read-write", default_value=False)
     def shuffle(self) -> bool:
-        if self._proxy.get_cached_property("Shuffle"):
-            return self._proxy.get_cached_property("Shuffle").get_boolean()  # type: ignore
-        return False
+        return self._cached_bool("Shuffle")
 
     @shuffle.setter
     def shuffle(self, is_shuffle: bool) -> None:
@@ -113,7 +117,8 @@ class MprisPlayer(Service):
 
     @Property(float, "read-write")
     def volume(self) -> float:
-        return self._proxy.get_cached_property("Volume").get_double()  # type: ignore
+        value = self._proxy.get_cached_property("Volume")
+        return value.get_double() if value is not None else 1.0
 
     @volume.setter
     def volume(self, volume: float) -> None:
@@ -124,7 +129,8 @@ class MprisPlayer(Service):
 
     @Property(int, "read-write", default_value=0)
     def position(self) -> int:
-        return self._proxy.get_cached_property("Position").get_int64()  # type: ignore
+        value = self._proxy.get_cached_property("Position")
+        return value.get_int64() if value is not None else 0
 
     @position.setter
     def position(self, new_pos: int) -> None:
@@ -140,32 +146,42 @@ class MprisPlayer(Service):
 
     @Property(bool, "readable", default_value=False)
     def can_go_next(self) -> bool:
-        return self._proxy.get_cached_property("CanGoNext").get_boolean()
+        return self._cached_bool("CanGoNext")
 
     @Property(bool, "readable", default_value=False)
     def can_go_previous(self) -> bool:
-        return self._proxy.get_cached_property("CanGoPrevious").get_boolean()
+        return self._cached_bool("CanGoPrevious")
 
     @Property(bool, "readable", default_value=False)
     def can_play(self) -> bool:
-        return self._proxy.get_cached_property("CanPlay").get_boolean()
+        return self._cached_bool("CanPlay")
 
     @Property(bool, "readable", default_value=False)
     def can_pause(self) -> bool:
-        return self._proxy.get_cached_property("CanPause").get_boolean()
+        return self._cached_bool("CanPause")
 
     @Property(bool, "readable", default_value=False)
     def can_seek(self) -> bool:
-        return self._proxy.get_cached_property("CanSeek").get_boolean()
+        return self._cached_bool("CanSeek")
 
     @Property(bool, "readable", default_value=False)
     def can_control(self) -> bool:
-        return self._proxy.get_cached_property("CanControl").get_boolean()
+        return self._cached_bool("CanControl")
+
+    # players may leave out optional properties, and get_cached_property()
+    # returns None for any it hasn't received
+    def _cached_bool(self, name: str) -> bool:
+        value = self._proxy.get_cached_property(name)
+        return value.get_boolean() if value is not None else False
+
+    def _cached_string(self, name: str, default: str) -> str:
+        value = self._proxy.get_cached_property(name)
+        return value.get_string() if value is not None else default
 
     def __init__(self, bus_name: str, **kwargs):
         super().__init__(**kwargs)
         self.bus_name: str = bus_name
-        self._proxy: Gio.DBusProxy | None = None
+        self._proxy: Gio.DBusProxy
 
         # Ahoy!
         self.do_register()
@@ -259,7 +275,7 @@ class MprisPlayer(Service):
         proxy: Gio.DBusProxy,
         sender_name: str,
         signal_name: str,
-        params: tuple[GLib.Variant],
+        params: GLib.Variant,
     ):
         # Only One Signal for Mpris
         if signal_name == "Seeked":
@@ -344,7 +360,7 @@ class MprisPlayerManager(Service):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._players: dict[str, MprisPlayer] = {}
-        self._bus: Gio.DBusConnection | None = None
+        self._bus: Gio.DBusConnection
 
         # ahoy
         self.do_register()
@@ -370,11 +386,10 @@ class MprisPlayerManager(Service):
     ):
         try:
             reply = conn.call_finish(res)
-            for player in filter(
-                lambda x: x.startswith(MPRIS_MEDIAPLAYER_BUS_NAME),
-                reply.get_child_value(0),  # type: ignore
-            ):
-                self.do_handle_new_player(player)
+            names: list[str] = reply.unpack()[0]
+            for player in names:
+                if player.startswith(MPRIS_MEDIAPLAYER_BUS_NAME):
+                    self.do_handle_new_player(player)
 
         except Exception:
             logger.error("[MPRIS MANAGER] Failed to ListNames")

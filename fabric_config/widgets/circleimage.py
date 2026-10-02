@@ -1,5 +1,5 @@
 import math
-from typing import Iterable, Literal
+from typing import Literal
 
 import cairo
 import gi
@@ -25,7 +25,7 @@ class CircleImage(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibl
     def __init__(
         self,
         image_file: str | None = None,
-        pixbuf: None = None,
+        pixbuf: GdkPixbuf.Pixbuf | None = None,
         name: str | None = None,
         visible: bool = True,
         all_visible: bool = False,
@@ -40,7 +40,7 @@ class CircleImage(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibl
         | None = None,
         h_expand: bool = False,
         v_expand: bool = False,
-        size: Iterable[int] | int | None = None,
+        size: int = 0,
         **kwargs,
     ):
         Gtk.DrawingArea.__init__(self)
@@ -103,13 +103,4 @@ class CircleImage(Gtk.DrawingArea, Widget):  # pyright: ignore[reportIncompatibl
         if not pixbuf:
             return
         self._image = pixbuf
-        self.queue_draw()
-
-    def set_image_size(self, size: Iterable[int] | int):
-        if size is Iterable:
-            x, y = size
-        else:
-            self._image = self._image.scale_simple(
-                size, size, GdkPixbuf.InterpType.BILINEAR
-            )
         self.queue_draw()
