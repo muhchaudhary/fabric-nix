@@ -27,6 +27,11 @@ find = { namespaces = true }
 # also what VS Code uses: with this section present, the editor's
 # basedpyright.analysis.* settings are ignored
 typeCheckingMode = "basic"
+# the dev shell's Python env, symlinked by shell.nix's shellHook. Takes
+# precedence over the interpreter an editor passes in, which can be a
+# stale store path
+venvPath = ".direnv"
+venv = "python"
 # gi.repository modules (Gtk, GLib, ...) are generated at runtime from
 # typelibs, so they only ever exist as stubs and never have a "source"
 reportMissingModuleSource = false
