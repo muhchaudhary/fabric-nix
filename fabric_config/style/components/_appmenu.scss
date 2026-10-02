@@ -69,6 +69,11 @@ $appmenu-radius: 32px;
 }
 
 /* Result rows */
+@keyframes app-slot-shine {
+  50%  { background-color: a(var(--fg), 0.15); padding: 8px 5px; }
+  100% { background-color: unset; }
+}
+
 #appmenu-button {
   background-color: transparent;
   padding: 6px $gap-sm;
@@ -84,6 +89,7 @@ $appmenu-radius: 32px;
   &:active  { background-color: a(var(--accent), 0.25); border-color: a(var(--accent), 0.5); }
 
   &.hidden-app { opacity: 0.6; }
+  &.shine      { animation: app-slot-shine 0.5s ease; }
 }
 
 #appmenu-app-name { color: var(--fg); font-size: 14px; font-weight: 600; }
