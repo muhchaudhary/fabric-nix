@@ -7,6 +7,7 @@ from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.theme import ThemeService
+from fabric_config.services.wallpaper_accent import WallpaperAccent
 from fabric_config.utils.process import run_command_async
 
 gi.require_version("AstalNetwork", "0.1")
@@ -22,6 +23,16 @@ sc = ScreenRecorder()
 brightness = Brightness()
 network = Network.get_default()
 theme = ThemeService()
+wallpaper_accent = WallpaperAccent()
+
+
+# the whole theme's accent follows the wallpaper, tuned for light or dark
+def _apply_theme_accent(*_):
+    wallpaper_accent.apply_to_theme(theme.is_light)
+
+
+wallpaper_accent.connect("changed", _apply_theme_accent)
+theme.connect("notify::is-light", _apply_theme_accent)
 
 
 # Cvc misses a default-device change that arrives before the device itself
