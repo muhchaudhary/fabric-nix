@@ -18,7 +18,10 @@ class BrightnessSlider(QuickSettingsScale):
         )
 
         if self.client.screen_brightness == -1:
-            self.destroy()
+            # no backlight: hide rather than destroy, since QuickSettings still
+            # adds this widget to its layout and a destroyed widget can crash
+            self.set_no_show_all(True)
+            self.set_visible(False)
             return
 
         if self.scale:

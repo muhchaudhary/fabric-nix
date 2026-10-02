@@ -19,8 +19,10 @@ class BatteryIndicator(Box):
     def __init__(self, **kwargs):
         super().__init__(v_align="center", h_align="start", **kwargs)
         if not psutil.sensors_battery():
+            # Hide rather than destroy: the caller still adds this widget to
+            # its layout, and a destroyed widget there crashes when drawn.
+            self.set_no_show_all(True)
             self.set_visible(False)
-            self.destroy()
             return
 
         self.is_charging = False
