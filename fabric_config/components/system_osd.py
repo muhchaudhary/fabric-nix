@@ -80,17 +80,9 @@ class SystemOSD(PopupWindow):
         )
 
     def update_label_audio(self, *_):
-        vol = round(config.audio.speaker.volume)
-        if config.audio.speaker.muted or vol == 0:
-            icon_name = config.audio_icons_names["mute"]
-        elif vol >= 66:
-            icon_name = config.audio_icons_names["high"]
-        elif vol >= 33:
-            icon_name = config.audio_icons_names["medium"]
-        else:
-            icon_name = config.audio_icons_names["low"]
-        self.icon.set_from_icon_name(icon_name, 42)
-        self.level_bar.set_progress(vol / 100)
+        speaker = config.audio.speaker
+        self.icon.set_from_icon_name(config.audio_icon_name(speaker), 42)
+        self.level_bar.set_progress(speaker.volume / 100 if speaker else 0)
 
     def update_label_brightness(self):
         self.icon.set_from_icon_name("display-brightness-symbolic", 42)

@@ -34,3 +34,17 @@ audio_icons_names = {
     "medium": "audio-volume-medium-symbolic",
     "high": "audio-volume-high-symbolic",
 }
+
+
+def audio_icon_name(speaker) -> str:
+    """Volume icon for a fabric audio stream (e.g. `audio.speaker`)."""
+    if speaker is None:
+        return audio_icons_names["off"]
+    volume = round(speaker.volume)
+    if speaker.muted or volume <= 0:
+        return audio_icons_names["mute"]
+    if volume >= 66:
+        return audio_icons_names["high"]
+    if volume >= 33:
+        return audio_icons_names["medium"]
+    return audio_icons_names["low"]

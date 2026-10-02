@@ -24,7 +24,8 @@ from fabric_config.components.quick_settings.widgets.buttons.theme_toggle import
 )
 
 gi.require_version("AstalNetwork", "0.1")
-from gi.repository import AstalNetwork as an
+from gi.repository import AstalNetwork as an  # noqa: E402
+from gi.repository import GObject  # noqa: E402
 
 
 class QuickSettingsButtonBox(Box):
@@ -118,25 +119,30 @@ class QuickSettingsButton(Button):
         self.audio_icon = Image(name="panel-icon")
         config.audio.connect("speaker-changed", self.update_audio)
 
-        def get_network_icon(*_):
-            prim = config.network.get_primary()
-
-            if prim == an.Primary.WIFI:
-                wifi = config.network.get_wifi()
-
-                self.network_icon.set_from_icon_name(
-                    wifi.get_icon_name(), self.planel_icon_size
-                )
-                wifi.bind_property("icon-name", self.network_icon, "icon-name")
-
-            else:
-                ethernet = config.network.get_wired()
-                if ethernet:
-                    self.network_icon.set_from_icon_name(
-                        ethernet.get_icon_name(), self.planel_icon_size
-                    )
-
         self.network_icon = Image(name="panel-icon", icon_size=self.planel_icon_size)
+        self._network_icon_binding: GObject.Binding | None = None
+
+        def get_network_icon(*_):
+            # follow whichever device is primary, and re-run when that changes
+            if self._network_icon_binding is not None:
+                self._network_icon_binding.unbind()
+                self._network_icon_binding = None
+
+            device = (
+                config.network.get_wifi()
+                if config.network.get_primary() == an.Primary.WIFI
+                else config.network.get_wired()
+            )
+            if device is None:
+                return
+            self.network_icon.set_from_icon_name(
+                device.get_icon_name(), self.planel_icon_size
+            )
+            self._network_icon_binding = device.bind_property(
+                "icon-name", self.network_icon, "icon-name"
+            )
+
+        config.network.connect("notify::primary", get_network_icon)
         get_network_icon()
 
         self.add(
@@ -160,28 +166,9 @@ class QuickSettingsButton(Button):
         )
 
     def update_audio(self, *args):
-        vol = config.audio.speaker.volume
-        if config.audio.speaker.muted:
-            self.audio_icon.set_from_icon_name(
-                config.audio_icons_names["mute"], self.planel_icon_size
-            )
-            return
-        if vol >= 66:
-            self.audio_icon.set_from_icon_name(
-                config.audio_icons_names["high"], self.planel_icon_size
-            )
-        elif 33 <= vol < 66:
-            self.audio_icon.set_from_icon_name(
-                config.audio_icons_names["medium"], self.planel_icon_size
-            )
-        elif 0 < vol < 33:
-            self.audio_icon.set_from_icon_name(
-                config.audio_icons_names["low"], self.planel_icon_size
-            )
-        else:
-            self.audio_icon.set_from_icon_name(
-                config.audio_icons_names["off"], self.planel_icon_size
-            )
+        self.audio_icon.set_from_icon_name(
+            config.audio_icon_name(config.audio.speaker), self.planel_icon_size
+        )
 
     def on_click(self, *args):
         QuickSettingsPopup.toggle_popup()
