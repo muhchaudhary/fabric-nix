@@ -2,7 +2,7 @@
 The desktop: one full-screen window per monitor on the bottom layer (behind
 windows, above the wallpaper). It stacks, from the bottom up:
 
-- the drawn layer (particles, prayer arc, audio visualizer),
+- the drawn layer (prayer arc, audio visualizer),
 - sticky notes,
 - the clock with its information lines.
 
@@ -27,7 +27,7 @@ from gi.repository import Gdk, GLib, Gtk
 import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
-from fabric_config.components.desktop.fx import Cava, FxLayer, season_mode
+from fabric_config.components.desktop.fx import Cava, FxLayer
 from fabric_config.components.desktop.media import MediaState
 from fabric_config.components.desktop.info import (
     OnThisDay,
@@ -43,7 +43,6 @@ from fabric_config.components.desktop.retro_player import (
 )
 from fabric_config.components.desktop.settings import (
     FACES,
-    PARTICLE_MODES,
     POSITIONS,
     WIDGETS,
     DesktopSettings,
@@ -151,13 +150,6 @@ def mood_color(now: datetime.datetime, prayer_times: dict[str, str]) -> RGB | No
         if start is not None and 0 <= minute - start < MOOD_MINUTES:
             return _MOODS[name]
     return None
-
-
-def is_night(now: datetime.datetime, prayer_times: dict[str, str]) -> bool:
-    minute = now.hour * 60 + now.minute
-    fajr = _minutes(prayer_times.get("Fajr", "")) or 6 * 60
-    maghrib = _minutes(prayer_times.get("Maghrib", "")) or 19 * 60
-    return minute < fajr or minute >= maghrib
 
 
 def _prayer_service():
@@ -426,16 +418,10 @@ class DesktopWindow(WaylandWindow):
     # Drawn layer
 
     def update_fx(self):
-        settings = self.manager.settings
         visible = self.manager.visibility.visible(self.monitor_name)
-        now = datetime.datetime.now()
-        mode = settings.particles
-        if mode == "auto":
-            mode = season_mode(now, is_night(now, self.manager.prayer_times()))
-        self.fx.configure_particles(mode)
         self.fx.show_arc = self.enabled("prayer_arc")
         self.fx.show_bars = self.enabled("visualizer") and self.manager.cava.running
-        self.fx.set_animating(visible and (mode != "off" or self.fx.show_bars))
+        self.fx.set_animating(visible and self.fx.show_bars)
         self.fx.queue_draw()
 
     # Greeting
@@ -538,16 +524,6 @@ class DesktopWindow(WaylandWindow):
                 settings.position == position,
                 lambda p=position: manager.set_position(p),
                 clock,
-                radio=True,
-            )
-
-        particles = submenu("Particles")
-        for mode in PARTICLE_MODES:
-            check(
-                "Auto (by season)" if mode == "auto" else mode.capitalize(),
-                settings.particles == mode,
-                lambda m=mode: manager.set_particles(m),
-                particles,
                 radio=True,
             )
 
@@ -765,10 +741,6 @@ class DesktopManager:
 
     def set_position(self, position):
         self.settings.position = position
-        self._changed()
-
-    def set_particles(self, mode: str):
-        self.settings.particles = mode
         self._changed()
 
     def set_player_theme(self, theme: str):

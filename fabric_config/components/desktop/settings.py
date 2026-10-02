@@ -16,7 +16,6 @@ from loguru import logger
 SETTINGS_FILE = os.path.join(GLib.get_user_cache_dir(), "fabric", "desktop_clock.json")
 
 FACES = ("digital", "analog", "words")
-PARTICLE_MODES = ("auto", "snow", "leaves", "petals", "fireflies", "off")
 Position = Literal["top", "center", "bottom-left", "bottom-right"]
 POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right")
 
@@ -40,7 +39,6 @@ class DesktopSettings:
     def __init__(self):
         self.use_24h = False
         self.face = FACES[0]
-        self.particles = "auto"
         self.position: Position = "top"
         # shared defaults, and per-monitor choices that override them
         self.widgets = {name: default for name, (_, default) in WIDGETS.items()}
@@ -58,8 +56,6 @@ class DesktopSettings:
         self.use_24h = bool(data.get("24h", False))
         if data.get("face") in FACES:
             self.face = data["face"]
-        if data.get("particles") in PARTICLE_MODES:
-            self.particles = data["particles"]
         if data.get("position") in POSITIONS:
             self.position = data["position"]
         if isinstance(data.get("player_theme"), str):
@@ -113,7 +109,6 @@ class DesktopSettings:
                     {
                         "24h": self.use_24h,
                         "face": self.face,
-                        "particles": self.particles,
                         "position": self.position,
                         "widgets": self.widgets,
                         "monitor_widgets": self.monitor_widgets,
