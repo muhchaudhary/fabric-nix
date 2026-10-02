@@ -69,12 +69,20 @@ def _load_pixbuf_async(path: str, callback):
 
 
 def _list_wallpapers() -> list[str]:
-    names = []
-    for name in os.listdir(WALLPAPER_DIR):
-        file_type = mimetypes.guess_type(name)[0]
-        if file_type and file_type.startswith("image/"):
-            names.append(name)
-    return sorted(names, key=str.lower)
+    """Image file names in WALLPAPER_DIR, most recently modified first."""
+    entries = []
+    with os.scandir(WALLPAPER_DIR) as it:
+        for entry in it:
+            file_type = mimetypes.guess_type(entry.name)[0]
+            if not (file_type and file_type.startswith("image/")):
+                continue
+            try:
+                mtime = entry.stat().st_mtime
+            except OSError:
+                continue
+            entries.append((mtime, entry.name))
+    entries.sort(key=lambda e: (-e[0], e[1].lower()))
+    return [name for _, name in entries]
 
 
 class WallpaperCard(Button):
