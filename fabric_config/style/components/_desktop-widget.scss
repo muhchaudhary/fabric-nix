@@ -6,7 +6,8 @@
 // reads over busy line art without covering it. Light text with a dark
 // outline normally; dark text with a light outline on light wallpapers
 // (.on-light). The text colour is a tint of the wallpaper's dominant colour,
-// set inline on #desktop-clock; every part inherits it.
+// set inline on #desktop-clock; every part inherits it. Font sizes and the
+// time's outline are per monitor, generated in desktop_widget.py.
 // (GTK draws large blurs behind big text as grey smudges, so no blur.)
 @function outline($c, $w: 1px) {
   @return $w 0 0 $c, (-$w) 0 0 $c, 0 $w 0 $c, 0 (-$w) 0 $c,
@@ -30,13 +31,11 @@ $outline-light: a(white, 0.7);
   }
 
   label { text-shadow: outline($outline-dark); }
-  #clock-time { text-shadow: outline($outline-dark, 2px); }
   #clock-progress { box-shadow: 0 0 0 1px $outline-dark; }
 }
 
 #desktop-clock.on-light {
   label { text-shadow: outline($outline-light); }
-  #clock-time { text-shadow: outline($outline-light, 2px); }
   #clock-progress { box-shadow: 0 0 0 1px $outline-light; }
 }
 
@@ -44,18 +43,7 @@ $outline-light: a(white, 0.7);
 #clock-ampm  { font-weight: 500; opacity: 0.85; }
 #clock-prayer { font-weight: 500; opacity: 0.85; }
 
-#clock-date {
-  background: none;
-  border: none;
-  box-shadow: none;
-  padding: 2px $gap-md;
-  border-radius: $radius-pill;
-  color: inherit;
-  @include transition(background-color);
-
-  label { font-weight: 600; }
-  &:hover { background-color: a(currentColor, 0.12); }
-}
+#clock-date { font-weight: 600; }
 
 /* Day progress: a short accent rule that fills through the day */
 #clock-progress {
@@ -84,38 +72,3 @@ $outline-light: a(white, 0.7);
 #desktop-clock.on-light #clock-words .clock-word.lit {
   text-shadow: outline($outline-light);
 }
-
-/* Calendar (click the date) */
-#clock-calendar {
-  margin-top: $gap-sm;
-  padding: $gap-sm $gap-md;
-  border-radius: $radius-lg;
-  background-color: var(--bg-glass);
-  color: var(--fg);
-  font-family: "Roboto", sans-serif;
-  font-size: 14px;
-
-  &.header { border: none; background: none; }
-  &.button { color: var(--fg-dim); background: none; border: none; box-shadow: none; }
-  &.button:hover { color: var(--fg); }
-  &:indeterminate { color: a(var(--fg-dim), 0.5); }
-  &:selected {
-    background-color: a(var(--fg), 0.2);
-    color: var(--fg);
-    border-radius: $radius-sm;
-  }
-}
-
-/* Sizes (SIZE in desktop_widget.py) */
-@mixin clock-size($time, $words) {
-  // Oswald's line box is tall; pull the progress line up under the digits
-  #clock-time   { font-size: $time; margin-bottom: -$time * 0.2; }
-  #clock-ampm   { font-size: $time * 0.3; margin-top: $time * 0.18; }
-  #clock-date   { font-size: $time * 0.26; }
-  #clock-prayer { font-size: $time * 0.17; }
-  #clock-words .clock-word { font-size: $words; }
-}
-
-.clock-size-small  { @include clock-size(64px, 20px); }
-.clock-size-medium { @include clock-size(96px, 26px); }
-.clock-size-large  { @include clock-size(128px, 34px); }

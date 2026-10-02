@@ -4,15 +4,14 @@ import json
 import math
 import os
 import warnings
+from dataclasses import dataclass
 from collections.abc import Callable
 from typing import Literal
 
 from fabric.utils import monitor_file
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.widgets.eventbox import EventBox
 from fabric.widgets.label import Label
-from fabric.widgets.revealer import Revealer
 from fabric.widgets.stack import Stack
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import Gdk, GLib, Gtk
@@ -25,27 +24,95 @@ from fabric_config.utils.wallpaper import (
     wallpaper_for_monitor,
 )
 
-# Layout. POSITION picks where the clock sits on each monitor; SIZE scales it
-# (matching .clock-size-* rules in _desktop-widget.scss).
+# Layout. POSITION picks where the clock sits on each monitor. Everything is
+# sized from the monitor's height, so screens of different resolutions get a
+# clock taking up the same share of the screen; SCALE grows or shrinks it.
 Position = Literal["top-center", "center", "top-left", "bottom-left", "bottom-right"]
 POSITION: Position = "top-center"
-SIZE: Literal["small", "medium", "large"] = "large"
-EDGE_MARGIN = 60
+SCALE = 1.0
 
 FACES = ("digital", "analog", "words")
-ANALOG_SIZE = 260
-PROGRESS_WIDTH = 180  # px, the day-progress line under the time
 
 SETTINGS_FILE = os.path.join(GLib.get_user_cache_dir(), "fabric", "desktop_clock.json")
 
 _POSITIONS: dict[str, tuple[str, str]] = {
-    # anchor, margin (top right bottom left)
-    "top-center": ("top", f"{EDGE_MARGIN}px 0 0 0"),
+    # anchor, margin (top right bottom left) with {m} the edge margin
+    "top-center": ("top", "{m}px 0 0 0"),
     "center": ("", "0"),
-    "top-left": ("top left", f"{EDGE_MARGIN}px 0 0 {EDGE_MARGIN}px"),
-    "bottom-left": ("bottom left", f"0 0 {EDGE_MARGIN}px {EDGE_MARGIN}px"),
-    "bottom-right": ("bottom right", f"0 {EDGE_MARGIN}px {EDGE_MARGIN}px 0"),
+    "top-left": ("top left", "{m}px 0 0 {m}px"),
+    "bottom-left": ("bottom left", "0 0 {m}px {m}px"),
+    "bottom-right": ("bottom right", "0 {m}px {m}px 0"),
 }
+
+
+@dataclass(frozen=True)
+class ClockSizes:
+    """Pixel sizes for one monitor, all derived from its height."""
+
+    time: int
+    ampm: int
+    date: int
+    prayer: int
+    words: int
+    analog: int
+    progress: int
+    spacing: int
+    margin: int
+    outline: int  # outline width around the time digits
+
+    @classmethod
+    def for_height(cls, height: int) -> "ClockSizes":
+        time = round(height * 0.2 * SCALE)
+        return cls(
+            time=time,
+            ampm=round(time * 0.28),
+            date=round(time * 0.2),
+            prayer=round(time * 0.13),
+            words=round(height * 0.042 * SCALE),
+            analog=round(height * 0.34 * SCALE),
+            progress=round(time * 1.4),
+            spacing=round(time * 0.07),
+            margin=round(height * 0.07),
+            outline=2 if time < 240 else 3,
+        )
+
+
+def _outline(color: str, width: int) -> str:
+    return ", ".join(
+        f"{x * width}px {y * width}px 0 {color}"
+        for x, y in (
+            (1, 0),
+            (-1, 0),
+            (0, 1),
+            (0, -1),
+            (1, 1),
+            (-1, -1),
+            (1, -1),
+            (-1, 1),
+        )
+    )
+
+
+def _sizes_css(cls: str, sizes: ClockSizes) -> str:
+    """Per-monitor size rules, scoped by the window's class."""
+    root = f"#desktop-clock.{cls}"
+    return f"""
+{root} #clock-time {{
+  font-size: {sizes.time}px;
+  margin-bottom: -{round(sizes.time * 0.2)}px;
+  text-shadow: {_outline("alpha(black, 0.55)", sizes.outline)};
+}}
+{root}.on-light #clock-time {{
+  text-shadow: {_outline("alpha(white, 0.7)", sizes.outline)};
+}}
+{root} #clock-ampm {{
+  font-size: {sizes.ampm}px;
+  margin-top: {round(sizes.time * 0.17)}px;
+}}
+{root} #clock-date {{ font-size: {sizes.date}px; }}
+{root} #clock-prayer {{ font-size: {sizes.prayer}px; }}
+{root} #clock-words .clock-word {{ font-size: {sizes.words}px; }}
+"""
 
 
 class ClockSettings:
@@ -139,9 +206,9 @@ class DigitalFace(EventBox):
 
 
 class AnalogFace(Gtk.DrawingArea):
-    def __init__(self):
+    def __init__(self, size: int):
         super().__init__()
-        self.set_size_request(ANALOG_SIZE, ANALOG_SIZE)
+        self.set_size_request(size, size)
         self.set_halign(Gtk.Align.CENTER)
         self.get_style_context().add_class("clock-analog")
         self._now = datetime.datetime.now()
@@ -273,12 +340,30 @@ def _prayer_service():
 
 
 class ClockWidget(WaylandWindow):
-    def __init__(self, manager: "DesktopClocks", monitor: int, monitor_name: str):
+    def __init__(
+        self,
+        manager: "DesktopClocks",
+        monitor: int,
+        monitor_name: str,
+        monitor_height: int,
+    ):
         self.manager = manager
         self.monitor_name = monitor_name
+        self.sizes = ClockSizes.for_height(monitor_height)
+        # a screen-wide provider whose rules only match this window's clock
+        size_class = "clock-" + "".join(c if c.isalnum() else "-" for c in monitor_name)
+        self._size_provider = Gtk.CssProvider()
+        self._size_provider.load_from_data(_sizes_css(size_class, self.sizes).encode())
+        screen = Gdk.Screen.get_default()
+        if screen is not None:
+            # above the app stylesheet: between providers GTK goes by
+            # priority, not selector specificity
+            Gtk.StyleContext.add_provider_for_screen(
+                screen, self._size_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER + 10
+            )
         self.faces = {
             "digital": DigitalFace(manager.toggle_24h),
-            "analog": AnalogFace(),
+            "analog": AnalogFace(self.sizes.analog),
             "words": WordFace(),
         }
         self.face_stack = Stack(
@@ -301,37 +386,25 @@ class ClockWidget(WaylandWindow):
         self.progress = Box(
             name="clock-progress",
             h_align="center",
-            size=(PROGRESS_WIDTH, -1),
+            size=(self.sizes.progress, -1),
             children=self.progress_fill,
             tooltip_text="How much of the day has passed",
         )
 
-        self.date_button = Button(
-            name="clock-date",
-            h_align="center",
-            on_clicked=lambda *_: self._toggle_calendar(),
-        )
+        self.date_label = Label(name="clock-date", h_align="center")
         self.prayer_label = Label(name="clock-prayer", visible=False)
-
-        self.calendar = Gtk.Calendar(name="clock-calendar")
-        self.calendar_revealer = Revealer(
-            transition_type="slide-down",
-            transition_duration=200,
-            child=Box(h_align="center", children=self.calendar),
-        )
 
         self.root = Box(
             name="desktop-clock",
-            style_classes=[f"clock-size-{SIZE}"],
+            style_classes=[size_class],
             orientation="v",
-            spacing=10,
+            spacing=self.sizes.spacing,
             h_align="center",
             children=[
                 self.face_events,
                 self.progress,
-                self.date_button,
+                self.date_label,
                 self.prayer_label,
-                self.calendar_revealer,
             ],
         )
 
@@ -339,7 +412,7 @@ class ClockWidget(WaylandWindow):
         super().__init__(
             layer="bottom",
             anchor=anchor,
-            margin=margin,
+            margin=margin.format(m=self.sizes.margin),
             monitor=monitor,
             exclusivity="none",
             keyboard_mode="none",
@@ -349,16 +422,22 @@ class ClockWidget(WaylandWindow):
         self.face_stack.set_visible_child_name(manager.settings.face)
         self.refresh()
 
+    def do_destroy(self):
+        screen = Gdk.Screen.get_default()
+        if screen is not None:
+            Gtk.StyleContext.remove_provider_for_screen(screen, self._size_provider)
+        WaylandWindow.do_destroy(self)
+
     def refresh(self):
         now = datetime.datetime.now()
         use_24h = self.manager.settings.use_24h
         for face in self.faces.values():
             face.update(now, use_24h)
-        self.date_button.set_label(now.strftime("%A, %B %-d"))
+        self.date_label.set_label(now.strftime("%A, %B %-d"))
         midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
         fraction = (now - midnight).total_seconds() / 86400
         self.progress_fill.set_size_request(
-            max(1, round(PROGRESS_WIDTH * fraction)), -1
+            max(1, round(self.sizes.progress * fraction)), -1
         )
         self.update_prayer()
 
@@ -400,15 +479,6 @@ class ClockWidget(WaylandWindow):
         if step:
             self.manager.cycle_face(step)
         return True
-
-    def _toggle_calendar(self):
-        revealing = not self.calendar_revealer.get_reveal_child()
-        if revealing:
-            # open on today, not wherever it was left
-            today = datetime.date.today()
-            self.calendar.select_month(today.month - 1, today.year)
-            self.calendar.select_day(today.day)
-        self.calendar_revealer.set_reveal_child(revealing)
 
 
 class DesktopClocks:
@@ -456,9 +526,11 @@ class DesktopClocks:
             ]
 
     def _build(self):
-        self.windows = [
-            ClockWidget(self, i, name) for i, name in enumerate(self._monitor_names())
-        ]
+        self.windows = []
+        for i, name in enumerate(self._monitor_names()):
+            monitor = self.display.get_monitor(i)
+            height = monitor.get_geometry().height if monitor else 1080
+            self.windows.append(ClockWidget(self, i, name, height))
 
     def _rebuild_soon(self):
         # monitor numbering shifts on hotplug; rebuild once things settle
