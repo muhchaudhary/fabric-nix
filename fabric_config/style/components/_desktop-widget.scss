@@ -1,74 +1,43 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
-// No backdrop: the text sits straight on the wallpaper with a crisp outline
-// (unblurred shadows in eight directions) in a contrasting colour, so it
-// reads over busy line art without covering it. Light text with a dark
-// outline normally; dark text with a light outline on light wallpapers
-// (.on-light). The text colour is a tint of the wallpaper's dominant colour,
-// set inline on #desktop-clock; every part inherits it. Font sizes and the
-// time's outline are per monitor, generated in desktop_widget.py.
-// (GTK draws large blurs behind big text as grey smudges, so no blur.)
-@function outline($c, $w: 1px) {
-  @return $w 0 0 $c, (-$w) 0 0 $c, 0 $w 0 $c, 0 (-$w) 0 $c,
-    $w $w 0 $c, (-$w) (-$w) 0 $c, $w (-$w) 0 $c, (-$w) $w 0 $c;
-}
-
-$outline-dark: a(black, 0.55);
-$outline-light: a(white, 0.7);
+// Modelled on the macOS lock-screen clock: the date small above, the time
+// large and semibold in Inter Display (SF Pro's closest open relative), no
+// backdrop, outline or shadow (GTK renders blurred text shadows as smudges).
+// The colour is near-white with a hint of the wallpaper (near-black on light
+// wallpapers), set inline on #desktop-clock; every part inherits it. Sizes
+// are per monitor, generated in desktop_widget.py.
 
 #desktop-clock {
-  color: m(var(--accent), white, 0.2);
-  font-family: "Oswald", sans-serif;
+  color: white;
+  font-family: "Inter", "Roboto", sans-serif;
   font-size: 15px;
 
   // the global `*` rule gives every node its own colour and font; inherit
-  // them here so the accent and Oswald reach every part of the clock
+  // them here so the tint and font reach every part of the clock
   * {
     color: inherit;
     font-family: inherit;
     font-size: inherit;
+    text-shadow: none;
   }
-
-  label { text-shadow: outline($outline-dark); }
-  #clock-progress { box-shadow: 0 0 0 1px $outline-dark; }
 }
 
-#desktop-clock.on-light {
-  label { text-shadow: outline($outline-light); }
-  #clock-progress { box-shadow: 0 0 0 1px $outline-light; }
+#clock-time {
+  font-family: "Inter Display", "Inter", "Roboto", sans-serif;
+  font-weight: 600;
+  opacity: 0.92;
 }
 
-#clock-time  { font-weight: 700; }
-#clock-ampm  { font-weight: 500; opacity: 0.85; }
-#clock-prayer { font-weight: 500; opacity: 0.85; }
+#clock-date   { font-weight: 600; opacity: 0.9; }
+#clock-prayer { font-weight: 500; opacity: 0.75; }
 
-#clock-date { font-weight: 600; }
-
-/* Day progress: a short accent rule that fills through the day */
-#clock-progress {
-  min-height: 4px;
-  border-radius: $radius-pill;
-  background-color: a(currentColor, 0.25);
-}
-
-#clock-progress-fill {
-  min-height: 4px;
-  border-radius: $radius-pill;
-  background-color: currentColor;
-}
-
-/* Word clock: unlit words stay quiet (no outline), lit ones get one */
+/* Word clock */
 #desktop-clock #clock-words .clock-word {
-  font-weight: 700;
-  letter-spacing: 2px;
-  opacity: 0.3;
-  text-shadow: none;
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.28;
   @include transition(opacity, 0.6s);
 
-  &.lit { opacity: 1; text-shadow: outline($outline-dark); }
-}
-
-#desktop-clock.on-light #clock-words .clock-word.lit {
-  text-shadow: outline($outline-light);
+  &.lit { opacity: 0.95; }
 }

@@ -44,64 +44,36 @@ class ClockSizes:
     """Pixel sizes for one monitor, all derived from its height."""
 
     time: int
-    ampm: int
     date: int
     prayer: int
     words: int
     analog: int
-    progress: int
-    spacing: int
     margin: int
-    outline: int  # outline width around the time digits
 
     @classmethod
     def for_height(cls, height: int) -> "ClockSizes":
         time = round(height * 0.2 * SCALE)
         return cls(
             time=time,
-            ampm=round(time * 0.28),
-            date=round(time * 0.2),
-            prayer=round(time * 0.13),
-            words=round(height * 0.042 * SCALE),
-            analog=round(height * 0.34 * SCALE),
-            progress=round(time * 1.4),
-            spacing=round(time * 0.07),
-            margin=round(height * 0.07),
-            outline=2 if time < 240 else 3,
+            date=round(time * 0.17),
+            prayer=round(time * 0.11),
+            words=round(height * 0.04 * SCALE),
+            analog=round(height * 0.32 * SCALE),
+            margin=round(height * 0.06),
         )
-
-
-def _outline(color: str, width: int) -> str:
-    return ", ".join(
-        f"{x * width}px {y * width}px 0 {color}"
-        for x, y in (
-            (1, 0),
-            (-1, 0),
-            (0, 1),
-            (0, -1),
-            (1, 1),
-            (-1, -1),
-            (1, -1),
-            (-1, 1),
-        )
-    )
 
 
 def _sizes_css(cls: str, sizes: ClockSizes) -> str:
     """Per-monitor size rules, scoped by the window's class."""
     root = f"#desktop-clock.{cls}"
+    # Inter Display's line box is taller than its digits; pull the date and
+    # prayer line in close, like the macOS lock screen
     return f"""
 {root} #clock-time {{
   font-size: {sizes.time}px;
-  margin-bottom: -{round(sizes.time * 0.2)}px;
-  text-shadow: {_outline("alpha(black, 0.55)", sizes.outline)};
-}}
-{root}.on-light #clock-time {{
-  text-shadow: {_outline("alpha(white, 0.7)", sizes.outline)};
-}}
-{root} #clock-ampm {{
-  font-size: {sizes.ampm}px;
-  margin-top: {round(sizes.time * 0.17)}px;
+  letter-spacing: -{round(sizes.time * 0.025)}px;
+  margin-top: -{round(sizes.time * 0.12)}px;
+  margin-bottom: -{round(sizes.time * 0.14)}px;
 }}
 {root} #clock-date {{ font-size: {sizes.date}px; }}
 {root} #clock-prayer {{ font-size: {sizes.prayer}px; }}
@@ -164,7 +136,9 @@ def readable_accent(rgb: tuple[int, int, int]) -> Accent:
     red, green, blue = (c / 255 for c in rgb)
     on_light = 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.55
     h, _light, s = colorsys.rgb_to_hls(red, green, blue)
-    r, g, b = colorsys.hls_to_rgb(h, 0.2 if on_light else 0.82, min(s, 0.5))
+    # mostly white (or near-black) with just a hint of the wallpaper, like
+    # macOS's vibrant lock-screen clock
+    r, g, b = colorsys.hls_to_rgb(h, 0.2 if on_light else 0.93, min(s, 0.4))
     return f"rgb({round(r * 255)}, {round(g * 255)}, {round(b * 255)})", on_light
 
 
@@ -174,14 +148,10 @@ def readable_accent(rgb: tuple[int, int, int]) -> Accent:
 class DigitalFace(EventBox):
     def __init__(self, on_toggle_24h: Callable[[], None]):
         self.time_label = Label(name="clock-time")
-        self.ampm_label = Label(name="clock-ampm", v_align="start")
         super().__init__(
             events=["button-press"],
-            child=Box(
-                h_align="center",
-                spacing=8,
-                children=[self.time_label, self.ampm_label],
-            ),
+            child=self.time_label,
+            h_align="center",
             tooltip_text="Click to switch 12/24-hour time",
         )
         self.connect(
@@ -190,13 +160,9 @@ class DigitalFace(EventBox):
         )
 
     def update(self, now: datetime.datetime, use_24h: bool):
-        if use_24h:
-            self.time_label.set_label(now.strftime("%H:%M"))
-            self.ampm_label.hide()
-        else:
-            self.time_label.set_label(f"{now.hour % 12 or 12}:{now:%M}")
-            self.ampm_label.set_label(now.strftime("%p"))
-            self.ampm_label.show()
+        # like the macOS lock screen: no leading zero, no AM/PM
+        hour = now.hour if use_24h else now.hour % 12 or 12
+        self.time_label.set_label(f"{hour}:{now:%M}")
 
 
 class AnalogFace(Gtk.DrawingArea):
@@ -206,8 +172,6 @@ class AnalogFace(Gtk.DrawingArea):
         self.set_halign(Gtk.Align.CENTER)
         self.get_style_context().add_class("clock-analog")
         self._now = datetime.datetime.now()
-        # dial fill and hand shadows contrast with the wallpaper
-        self.on_light = False
         self.connect("draw", self._on_draw)
 
     def update(self, now: datetime.datetime, _use_24h: bool):
@@ -220,16 +184,9 @@ class AnalogFace(Gtk.DrawingArea):
         cx, cy, radius = w / 2, h / 2, min(w, h) / 2 - 6
         cr.set_line_cap(1)  # round
 
-        # an outline in the contrasting colour keeps every stroke readable
-        # over busy wallpapers without a filled backdrop
-        o = 1.0 if self.on_light else 0.0
-        outline = (o, o, o, 0.6 if self.on_light else 0.5)
         ink = (color.red, color.green, color.blue)
 
         def stroke(width: float, alpha: float = 1.0):
-            cr.set_source_rgba(*outline)
-            cr.set_line_width(width + 2.5)
-            cr.stroke_preserve()
             cr.set_source_rgba(*ink, alpha)
             cr.set_line_width(width)
             cr.stroke()
@@ -259,10 +216,7 @@ class AnalogFace(Gtk.DrawingArea):
             cr.line_to(cx + length * math.sin(angle), cy - length * math.cos(angle))
             stroke(width)
 
-        cr.arc(cx, cy, 8, 0, 2 * math.pi)
-        cr.set_source_rgba(*outline)
-        cr.fill_preserve()
-        cr.arc(cx, cy, 6.5, 0, 2 * math.pi)
+        cr.arc(cx, cy, 7, 0, 2 * math.pi)
         cr.set_source_rgba(*ink, 1)
         cr.fill()
         return False
@@ -376,15 +330,6 @@ class ClockWidget(WaylandWindow):
             on_scroll_event=self._on_scroll,
         )
 
-        self.progress_fill = Box(name="clock-progress-fill", h_align="start")
-        self.progress = Box(
-            name="clock-progress",
-            h_align="center",
-            size=(self.sizes.progress, -1),
-            children=self.progress_fill,
-            tooltip_text="How much of the day has passed",
-        )
-
         self.date_label = Label(name="clock-date", h_align="center")
         self.prayer_label = Label(name="clock-prayer", visible=False)
 
@@ -392,12 +337,10 @@ class ClockWidget(WaylandWindow):
             name="desktop-clock",
             style_classes=[size_class],
             orientation="v",
-            spacing=self.sizes.spacing,
             h_align="center",
             children=[
-                self.face_events,
-                self.progress,
                 self.date_label,
+                self.face_events,
                 self.prayer_label,
             ],
         )
@@ -428,11 +371,6 @@ class ClockWidget(WaylandWindow):
         for face in self.faces.values():
             face.update(now, use_24h)
         self.date_label.set_label(now.strftime("%A, %B %-d"))
-        midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
-        fraction = (now - midnight).total_seconds() / 86400
-        self.progress_fill.set_size_request(
-            max(1, round(self.sizes.progress * fraction)), -1
-        )
         self.update_prayer()
 
     def update_prayer(self):
@@ -455,10 +393,8 @@ class ClockWidget(WaylandWindow):
             self.root.add_style_class("on-light")
         else:
             self.root.remove_style_class("on-light")
-        analog = self.faces["analog"]
-        assert isinstance(analog, AnalogFace)
-        analog.on_light = on_light
-        analog.queue_draw()
+        # the dial draws in the inherited colour
+        self.faces["analog"].queue_draw()
 
     def _on_scroll(self, _widget, event: Gdk.EventScroll):
         match event.direction:
