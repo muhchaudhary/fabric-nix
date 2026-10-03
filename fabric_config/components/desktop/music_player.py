@@ -56,10 +56,36 @@ def rounded_rect(cr: cairo.Context, x: float, y: float, w: float, h: float, r: f
     cr.close_path()
 
 
+_shadow_cache: dict[tuple, tuple[cairo.ImageSurface, float]] = {}
+
+
 def soft_shadow(
     cr: cairo.Context, x: float, y: float, w: float, h: float, r: float, depth: float
 ):
-    """A cheap blurred drop shadow: stacked, growing, faint rounded rects."""
+    """
+    A blurred drop shadow (stacked, growing, faint rounded rects), drawn once
+    per size into an image and painted from there afterwards.
+    """
+    key = (round(w), round(h), round(r), round(depth))
+    cached = _shadow_cache.get(key)
+    if cached is None:
+        margin = depth
+        surface = cairo.ImageSurface(
+            cairo.FORMAT_ARGB32, int(w + margin * 2) + 2, int(h + margin * 2) + 2
+        )
+        _draw_shadow(cairo.Context(surface), margin, margin, w, h, r, depth)
+        cached = (surface, margin)
+        if len(_shadow_cache) > 16:
+            _shadow_cache.clear()
+        _shadow_cache[key] = cached
+    surface, margin = cached
+    cr.set_source_surface(surface, x - margin, y - margin)
+    cr.paint()
+
+
+def _draw_shadow(
+    cr: cairo.Context, x: float, y: float, w: float, h: float, r: float, depth: float
+):
     steps = 10
     for i in range(steps, 0, -1):
         spread = depth * i / steps
@@ -256,6 +282,9 @@ class MusicPlayer(Gtk.EventBox):
         self._scrub: float | None = None  # fraction while dragging the seek bar
         self._seek_rect = (0.0, 0.0, 0.0, 0.0)
         self._levels: list[float] = []  # eased cava levels, one per seek bar
+        self._layouts: dict[tuple, Pango.Layout] = {}
+        # where the seek bar was last drawn: (x, width, centre y)
+        self._seek_geometry: tuple[float, float, float] | None = None
         # hover: what's under the pointer, and each control's eased highlight
         self._hover: str | None = None
         self._hover_x = 0.0
@@ -442,10 +471,16 @@ class MusicPlayer(Gtk.EventBox):
         now = GLib.get_monotonic_time() / 1e6
         dt = min(0.1, now - self._last_tick) if self._last_tick else FRAME_MS / 1000
         self._last_tick = now
+        sliding = self._lyric_slide > 0
+        hovering = self._hover_settling() or self._hover == "seek"
         self._lyric_slide = max(0.0, self._lyric_slide - dt / LYRIC_TRANSITION_S)
         self._step_levels()
         self._step_hover(dt)
-        self.queue_draw()
+        area = self._seek_only_area()
+        if sliding or hovering or area is None or self._scrub is not None:
+            self.queue_draw()
+        else:
+            self.area.queue_draw_area(*area)
         if not self.visible_on_desktop or not self._animating():
             self._tick_id = None
             return False
@@ -623,6 +658,19 @@ class MusicPlayer(Gtk.EventBox):
     # Drawing
 
     def _on_draw(self, _widget, cr: cairo.Context):
+        area = self._seek_only_area()
+        if area is not None:
+            x1, y1, x2, y2 = cr.clip_extents()
+            ax, ay, aw, ah = area
+            if x1 >= ax and y1 >= ay and x2 <= ax + aw and y2 <= ay + ah:
+                # a level-only frame: repaint the card behind the seek bar
+                # and the bar itself, not the whole card
+                rounded_rect(cr, 0, self.card_top, self.card_w,
+                             self.card_bottom - self.card_top, self.radius)  # fmt: skip
+                cr.set_source_rgba(*self.surface)
+                cr.fill()
+                self._draw_seek(cr)
+                return False
         self._hits = []
         w = self.card_w
         top, bottom = self.card_top, self.card_bottom
@@ -695,54 +743,10 @@ class MusicPlayer(Gtk.EventBox):
         cr.move_to(tx, y)
         PangoCairo.show_layout(cr, layout)
 
-        # seek bar: a row of level bars that move with the music (cava),
-        # solid up to the playhead and faint after it; flat when quiet
+        # seek bar: a row of level bars that move with the music (cava)
         bar_y = top + self.info_h * 0.585
-        bar_w, bar_gap = SEEK_BAR_W * u, SEEK_BAR_GAP * u
-        count = max(8, int((tw + bar_gap) / (bar_w + bar_gap)))
-        if len(self._levels) != count:
-            self._levels = [0.0] * count
-        step = (tw - bar_w) / (count - 1)
-        played = tw * self.progress
-        cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.set_line_width(bar_w)
-        for i, level in enumerate(self._levels):
-            x = tx + bar_w / 2 + i * step
-            half = 1.2 * u + level * SEEK_BAR_MAX * u
-            cr.move_to(x, bar_y - half)
-            cr.line_to(x, bar_y + half)
-            cr.set_source_rgba(*ink, 0.9 if x <= tx + played else 0.2)
-            cr.stroke()
-        # the playhead: a slim line standing a little taller than the bars,
-        # thicker while scrubbing
-        head_x = tx + played
-        head_half = (SEEK_BAR_MAX + 3) * u
-        cr.set_line_width((3.2 if self._scrub is not None else 2.2) * u)
-        cr.set_source_rgba(*ink, 1)
-        cr.move_to(head_x, bar_y - head_half)
-        cr.line_to(head_x, bar_y + head_half)
-        cr.stroke()
-        self._seek_rect = (tx, bar_y - 16 * u, tw, 32 * u)
-        if (glow := self._hovered("seek")) and self._scrub is None and self.length:
-            # where a click would land, and when that is
-            ghost_x = max(tx, min(tx + tw, self._hover_x))
-            cr.set_line_width(1.6 * u)
-            cr.set_source_rgba(*ink, 0.45 * glow)
-            cr.move_to(ghost_x, bar_y - head_half)
-            cr.line_to(ghost_x, bar_y + head_half)
-            cr.stroke()
-            label = format_time(self._seek_fraction(ghost_x) * self.length)
-            layout = text_layout(cr, label, 10.5 * u, 600)
-            lw, lh = layout.get_pixel_size()
-            bx = max(tx, min(tx + tw - lw - 10 * u, ghost_x - lw / 2 - 5 * u))
-            # above the bar, under the artist line
-            by = bar_y - head_half - lh - 7 * u
-            rounded_rect(cr, bx, by, lw + 10 * u, lh + 4 * u, (lh + 4 * u) / 2)
-            cr.set_source_rgba(*ink, 0.9 * glow)
-            cr.fill()
-            cr.set_source_rgba(*self.surface[:3], glow)
-            cr.move_to(bx + 5 * u, by + 2 * u)
-            PangoCairo.show_layout(cr, layout)
+        self._seek_geometry = (tx, tw, bar_y)
+        self._draw_seek(cr)
 
         # times
         cr.set_source_rgba(*ink, 0.75)
@@ -789,6 +793,85 @@ class MusicPlayer(Gtk.EventBox):
         if self._has_lyrics_section:
             self._draw_lyrics(cr)
         return False
+
+    def _lyric_layout(
+        self, cr: cairo.Context, text: str, size: float, weight: float, width: float
+    ) -> Pango.Layout:
+        """Lyric layouts, cached: only lines mid-transition change size."""
+        key = (text, round(size * 4), round(weight), round(width))
+        layout = self._layouts.get(key)
+        if layout is None:
+            layout = text_layout(
+                cr, text, size, weight, width, Pango.Alignment.CENTER, wrap=True
+            )
+            if len(self._layouts) > 96:
+                self._layouts.clear()
+            self._layouts[key] = layout
+        else:
+            PangoCairo.update_layout(cr, layout)
+        return layout
+
+    def _draw_seek(self, cr: cairo.Context):
+        """
+        The level bars, solid up to the playhead and faint after it (flat when
+        quiet), the playhead, and on hover a ghost playhead with its time.
+        """
+        if self._seek_geometry is None:
+            return
+        tx, tw, bar_y = self._seek_geometry
+        ink, u = self.ink, self.u
+        bar_w, bar_gap = SEEK_BAR_W * u, SEEK_BAR_GAP * u
+        count = max(8, int((tw + bar_gap) / (bar_w + bar_gap)))
+        if len(self._levels) != count:
+            self._levels = [0.0] * count
+        step = (tw - bar_w) / (count - 1)
+        played = tw * self.progress
+        cr.set_line_cap(cairo.LINE_CAP_ROUND)
+        cr.set_line_width(bar_w)
+        for i, level in enumerate(self._levels):
+            x = tx + bar_w / 2 + i * step
+            half = 1.2 * u + level * SEEK_BAR_MAX * u
+            cr.move_to(x, bar_y - half)
+            cr.line_to(x, bar_y + half)
+            cr.set_source_rgba(*ink, 0.9 if x <= tx + played else 0.2)
+            cr.stroke()
+        # the playhead: a slim line standing a little taller than the bars,
+        # thicker while scrubbing
+        head_x = tx + played
+        head_half = (SEEK_BAR_MAX + 3) * u
+        cr.set_line_width((3.2 if self._scrub is not None else 2.2) * u)
+        cr.set_source_rgba(*ink, 1)
+        cr.move_to(head_x, bar_y - head_half)
+        cr.line_to(head_x, bar_y + head_half)
+        cr.stroke()
+        self._seek_rect = (tx, bar_y - 16 * u, tw, 32 * u)
+        if (glow := self._hovered("seek")) and self._scrub is None and self.length:
+            # where a click would land, and when that is
+            ghost_x = max(tx, min(tx + tw, self._hover_x))
+            cr.set_line_width(1.6 * u)
+            cr.set_source_rgba(*ink, 0.45 * glow)
+            cr.move_to(ghost_x, bar_y - head_half)
+            cr.line_to(ghost_x, bar_y + head_half)
+            cr.stroke()
+            label = format_time(self._seek_fraction(ghost_x) * self.length)
+            layout = text_layout(cr, label, 10.5 * u, 600)
+            lw, lh = layout.get_pixel_size()
+            bx = max(tx, min(tx + tw - lw - 10 * u, ghost_x - lw / 2 - 5 * u))
+            # above the bar, under the artist line
+            by = bar_y - head_half - lh - 7 * u
+            rounded_rect(cr, bx, by, lw + 10 * u, lh + 4 * u, (lh + 4 * u) / 2)
+            cr.set_source_rgba(*ink, 0.9 * glow)
+            cr.fill()
+            cr.set_source_rgba(*self.surface[:3], glow)
+            cr.move_to(bx + 5 * u, by + 2 * u)
+            PangoCairo.show_layout(cr, layout)
+
+    def _seek_only_area(self) -> tuple[int, int, int, int] | None:
+        """The rectangle a level-only frame needs repainting, if it can."""
+        if self._seek_geometry is None or self._seek_rect[2] <= 0:
+            return None
+        x, y, w, h = self._seek_rect
+        return (int(x) - 4, int(y) - 2, int(w) + 8, int(h) + 4)
 
     def _draw_switch_icon(self, cr: cairo.Context, cx: float, cy: float, size: float):
         """Two opposing arrows: switch to the next player."""
@@ -854,9 +937,7 @@ class MusicPlayer(Gtk.EventBox):
             weight = (
                 LYRIC_WEIGHT_OTHER + (LYRIC_WEIGHT_CURRENT - LYRIC_WEIGHT_OTHER) * focus
             )
-            layout = text_layout(
-                cr, text, size, weight, width, Pango.Alignment.CENTER, wrap=True
-            )
+            layout = self._lyric_layout(cr, text, size, weight, width)
             blocks.append((delta, layout, float(layout.get_pixel_size()[1]), focus))
 
         gap = line_h * 0.18

@@ -15,6 +15,7 @@ from gi.repository import GLib, Gtk
 from fabric_config.services.cava import CAVA_BARS, Cava
 
 FRAME_MS = 33  # ~30 fps
+BARS_HEIGHT = 0.08  # tallest visualizer bar, as a fraction of the screen
 
 
 # Prayer arc
@@ -69,7 +70,11 @@ class FxLayer(Gtk.DrawingArea):
         self._bars = [
             b + (v - b) * (0.6 if v > b else 0.15) for b, v in zip(self._bars, target)
         ]
-        self.queue_draw()
+        # only the bars move: repaint the strip along the bottom, not the
+        # whole screen (which would repaint the clock and notes on top too)
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        strip = int(h * BARS_HEIGHT) + 16
+        self.queue_draw_area(0, h - strip, w, strip)
         return True
 
     # Drawing
@@ -150,7 +155,7 @@ class FxLayer(Gtk.DrawingArea):
         count = len(self._bars)
         slot = w / count
         width = slot * 0.45
-        max_height = h * 0.08
+        max_height = h * BARS_HEIGHT
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
         cr.set_line_width(width)
         for i, level in enumerate(self._bars):

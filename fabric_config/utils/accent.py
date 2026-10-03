@@ -1,5 +1,4 @@
 from typing import Callable
-from colorthief import ColorThief
 from PIL import Image
 import threading
 
@@ -7,35 +6,12 @@ from loguru import logger
 from gi.repository import GLib
 
 
-def grab_accent_color_threaded(
-    image_path: str,
-    callback: Callable,
-    quality: int = 10,
-):
-    def thread_function():
-        try:
-            ct = ColorThief(file=image_path).get_color(quality)
-            GLib.idle_add(callback, ct)
-        except Exception:
-            logger.error("[COLORS] Failed to grab an accent color")
-            GLib.idle_add(callback, None)
-        finally:
-            GLib.idle_add(thread.join)
-
-    thread = threading.Thread(target=thread_function)
-    thread.start()
-
-
-def grab_color(image_path: str, n: int):
-    c_t = ColorThief(image_path)
-    return c_t.get_color(n)
-
-
 def dominant_color(image_path: str) -> tuple[int, int, int]:
     """
     The most common colour of an image, cheaply: decode at reduced size and
-    let Pillow's C quantizer do the work. ColorThief is pure Python and holds
-    the GIL for most of a second on a 4K wallpaper, freezing the GTK loop.
+    let Pillow's C quantizer do the work. (ColorThief, used before, is pure
+    Python and held the GIL for most of a second on a 4K wallpaper, freezing
+    the GTK loop.)
     """
     image = Image.open(image_path)
     image.draft("RGB", (256, 256))  # JPEG decodes straight to a smaller size

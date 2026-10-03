@@ -20,7 +20,7 @@ from loguru import logger
 
 from fabric_config.services.mpris_v2 import MprisPlayer, MprisPlayerManager
 from fabric_config.snippits.animator import Animator
-from fabric_config.utils.accent import grab_accent_color_threaded
+from fabric_config.utils.accent import grab_dominant_color_threaded
 from fabric_config.widgets.level_seek_bar import LevelSeekBar, format_time
 from fabric_config.utils.uri import file_uri_to_path
 from fabric_config.widgets.circleimage import CircleImage
@@ -492,7 +492,7 @@ class PlayerBox(Box):
             )
             self.art_animator.play()
 
-        grab_accent_color_threaded(image_path=self.cover_path, callback=on_accent_color)
+        grab_dominant_color_threaded(self.cover_path, on_accent_color)
 
     def set_image(self, *args):
         url = self.player.arturl
