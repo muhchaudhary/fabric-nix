@@ -16,6 +16,7 @@
   libdbusmenu-gtk3,
   networkmanager,
   astal,
+  cinnamon-desktop,
   fabric-libgray,
   fabric-libglace,
 }:
@@ -23,6 +24,7 @@ let
   # "Namespace:version" for each typelib to generate
   modules = [
     "AstalNetwork:0.1"
+    "Cvc:1.0"
     "Glace:0.1"
     "Gray:0.1"
     "GtkLayerShell:0.1"
@@ -47,6 +49,7 @@ stdenvNoCC.mkDerivation {
     libdbusmenu-gtk3
     networkmanager
     astal.network
+    cinnamon-desktop # Cvc
     fabric-libgray
     fabric-libglace
   ];

@@ -83,7 +83,7 @@ class QuickSettingsButtonBox(Gtk.Grid):
         # plain GTK widgets start hidden, unlike fabric's
         self.show()
 
-    def set_active_submenu(self, btn: QuickSubToggle):
+    def set_active_submenu(self, btn: QuickSubToggle | AudioSlider):
         if btn.submenu != self.active_submenu and self.active_submenu is not None:
             self.active_submenu.do_reveal(False)
 
@@ -106,8 +106,14 @@ class QuickSettings(Box):
         self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
 
+        self.audio_slider_box.reveal_button.connect(
+            "clicked",
+            lambda *_: self.buttons_box.set_active_submenu(self.audio_slider_box),
+        )
+
         self.add(self.buttons_box)
         self.add(self.audio_slider_box)
+        self.add(self.audio_slider_box.submenu)
         self.add(self.screen_bright_slider)
         self.add(self.mprisBox)
 
