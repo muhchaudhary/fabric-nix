@@ -13,6 +13,7 @@ monitor's height, so screens of different resolutions look alike.
 
 import colorsys
 import datetime
+import math
 import warnings
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -46,6 +47,12 @@ from fabric_config.components.desktop.settings import (
 )
 from fabric_config.components.desktop.visibility import DesktopVisibility
 from fabric_config.utils.process import run_command_async
+from fabric_config.utils.wallpaper_map import (
+    RegionStats,
+    WallpaperMap,
+    build_map_async,
+    contrast_ratio,
+)
 
 SCALE = 1.0  # grows or shrinks the clock on every monitor
 GREETING_MS = 5000
@@ -54,6 +61,30 @@ GREET_AFTER_HIDDEN_S = 120
 MOOD_MINUTES = 20
 
 RGB = tuple[int, int, int]
+
+# Legibility. Brightness (0-1, gamma-encoded) of the clock's light and dark
+# text, for contrast against what's behind it.
+LIGHT_TEXT, DARK_TEXT = 0.93, 0.18
+# Behind the clock: more detail than this (std. dev. of brightness), or less
+# contrast than this, and a soft scrim (fx.py) is drawn behind it, stronger
+# the worse it is. (The desktop layer isn't blurred by Hyprland, which would
+# frost the scrim into a hard-edged shape.)
+BUSY_LIMIT = 0.1
+MIN_CONTRAST = 4.5
+SCRIM_MIN_ALPHA, SCRIM_MAX_ALPHA = 0.18, 0.5
+# "auto" placement: how much a spot's distance from the classic top-centre
+# place counts against it, and how much better a new spot must score before
+# the clock moves (so it doesn't wander as its text changes width)
+HOME_WEIGHT = 0.06
+MOVE_MARGIN = 0.02
+LAYOUT_DELAY_MS = 150
+
+
+def text_contrast(stats: RegionStats) -> tuple[bool, float]:
+    """Whether dark text reads better there than light, and its contrast."""
+    light = contrast_ratio(LIGHT_TEXT, stats.mean)
+    dark = contrast_ratio(DARK_TEXT, stats.mean)
+    return dark > light, max(light, dark)
 
 
 @dataclass(frozen=True)
@@ -101,14 +132,16 @@ def _sizes_css(cls: str, sizes: ClockSizes) -> str:
 """
 
 
-def readable_accent(rgb: RGB) -> tuple[RGB, bool]:
+def readable_accent(rgb: RGB, on_light: bool | None = None) -> tuple[RGB, bool]:
     """
-    A tint of a wallpaper's dominant colour that reads against it, and
-    whether the wallpaper is light: near-white with a hint of colour on dark
-    wallpapers, near-black on light ones.
+    A tint of a wallpaper's dominant colour for the clock, and whether it is
+    dark text (for a light background): near-white with a hint of colour, or
+    near-black. Without `on_light`, it's guessed from the colour itself; the
+    region actually behind the clock is a better guide (see text_contrast).
     """
     red, green, blue = (c / 255 for c in rgb)
-    on_light = 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.55
+    if on_light is None:
+        on_light = 0.2126 * red + 0.7152 * green + 0.0722 * blue > 0.55
     h, _light, s = colorsys.rgb_to_hls(red, green, blue)
     r, g, b = colorsys.hls_to_rgb(h, 0.2 if on_light else 0.93, min(s, 0.4))
     return (round(r * 255), round(g * 255), round(b * 255)), on_light
@@ -177,11 +210,20 @@ class DesktopWindow(WaylandWindow):
         monitor_height: int,
     ):
         self.manager = manager
+        self.monitor_index = monitor
         self.monitor_name = monitor_name
         self.sizes = ClockSizes.for_height(monitor_height)
         self.accent: RGB | None = None
         self.on_light = False
         self._greeting_id: int | None = None
+        # the wallpaper behind this monitor's desktop, measured (wallpaper_map)
+        self._accent_source: RGB | None = None
+        self.wall_map: WallpaperMap | None = None
+        self._map_path: str | None = None
+        # where "auto" placed the clock (monitor coordinates), and its score
+        self._auto_spot: tuple[float, float] | None = None
+        self._layout_id: int | None = None
+        self._last_rect: tuple[int, int, int, int] | None = None
 
         # a screen-wide provider whose rules only match this monitor's clock;
         # above the app stylesheet, since GTK picks between providers by
@@ -280,6 +322,9 @@ class DesktopWindow(WaylandWindow):
         )
 
         self.overlay.add_overlay(self.column)
+        # the clock's size changes with its face and text: re-check where it
+        # goes and how readable it is there
+        self.column.connect("size-allocate", lambda *_: self._layout_soon())
 
         super().__init__(
             title="fabric-desktop",
@@ -316,12 +361,28 @@ class DesktopWindow(WaylandWindow):
 
     def _place_column(self):
         margin = self.sizes.margin
+        if self.manager.settings.position == "auto":
+            if self._auto_spot is not None:
+                x, y = self._auto_spot
+                self.column.set_halign(Gtk.Align.START)
+                self.column.set_valign(Gtk.Align.START)
+                self.column.set_margin_start(round(x))
+                self.column.set_margin_top(round(y))
+                self.column.set_margin_end(0)
+                self.column.set_margin_bottom(0)
+                return
+            # until the wallpaper is measured, start from the classic place
+        else:
+            self._auto_spot = None
+        position = self.manager.settings.position
+        if position == "auto":
+            position = "top"
         h_align, v_align = {
             "top": (Gtk.Align.CENTER, Gtk.Align.START),
             "center": (Gtk.Align.CENTER, Gtk.Align.CENTER),
             "bottom-left": (Gtk.Align.START, Gtk.Align.END),
             "bottom-right": (Gtk.Align.END, Gtk.Align.END),
-        }[self.manager.settings.position]
+        }[position]
         self.column.set_halign(h_align)
         self.column.set_valign(v_align)
         self.column.set_margin_top(margin if v_align == Gtk.Align.START else 0)
@@ -397,11 +458,143 @@ class DesktopWindow(WaylandWindow):
     # Colour
 
     def set_accent(self, rgb: RGB | None):
-        if rgb is None:
-            self.accent, self.on_light = None, False
+        self._accent_source = rgb
+        self._apply_tone(self.on_light if self.wall_map is not None else None)
+
+    def _apply_tone(self, on_light: bool | None):
+        if self._accent_source is None:
+            self.accent, self.on_light = None, bool(on_light)
         else:
-            self.accent, self.on_light = readable_accent(rgb)
+            self.accent, self.on_light = readable_accent(self._accent_source, on_light)
         self.update_color(datetime.datetime.now(), self.manager.prayer_times())
+
+    # Wallpaper: placement and legibility
+
+    def set_wallpaper(self, path: str | None):
+        """Measure this monitor's wallpaper (when it changed)."""
+        if path is None or path == self._map_path:
+            return
+        self._map_path = path
+        width, height = self._monitor_size()
+
+        def on_map(wall_map: WallpaperMap | None):
+            if path != self._map_path:
+                return  # the wallpaper changed again meanwhile
+            self.wall_map = wall_map
+            # a new wallpaper: let "auto" pick afresh
+            self._auto_spot = None
+            self._last_rect = None
+            self._update_layout()
+
+        build_map_async(path, width, height, on_map)
+
+    def _monitor_size(self) -> tuple[int, int]:
+        monitor = self.manager.display.get_monitor(self.monitor_index)
+        if monitor is not None:
+            geometry = monitor.get_geometry()
+            return geometry.width, geometry.height
+        return self.get_allocated_width() or 1920, self.get_allocated_height() or 1080
+
+    def _layout_soon(self):
+        if self._layout_id is None:
+            self._layout_id = GLib.timeout_add(LAYOUT_DELAY_MS, self._update_layout)
+
+    def _update_layout(self) -> bool:
+        self._layout_id = None
+        wall_map = self.wall_map
+        width = self.column.get_allocated_width()
+        height = self.column.get_allocated_height()
+        if wall_map is None or width <= 1 or height <= 1:
+            return False
+
+        if self.manager.settings.position == "auto":
+            spot = self._choose_spot(wall_map, width, height)
+            if spot is not None and spot != self._auto_spot:
+                self._auto_spot = spot
+                self._place_column()
+                return False  # the move reallocates the clock: check again then
+
+        coords = self.column.translate_coordinates(self, 0, 0)
+        if coords is None:
+            return False
+        rect = (coords[0], coords[1], width, height)
+        if rect != self._last_rect:
+            self._last_rect = rect
+            self._apply_legibility(wall_map.stats(rect))
+        return False
+
+    def _choose_spot(
+        self, wall_map: WallpaperMap, width: int, height: int
+    ) -> tuple[float, float] | None:
+        """The calmest readable spot for the clock, near the top centre."""
+        monitor_w, monitor_h = wall_map.monitor_width, wall_map.monitor_height
+        margin = self.sizes.margin
+        # keep clear of the screen edges, and of the visualizer at the bottom
+        bottom = margin * 2 if self.enabled("visualizer") else margin
+        bounds = (margin, margin, monitor_w - 2 * margin, monitor_h - margin - bottom)
+        home_x, home_y = monitor_w / 2, margin + height / 2
+
+        def score(stats: RegionStats, x: float, y: float) -> float:
+            _dark, contrast = text_contrast(stats)
+            distance = math.hypot(
+                (x + width / 2 - home_x) / monitor_w,
+                (y + height / 2 - home_y) / monitor_h,
+            )
+            return (
+                stats.busyness + 0.02 * max(0.0, 7 - contrast) + HOME_WEIGHT * distance
+            )
+
+        best = wall_map.calmest(width, height, bounds, self._avoid(), score)
+        if best is None:
+            return None
+        x, y, stats = best
+        if self._auto_spot is not None:
+            old_x, old_y = self._auto_spot
+            fits = (
+                bounds[0] <= old_x <= bounds[0] + bounds[2] - width
+                and bounds[1] <= old_y <= bounds[1] + bounds[3] - height
+            )
+            if fits:
+                current = score(
+                    wall_map.stats((old_x, old_y, width, height)), old_x, old_y
+                )
+                if score(stats, x, y) > current - MOVE_MARGIN:
+                    return self._auto_spot
+        return x, y
+
+    def _avoid(self) -> list[tuple[float, float, float, float]]:
+        """Areas the clock shouldn't cover: this monitor's music card."""
+        pad = self.sizes.margin / 2
+        return [
+            (
+                w.x - pad,
+                w.y - pad,
+                w.player.card_w + 2 * pad,
+                w.player.total_h + 2 * pad,
+            )
+            for w in self.manager.player_windows
+            if w.monitor_name == self.monitor_name and w.get_visible()
+        ]
+
+    def _apply_legibility(self, stats: RegionStats):
+        """Pick light or dark text for what's behind the clock, and lay a
+        soft scrim behind it where the wallpaper is too busy or mid-toned."""
+        on_light, contrast = text_contrast(stats)
+        need = (
+            max(0.0, stats.busyness - BUSY_LIMIT) * 2.5
+            + max(0.0, MIN_CONTRAST - contrast) * 0.06
+        )
+        rect = self._last_rect
+        if rect is not None and (
+            stats.busyness > BUSY_LIMIT or contrast < MIN_CONTRAST
+        ):
+            alpha = min(SCRIM_MAX_ALPHA, SCRIM_MIN_ALPHA + need)
+            # light under dark text, dark under light text
+            rgb = (0.98, 0.97, 0.95) if on_light else (0.04, 0.04, 0.07)
+            self.fx.scrim = (rect, rgb, alpha)
+        else:
+            self.fx.scrim = None
+        self._apply_tone(on_light)
 
     def update_color(self, now: datetime.datetime, prayer_times: dict[str, str]):
         color = self.accent or (240, 240, 245)
@@ -521,7 +714,9 @@ class DesktopWindow(WaylandWindow):
         clock.append(Gtk.SeparatorMenuItem())
         for position in POSITIONS:
             check(
-                position.replace("-", " ").capitalize(),
+                "Auto (calmest spot)"
+                if position == "auto"
+                else position.replace("-", " ").capitalize(),
                 settings.position == position,
                 lambda p=position: manager.set_position(p),
                 clock,
@@ -697,6 +892,7 @@ class DesktopManager:
     def update_accents(self):
         for window in self.windows:
             window.set_accent(config.wallpaper_accent.color_for(window.monitor_name))
+            window.set_wallpaper(config.wallpaper_accent.path_for(window.monitor_name))
 
     # Settings
 

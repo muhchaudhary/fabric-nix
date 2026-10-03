@@ -16,8 +16,15 @@ from loguru import logger
 SETTINGS_FILE = os.path.join(GLib.get_user_cache_dir(), "fabric", "desktop_clock.json")
 
 FACES = ("digital", "analog", "words")
-Position = Literal["top", "center", "bottom-left", "bottom-right"]
-POSITIONS: tuple[Position, ...] = ("top", "center", "bottom-left", "bottom-right")
+# "auto" puts the clock on the calmest part of the wallpaper
+Position = Literal["auto", "top", "center", "bottom-left", "bottom-right"]
+POSITIONS: tuple[Position, ...] = (
+    "auto",
+    "top",
+    "center",
+    "bottom-left",
+    "bottom-right",
+)
 # music player sizes, chosen per display
 PLAYER_SIZES = {"small": 0.85, "medium": 1.0, "large": 1.2}
 
@@ -41,7 +48,7 @@ class DesktopSettings:
     def __init__(self):
         self.use_24h = False
         self.face = FACES[0]
-        self.position: Position = "top"
+        self.position: Position = "auto"
         # shared defaults, and per-monitor choices that override them
         self.widgets = {name: default for name, (_, default) in WIDGETS.items()}
         self.monitor_widgets: dict[str, dict[str, bool]] = {}

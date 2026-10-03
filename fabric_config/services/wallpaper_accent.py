@@ -67,9 +67,14 @@ class WallpaperAccent(Service):
         """Dominant colour of that monitor's wallpaper, once known."""
         return self._colors.get(monitor_name)
 
+    def path_for(self, monitor_name: str) -> str | None:
+        """The wallpaper file that monitor shows, once known."""
+        return self._paths.get(monitor_name)
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._colors: dict[str, RGB] = {}
+        self._paths: dict[str, str] = {}
         self._accent: RGB | None = None
         self._cache: dict[str, RGB | None] = {}
         # callbacks waiting on an extraction already running for that path
@@ -111,6 +116,7 @@ class WallpaperAccent(Service):
         pending = {p for p in paths.values() if p not in self._cache}
 
         def finish():
+            self._paths = dict(paths)
             self._colors = {
                 name: color
                 for name, path in paths.items()
