@@ -25,7 +25,9 @@ class QuickSettingsToggleButton(Box):
             icon_name=action_icon,
             icon_size=pixel_size,
         )
-        self.action_label = Label(name="panel-text", label=action_label)
+        self.action_label = Label(
+            name="panel-text", label=action_label, ellipsization="end"
+        )
         self.action_button = Button(
             name="quicksettings-toggle-standalone",
             child=Box(

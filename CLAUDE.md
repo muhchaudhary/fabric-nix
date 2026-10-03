@@ -46,7 +46,7 @@ basedpyright .        # type check
 ### Entry points
 
 - `run_fabric.py` → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
-- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
+- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews), `config.hyprsunset` (night light). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
 
 ### Components (`fabric_config/components/`)
 
@@ -56,7 +56,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 |---|---|
 | `bar/bar.py` | `StatusBarSeperated` — the main top bar (workspaces, clock, system tray, quick settings) |
 | `bar/widgets/` | Bar buttons and their popups (prayer times, clipboard history, power menu, temps, tray, battery) |
-| `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, sliders, media player, theme toggle) |
+| `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, night light + theme toggles, sliders, media player) |
 | `notification_popup.py` | Notification toasts (cards fly in/out on a click-through overlay that's only mapped while animating). Timing out only hides a toast; max 4 shown, critical ones stay until dismissed |
 | `bar/widgets/notification_center.py` | Notification center: bell button + popup listing notifications grouped by app, Do Not Disturb, clear (actions `toggle_notification_center`, `toggle_do_not_disturb`). Cards come from `widgets/notification_card.py` |
 | `overview.py` | Workspace overview with live window previews (`config.window_previews`, while open) |
@@ -84,6 +84,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)
 - `notifications.py` — `NotificationCenter` (`config.notifications`): owns fabric's notification server and keeps the history, saved to `~/.cache/fabric/notifications.json`. Notifications stay live (actions work) until dismissed; `replaces_id` updates in place; restored entries have negative ids and no actions
 - `window_previews.py` — `WindowPreviews` (`config.window_previews`): live window previews via toplevel-streamer-rs's `PreviewHub` (a Rust thread captures each subscribed window when it redraws, capped by `fps`, downscaled, as premultiplied BGRA = cairo ARGB32; delivered through an eventfd watched by GLib). `subscribe(owner, address, w, h, on_frame, fps)` / `unsubscribe(owner)`; use `cover_size()` to pick the frame size and `RoundedCoverImage.set_surface()` to draw. Unsubscribe when the preview hides: subscribed windows are captured continuously
+- `hyprsunset.py` — `Hyprsunset` (`config.hyprsunset`): night light via `hyprctl hyprsunset` (temperature, gamma, `identity` when off). hyprsunset can't report whether it's filtering, so on/off, temperature and gamma are kept here, saved to `~/.cache/fabric/hyprsunset.json` and pushed on startup; commands go one at a time with only the latest state sent (slider drags)
 - `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 
 Networking uses AstalNetwork (`config.network`) directly, plus the NM API for connecting/forgetting Wi-Fi (no `nmcli`, so passwords never appear in argv).
