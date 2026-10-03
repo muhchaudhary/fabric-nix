@@ -273,6 +273,7 @@ class AppDock(Window):
 
     def __init__(self):
         super().__init__(
+            title="fabric-dock",
             name="dock-window",
             layer="top",
             anchor="left bottom right",

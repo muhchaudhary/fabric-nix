@@ -4,8 +4,7 @@
 // ---- card (popups and the notification center) ----------------------------
 
 #notification-box {
-  @include bordered($radius-lg);
-  background-color: var(--bg-glass);
+  @include glass($radius-lg);
   min-width: 380px;
   @include transition(border-color);
 

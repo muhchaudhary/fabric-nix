@@ -282,6 +282,7 @@ class DesktopWindow(WaylandWindow):
         self.overlay.add_overlay(self.column)
 
         super().__init__(
+            title="fabric-desktop",
             layer="bottom",
             anchor="top bottom left right",
             exclusivity="normal",

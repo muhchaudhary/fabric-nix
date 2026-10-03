@@ -234,6 +234,9 @@ class PopupWindow(WaylandWindow):
         enable_inhibitor: bool = False,
         keyboard_mode: Literal["none", "exclusive", "on-demand"] = "on-demand",
         timeout: int = 1000,
+        # the layer-shell namespace (fabric sets it from the title); Hyprland's
+        # layer rules match it, e.g. to blur behind popups
+        namespace: str = "fabric-popup",
     ):
         self._layer = layer
         self.timeout = timeout
@@ -257,6 +260,7 @@ class PopupWindow(WaylandWindow):
         )
 
         super().__init__(
+            title=namespace,
             layer=self._layer,
             keyboard_mode=keyboard_mode,
             visible=False,

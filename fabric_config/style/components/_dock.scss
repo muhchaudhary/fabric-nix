@@ -8,8 +8,8 @@
 
 #dock {
   @include panel(22px);
+  @include floating-shadow;
   padding: 6px;
-  box-shadow: 0 4px 16px -6px a(#000000, 0.5);
 }
 
 #dock-launcher,
@@ -56,9 +56,9 @@
 /* Window previews */
 #dock-preview {
   @include panel($radius-lg);
+  @include floating-shadow;
   padding: $gap-sm;
   margin-bottom: $gap-sm;
-  box-shadow: 0 4px 16px -6px a(#000000, 0.5);
 }
 
 #dock-preview-window {

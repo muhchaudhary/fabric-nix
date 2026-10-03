@@ -179,6 +179,7 @@ class StatusBarSeperated(WaylandWindow):
         ]
 
         super().__init__(
+            title="fabric-bar",
             layer="top",
             anchor="left top right",
             exclusivity="auto",
@@ -192,6 +193,7 @@ class StatusBarSeperated(WaylandWindow):
 class ScreenCorners(WaylandWindow):
     def __init__(self):
         super().__init__(
+            title="fabric-corners",
             layer="top",
             anchor="top left bottom right",
             pass_through=True,

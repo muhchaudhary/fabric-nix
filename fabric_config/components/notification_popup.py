@@ -39,6 +39,7 @@ class AnimationWindow(WaylandWindow):
         self._shown_on: Gdk.Monitor | None = None
 
         super().__init__(
+            title="fabric-toast",
             anchor="top left bottom right",
             layer="overlay",
             child=Box(h_expand=True, v_expand=True, children=self.drawing_area),
@@ -348,6 +349,7 @@ class NotificationPopup(WaylandWindow):
         self.center.connect("notification-removed", self._on_removed)
 
         super().__init__(
+            title="fabric-toast",
             anchor="top right",
             child=self.notifications,
             layer="overlay",

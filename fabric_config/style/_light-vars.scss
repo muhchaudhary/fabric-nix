@@ -2,7 +2,11 @@
   /* Base backgrounds */
   --bg:       #e6e9ef;
   --surface:  alpha(#ccd0da, 0.70);
-  --bg-glass: alpha(#e6e9ef, 0.92);
+  /* Glass: see _dark-vars.scss */
+  --bg-glass:        alpha(#f6f6f9, 0.58);
+  --glass-edge:      alpha(#000000, 0.08);
+  --glass-highlight: alpha(#ffffff, 0.70);
+  --glass-shadow:    alpha(#000000, 0.12);
 
   /* Foreground */
   --fg:                   #4c4f69;
