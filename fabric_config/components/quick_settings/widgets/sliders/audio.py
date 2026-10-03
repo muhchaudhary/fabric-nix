@@ -22,7 +22,7 @@ class AudioSlider(QuickSettingsScale):
 
         # the arrow opens the output/input picker (QuickSettings places it
         # below the slider and keeps one submenu open at a time)
-        self.submenu = AudioSubMenu(config.audio_devices)
+        self.submenu = AudioSubMenu(config.audio_devices, config.audio)
         self.reveal_button = Button(
             image=Image(icon_name="pan-end-symbolic", icon_size=16),
             tooltip_text="Choose output and input",

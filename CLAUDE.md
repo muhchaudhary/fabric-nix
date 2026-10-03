@@ -56,7 +56,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 |---|---|
 | `bar/bar.py` | `StatusBarSeperated` — the main top bar (workspaces, clock, system tray, quick settings) |
 | `bar/widgets/` | Bar buttons and their popups (prayer times, clipboard history, power menu, temps, tray, battery) |
-| `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, night light + theme toggles, sliders, media player; the volume slider's arrow opens an output/input picker) |
+| `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, night light + theme toggles, sliders, media player; the volume slider's arrow opens the sound panel: per-app volume, output and input pickers) |
 | `notification_popup.py` | Notification toasts (cards fly in/out on a click-through overlay that's only mapped while animating). Timing out only hides a toast; max 4 shown, critical ones stay until dismissed |
 | `bar/widgets/notification_center.py` | Notification center: bell button + popup listing notifications grouped by app, Do Not Disturb, clear (actions `toggle_notification_center`, `toggle_do_not_disturb`). Cards come from `widgets/notification_card.py` |
 | `overview.py` | Workspace overview with live window previews (`config.window_previews`, while open) |
