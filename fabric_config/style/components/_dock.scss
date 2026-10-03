@@ -1,0 +1,89 @@
+@use '../tokens' as *;
+@use '../mixins' as *;
+
+/* Dock (components/dock.py) */
+#dock-container {
+  padding: 0 $gap-md $gap-sm $gap-md;
+}
+
+#dock {
+  @include panel(22px);
+  padding: 6px;
+  box-shadow: 0 4px 16px -6px a(#000000, 0.5);
+}
+
+#dock-launcher,
+#dock-app {
+  padding: 6px 6px 2px 6px;
+  border-radius: $radius-lg;
+  @include transition(background-color);
+
+  &:hover  { background-color: a(var(--fg), 0.1); }
+  &:active { background-color: a(var(--fg), 0.18); }
+}
+
+#dock-launcher {
+  padding: 6px 14px;
+  image { color: var(--fg-dim); }
+  &:hover image { color: var(--fg); }
+}
+
+#dock-separator {
+  min-width: 1px;
+  margin: 10px 2px;
+  background-color: a(var(--fg), 0.15);
+}
+
+#dock-app-dots { min-height: 4px; }
+
+#dock-app-dot {
+  min-width: 4px;
+  min-height: 4px;
+  border-radius: 2px;
+  background-color: var(--fg-dim2);
+  @include transition(background-color min-width);
+}
+
+#dock-app.active {
+  background-color: a(var(--fg), 0.06);
+
+  #dock-app-dot {
+    min-width: 10px;
+    background-color: var(--accent);
+  }
+}
+
+/* Window previews */
+#dock-preview {
+  @include panel($radius-lg);
+  padding: $gap-sm;
+  margin-bottom: $gap-sm;
+  box-shadow: 0 4px 16px -6px a(#000000, 0.5);
+}
+
+#dock-preview-window {
+  padding: 6px;
+  border-radius: $radius-md;
+  @include transition(background-color);
+
+  &.hover { background-color: a(var(--fg), 0.1); }
+}
+
+#dock-preview-title {
+  font-size: 12px;
+  color: var(--fg-dim);
+  margin-left: 2px;
+}
+
+#dock-preview-window.hover #dock-preview-title { color: var(--fg); }
+
+#dock-preview-close {
+  padding: 3px;
+  border-radius: $radius-sm;
+  opacity: 0;
+  @include transition(background-color opacity);
+
+  &:hover { background-color: a(var(--red), 0.8); }
+}
+
+#dock-preview-window.hover #dock-preview-close { opacity: 1; }

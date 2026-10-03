@@ -60,7 +60,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `notification_popup.py` | Notification toasts (cards fly in/out on a click-through overlay that's only mapped while animating). Timing out only hides a toast; max 4 shown, critical ones stay until dismissed |
 | `bar/widgets/notification_center.py` | Notification center: bell button + popup listing notifications grouped by app, Do Not Disturb, clear (actions `toggle_notification_center`, `toggle_do_not_disturb`). Cards come from `widgets/notification_card.py` |
 | `overview.py` | Workspace overview with live window previews (`toplevel-streamer-rs`) |
-| `dock.py` | Auto-hiding dock (Glace) with hover window previews |
+| `dock.py` | Auto-hiding dock: one icon per app (Glace), dots per window, click focuses/cycles. Hover previews list the app's windows from Hyprland, captured on a worker thread (`ThumbnailCapturer`, BGRA then swapped: the library's RGBA conversion holds the GIL). One fixed-height, full-width window whose input region covers only what's showing; don't let it resize, or the region lags and the dock hides under the pointer |
 | `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
 | `system_osd.py` | On-screen display for volume, mic mute, brightness and keyboard backlight; pops up on service changes (the `toggle_system_osd` action still works), hover to keep open, scroll to adjust, click to mute |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
@@ -69,8 +69,6 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 ### Popup windows (`fabric_config/widgets/popup_window_v2.py`)
 
 `PopupWindow` is the standard base for all overlay windows. It wraps content in a `PopupRevealer` (animated slide/fade via `Revealer`) and fills the screen with transparent `Padding` `EventBox` areas that dismiss the popup on click. Use `toggle_popup()` to show/hide; `popup_timeout()` for auto-dismissing popups (OSD pattern).
-
-The older `fabric_config/snippits/popupwindow.py` uses a different approach (margin-based repositioning relative to a pointing widget; still used by the dock's preview) — prefer `popup_window_v2.py` for new components.
 
 Popups use the shared commands-only Hyprland connection from `utils/hyprland_monitor.get_hyprland_monitors()`. Don't construct `Hyprland()`/`HyprlandWithMonitors()` per widget: each non-commands-only instance opens its own event-socket listener.
 

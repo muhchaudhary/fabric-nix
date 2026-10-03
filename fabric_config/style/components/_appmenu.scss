@@ -95,27 +95,3 @@ $appmenu-radius: 32px;
 #appmenu-app-name { color: var(--fg); font-size: 14px; font-weight: 600; }
 #appmenu-app-desc { color: var(--fg-dim); font-size: 12px; }
 #appmenu-glyph    { font-size: 22px; }
-
-/* App sidebar */
-#app-bar {
-  padding: $gap-md;
-  border-radius: 24px;
-
-  button {
-    padding: 10px;
-    border-radius: $radius-lg;
-    @include transition(background-color);
-
-    &.active {
-      background-color: a(var(--fg-dim), 0.25);
-      box-shadow: 0 0 8px -2px a(var(--fg), 0.25);
-    }
-
-    &:hover { background-color: var(--fg-glass); }
-  }
-}
-
-#app-bar-corner {
-  padding-top: 80px;
-  * { background-color: var(--bg-glass); }
-}
