@@ -266,18 +266,17 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1791066281,
+        "lastModified": 1791066882,
         "narHash": "sha256-ov+fHwSpe5LOyUNMe7aRN3nPtwRIN8aw23Qm37fZlH0=",
-        "ref": "feat/preview-hub",
-        "rev": "48da4dfb930c3b0c6bbf23df9f6700f0e78518ce",
-        "revCount": 3,
-        "type": "git",
-        "url": "file:///home/muhammad/tempGit/toplevel-streamer-rs"
+        "owner": "muhchaudhary",
+        "repo": "toplevel-streamer-rs",
+        "rev": "a6b8037a854a2d86b9f277d80edf771d18025d14",
+        "type": "github"
       },
       "original": {
-        "ref": "feat/preview-hub",
-        "type": "git",
-        "url": "file:///home/muhammad/tempGit/toplevel-streamer-rs"
+        "owner": "muhchaudhary",
+        "repo": "toplevel-streamer-rs",
+        "type": "github"
       }
     },
     "utils": {

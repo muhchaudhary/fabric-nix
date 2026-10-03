@@ -7,8 +7,7 @@
     fabric.url = "github:Fabric-Development/fabric";
     fabric-libgray.url = "github:Fabric-Development/gray";
     fabric-libglace.url = "github:muhchaudhary/glace/hyprland";
-    # local checkout while PreviewHub (feat/preview-hub) is unpublished
-    toplevel-streamer-rs.url = "git+file:///home/muhammad/tempGit/toplevel-streamer-rs?ref=feat/preview-hub";
+    toplevel-streamer-rs.url = "github:muhchaudhary/toplevel-streamer-rs";
   };
 
   outputs = {

@@ -46,7 +46,7 @@ basedpyright .        # type check
 ### Entry points
 
 - `run_fabric.py` → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
-- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
+- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
 
 ### Components (`fabric_config/components/`)
 
@@ -59,8 +59,8 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, sliders, media player, theme toggle) |
 | `notification_popup.py` | Notification toasts (cards fly in/out on a click-through overlay that's only mapped while animating). Timing out only hides a toast; max 4 shown, critical ones stay until dismissed |
 | `bar/widgets/notification_center.py` | Notification center: bell button + popup listing notifications grouped by app, Do Not Disturb, clear (actions `toggle_notification_center`, `toggle_do_not_disturb`). Cards come from `widgets/notification_card.py` |
-| `overview.py` | Workspace overview with live window previews (`toplevel-streamer-rs`) |
-| `dock.py` | Auto-hiding dock: one icon per app (Glace), dots per window, click focuses/cycles. Hover previews list the app's windows from Hyprland, captured on a worker thread (`ThumbnailCapturer`, BGRA then swapped: the library's RGBA conversion holds the GIL). One fixed-height, full-width window whose input region covers only what's showing; don't let it resize, or the region lags and the dock hides under the pointer |
+| `overview.py` | Workspace overview with live window previews (`config.window_previews`, while open) |
+| `dock.py` | Auto-hiding dock: one icon per app (Glace), dots per window, click focuses/cycles. Hover previews list the app's windows from Hyprland, live via `config.window_previews` while open. One fixed-height, full-width window whose input region covers only what's showing; don't let it resize, or the region lags and the dock hides under the pointer |
 | `app_menu.py` | Application launcher (search, frecency, pins/hidden apps, `=` calc, `>` run, `:` emoji); logic in `utils/app_search.py` |
 | `system_osd.py` | On-screen display for volume, mic mute, brightness and keyboard backlight; pops up on service changes (the `toggle_system_osd` action still works), hover to keep open, scroll to adjust, click to mute |
 | `wallpaper_picker.py` | Wallpaper grid overlay (hyprpaper); tiles drawn by `widgets/rounded_cover_image.py` (also used for clipboard image cards) |
@@ -83,6 +83,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `cava.py` — shared cava audio levels (`config.cava`); callers `set_wanted(owner, bool)` and it runs while anyone wants it
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)
 - `notifications.py` — `NotificationCenter` (`config.notifications`): owns fabric's notification server and keeps the history, saved to `~/.cache/fabric/notifications.json`. Notifications stay live (actions work) until dismissed; `replaces_id` updates in place; restored entries have negative ids and no actions
+- `window_previews.py` — `WindowPreviews` (`config.window_previews`): live window previews via toplevel-streamer-rs's `PreviewHub` (a Rust thread captures each subscribed window when it redraws, capped by `fps`, downscaled, as premultiplied BGRA = cairo ARGB32; delivered through an eventfd watched by GLib). `subscribe(owner, address, w, h, on_frame, fps)` / `unsubscribe(owner)`; use `cover_size()` to pick the frame size and `RoundedCoverImage.set_surface()` to draw. Unsubscribe when the preview hides: subscribed windows are captured continuously
 - `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 
 Networking uses AstalNetwork (`config.network`) directly, plus the NM API for connecting/forgetting Wi-Fi (no `nmcli`, so passwords never appear in argv).
