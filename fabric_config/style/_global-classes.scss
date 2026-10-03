@@ -41,17 +41,17 @@
 
 .button-basic:hover * { color: var(--fg); }
 
+/* No :focus here: a click leaves GTK3 buttons focused, so they'd stay filled
+   after the state they show (open, muted, ...) had ended */
 .tray menuitem:active,
 .tray menuitem:focus,
 .button-basic-active,
-.button-basic:focus,
 .button-basic:active {
   border-color: a(var(--accent), 0.5);
   background-color: a(var(--accent), 0.75);
 }
 
 .button-basic-active *,
-.button-basic:focus *,
 .button-basic:active * { color: var(--bg); }
 
 /* Title text */

@@ -46,3 +46,16 @@ scale {
     &:disabled { background-color: var(--fg-dim); }
   }
 }
+
+/* Arrow that opens a slider's submenu; points down while it's open */
+#quicksettings-box > box > button.quicksettings-reveal {
+  margin: 10px $gap-sm 10px 0px;
+}
+
+.quicksettings-reveal image {
+  transition: -gtk-icon-transform 0.2s ease;
+}
+
+.quicksettings-reveal.open image {
+  -gtk-icon-transform: rotate(90deg);
+}

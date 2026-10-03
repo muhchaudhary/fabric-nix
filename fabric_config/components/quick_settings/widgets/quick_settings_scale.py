@@ -29,11 +29,14 @@ class QuickSettingsScale(Box):
             h_expand=True,
         )
 
+        # the icon and scale; subclasses can add buttons after them
+        self.row = Box(
+            spacing=5, children=[self.icon_button, self.scale], h_expand=True
+        )
+
         super().__init__(
             name="quicksettings-box",
             style_classes=["cool-border"],
-            children=Box(
-                spacing=5, children=[self.icon_button, self.scale], h_expand=True
-            ),
+            children=self.row,
             **kwargs,
         )

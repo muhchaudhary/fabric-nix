@@ -2,6 +2,7 @@ from fabric.audio.service import Audio
 from fabric.bluetooth.service import BluetoothClient
 import gi
 
+from fabric_config.services.audio_devices import AudioDevices
 from fabric_config.services.brightness import Brightness
 from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
@@ -23,6 +24,8 @@ clipboard_history = ClipboardHistory()
 mprisplayer = MprisPlayerManager()
 bluetooth_client = BluetoothClient()
 audio = Audio()
+# outputs/inputs to switch between (speakers, headphones, HDMI, ...)
+audio_devices = AudioDevices()
 sc = ScreenRecorder()
 brightness = Brightness()
 network = Network.get_default()
