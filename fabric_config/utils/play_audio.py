@@ -1,5 +1,6 @@
-from fabric.utils import exec_shell_command_async
+from fabric_config.utils.process import run_command_async
 
 
 def play_sound(file: str):
-    exec_shell_command_async(f"play {file}")
+    # argv, not a shell string: paths with spaces work
+    run_command_async(["play", "-q", file])

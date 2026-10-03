@@ -1,21 +1,52 @@
 @use '../tokens' as *;
 @use '../mixins' as *;
 
+// ---- card (popups and the notification center) ----------------------------
+
 #notification-box {
   @include bordered($radius-lg);
   background-color: var(--bg-glass);
   min-width: 380px;
+  @include transition(border-color);
+
+  &.critical { border-color: a(var(--red), 0.6); }
 }
 
 #notification-header {
-  padding: 10px 10px 4px 12px;
+  padding: 10px 10px 2px 12px;
 }
+
+#notification-icon { margin-right: 6px; }
 
 #notification-app-name {
   font-size: 11px;
   font-weight: 600;
   color: var(--fg-dim);
+}
+
+#notification-time {
+  font-size: 11px;
+  color: var(--fg-dim2);
   margin-left: 6px;
+}
+
+// only shown while the card is hovered
+#notification-close-btn {
+  border-radius: 100%;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 3px;
+  opacity: 0;
+  @include transition(background-color opacity);
+
+  &:hover  { background-color: a(var(--fg), 0.12); }
+  &:active { background-color: a(var(--fg), 0.22); }
+}
+
+#notification-box.hovered #notification-close-btn { opacity: 1; }
+
+#notification-content {
+  padding: 4px 12px 12px 12px;
 }
 
 #notification-summary {
@@ -28,71 +59,144 @@
   font-size: 12px;
   color: var(--fg-dim);
   margin-top: 2px;
+
+  link { color: var(--accent); }
 }
 
-#notification-content {
-  padding: 4px 12px 12px 12px;
+#notification-actions {
+  padding: 0 12px 12px 12px;
 }
 
-#notification-image image {
-  border-radius: 8px;
-}
-
-#notification-icon {
-  margin-right: 0;
-}
-
-#notification-close-btn {
-  border-radius: 100%;
-  min-width: 20px;
-  min-height: 20px;
-  padding: 3px;
+.notification-action {
+  padding: 6px $gap-md;
+  border-radius: $radius-pill;
+  border-style: none;
+  background-color: a(var(--fg), 0.08);
   @include transition(background-color);
 
-  &:hover  { background-color: a(var(--fg), 0.12); }
-  &:active { background-color: a(var(--fg), 0.22); }
-}
-
-#notification-separator {
-  min-height: 1px;
-  background-color: a(var(--fg), 0.08);
-}
-
-#notification-action-buttons {
-  button {
-    background-color: transparent;
-    padding: $gap-sm $gap-md;
-    margin: 0;
-    border-radius: 0;
-    @include transition(background-color);
-
-    label {
-      color: var(--accent);
-      font-size: 12px;
-      font-weight: 500;
-    }
-
-    &.start-action { border-radius: 0; }
-    &.end-action   { border-radius: 0; }
-
-    &:hover  { background-color: a(var(--fg), 0.08); }
-    &:active { background-color: a(var(--fg), 0.04); }
+  label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--fg);
   }
+
+  &:hover  { background-color: a(var(--fg), 0.14); }
+  &:active { background-color: a(var(--fg), 0.2); }
 }
 
+// a thin inset line, so it never has to follow the card's rounded corners
 #notification-progress-bar {
   padding: 0;
+  margin: 0 14px 8px 14px;
 
   trough {
-    min-height: 3px;
-    background-color: a(var(--fg), 0.08);
-    border-radius: 0 0 $radius-lg $radius-lg;
+    min-height: 2px;
     padding: 0;
+    border-radius: $radius-pill;
+    background-color: a(var(--fg), 0.08);
   }
 
   trough progress {
-    min-height: 3px;
+    min-height: 2px;
+    border-radius: $radius-pill;
     background-color: var(--accent);
-    border-radius: 0 0 0 $radius-lg;
   }
+}
+
+// ---- notification center ----------------------------------------------------
+
+#notification-center {
+  @include panel($radius-xl);
+  margin: 6px;
+
+  // cards sit on the panel's glass already
+  #notification-box {
+    min-width: 0;
+    background-color: a(var(--fg), 0.04);
+    border-color: a(var(--fg), 0.06);
+
+    &.critical { border-color: a(var(--red), 0.5); }
+  }
+}
+
+#notification-center-title { font-size: 16px; font-weight: 700; }
+
+#notification-clear-btn {
+  font-size: 12px;
+  padding: $gap-xs 10px;
+  border-radius: $radius-sm;
+  border-style: solid;
+  border-width: 1px;
+  border-color: a(var(--fg), 0.15);
+  color: var(--fg-dim2);
+  @include transition(background-color color border-color);
+
+  &:hover {
+    background-color: a(var(--red), 0.12);
+    color: var(--red);
+    border-color: a(var(--red), 0.3);
+  }
+
+  &:disabled { opacity: 0.4; }
+}
+
+#notification-dnd-row {
+  padding: $gap-sm $gap-md;
+  border-radius: $radius-md;
+  background-color: a(var(--fg), 0.04);
+
+  label { font-size: 13px; }
+  image { color: var(--fg-dim); }
+}
+
+#notification-group-header { padding: 0 2px; }
+
+#notification-group-header #notification-icon { margin-right: 6px; }
+
+#notification-group-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--fg-dim);
+}
+
+#notification-group-count {
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  padding: 0 6px;
+  border-radius: $radius-pill;
+  background-color: a(var(--fg), 0.1);
+  color: var(--fg-dim);
+}
+
+#notification-group-expand,
+#notification-group-clear {
+  padding: 2px $gap-sm;
+  border-radius: $radius-pill;
+  border-style: none;
+  background-color: transparent;
+  color: var(--fg-dim2);
+  @include transition(background-color color);
+
+  label { font-size: 11px; font-weight: 600; }
+
+  &:hover { background-color: a(var(--fg), 0.1); color: var(--fg); }
+}
+
+#notification-empty {
+  padding: 40px 0;
+  color: var(--fg-dim2);
+
+  image { opacity: 0.6; }
+}
+
+// unread count next to the bar's bell
+#notification-count {
+  font-size: 11px;
+  font-weight: 700;
+}
+
+#notification-center {
+  #notification-content.compact { padding-top: 12px; }
+  #notification-time { margin: 2px 0 0 0; }
 }

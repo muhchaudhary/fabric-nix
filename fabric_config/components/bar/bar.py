@@ -19,6 +19,9 @@ from fabric_config.components.bar.widgets import (
 from fabric_config.components.bar.widgets.clipboard_history import (
     ClipboardHistoryButton,
 )
+from fabric_config.components.bar.widgets.notification_center import (
+    NotificationCenterButton,
+)
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
 from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
@@ -122,6 +125,7 @@ class StatusBarSeperated(WaylandWindow):
         )
         self.battery = BatteryIndicator()
         self.quick_settings = QuickSettingsButton()
+        self.notification_button = NotificationCenterButton()
         self.prayer_times = PrayerTimesButton()
         self.wallpaper_button = WallpapperPickerButton()
         self.clipboard_button = ClipboardHistoryButton()
@@ -138,6 +142,7 @@ class StatusBarSeperated(WaylandWindow):
                     self.recording_indicator,
                     self.system_temps,
                     self.system_tray,
+                    self.notification_button,
                     self.quick_settings,
                     self.battery,
                     self.date_time,

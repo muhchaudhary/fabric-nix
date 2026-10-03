@@ -14,6 +14,9 @@ from fabric_config.components import (
     SystemOSD,
 )
 from fabric_config.components.bar.bar import ScreenCorners
+from fabric_config.components.bar.widgets.notification_center import (
+    NotificationCenterPopup,
+)
 from fabric_config.components.overview import Overview
 
 from fabric_config.components.dock import AppDock
@@ -97,6 +100,14 @@ def main():
     @the_app.action()
     def toggle_system_osd(osd_type: str):
         the_app.systemOverlay.enable_popup(osd_type)
+
+    @the_app.action()
+    def toggle_notification_center():
+        NotificationCenterPopup.toggle_popup()
+
+    @the_app.action()
+    def toggle_do_not_disturb():
+        config.notifications.dnd = not config.notifications.dnd
 
     @the_app.action()
     def toggle_wallpaper_picker():
