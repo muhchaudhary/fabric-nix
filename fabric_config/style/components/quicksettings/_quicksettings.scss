@@ -3,6 +3,7 @@
 @use 'player';
 @use 'submenu';
 @use '../../tokens' as *;
+@use '../../mixins' as *;
 
 #quicksettings-box {
   background-color: a(var(--fg), 0.04);
@@ -11,12 +12,8 @@
 }
 
 #quicksettings {
-  background-color: var(--bg-glass);
+  @include glass($radius-xl);
   margin: 6px;
   padding: $gap-lg;
-  border-radius: $radius-xl;
-  border-style: solid;
-  border-width: 1px;
-  border-color: a(var(--fg), 0.1);
   min-width: 480px;
 }

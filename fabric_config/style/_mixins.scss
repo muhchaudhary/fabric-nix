@@ -19,9 +19,25 @@
   border-radius: $radius;
 }
 
+// Frosted glass surface: tint, hairline edge, brighter top edge (light
+// catching the rim, as on macOS). The blur itself comes from Hyprland.
+@mixin glass($radius) {
+  background-color: var(--bg-glass);
+  border-style: solid;
+  border-width: 1px;
+  border-color: var(--glass-edge);
+  border-top-color: var(--glass-highlight);
+  border-radius: $radius;
+}
+
+// Floating glass: a soft shadow below. Needs room around it in its window,
+// or the shadow is cut off.
+@mixin floating-shadow {
+  box-shadow: 0 6px 18px -8px var(--glass-shadow);
+}
+
 // Frosted window panel
 @mixin panel($radius: $radius-xl) {
-  background-color: var(--bg-glass);
-  @include bordered($radius);
+  @include glass($radius);
   padding: $gap-lg;
 }

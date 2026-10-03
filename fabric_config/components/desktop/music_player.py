@@ -1006,6 +1006,7 @@ class MusicPlayerWindow(WaylandWindow):
                 geometry.height - self.player.total_h - round(geometry.height * 0.16)
             )
         super().__init__(
+            title="fabric-music",
             layer="bottom",
             anchor="top left",
             exclusivity="none",

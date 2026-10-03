@@ -1,5 +1,6 @@
 // Shared rules for main.scss (dark) and main-light.scss; those files only pick the palette.
 @use 'tokens' as *;
+@use 'mixins' as *;
 @use 'global-classes';
 @use 'components/components';
 
@@ -15,11 +16,7 @@
 
 tooltip {
   padding: 8px 12px;
-  border-radius: 10px;
-  background-color: var(--bg-glass);
-  border-style: solid;
-  border-width: 1px;
-  border-color: a(var(--fg), 0.1);
+  @include glass(10px);
 
   label {
     font-family: "Roboto", "Helvetica Neue", sans-serif;

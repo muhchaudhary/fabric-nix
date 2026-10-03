@@ -134,6 +134,7 @@ class SystemOSD(PopupWindow):
         )
 
         super().__init__(
+            namespace="fabric-osd",
             layer="overlay",
             enable_inhibitor=False,
             transition_duration=200,

@@ -95,11 +95,15 @@ SCSS, compiled with `sass` (dart-sass) at startup into `~/.cache/fabric/css/main
 - `main.scss` / `main-light.scss` — entry points; each only picks a palette (`_dark-vars.scss` / `_light-vars.scss`) and uses `_base.scss`
 - `_base.scss` — shared root rules; pulls in global classes and components
 - `_tokens.scss` — radius/spacing scales and the GTK-safe `a()` (alpha) / `m()` (mix) functions (dart-sass would otherwise intercept `alpha()`/`mix()`)
-- `_mixins.scss` — `bordered`, `panel`, `transition`
+- `_mixins.scss` — `glass` (tint, hairline edge, bright top rim), `panel` (glass + padding), `floating-shadow`, `bordered`, `transition`
 - `_global-classes.scss` — shared utility classes (`.button-basic`, `.button-border`, `.cool-border`, etc.)
 - `components/` — per-component partials, registered in `components/_components.scss`
 
 Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables). Fabric compiles them to `@define-color`/`@name`, and GTK takes a named colour from the highest-priority provider that defines it: `config.wallpaper_accent` overrides `@accent` that way, so the accent follows the wallpaper without recompiling SCSS. Between providers GTK goes by priority, not selector specificity.
+
+### Glass and blur
+
+The blur comes from Hyprland layer rules in `~/nixOS/DesktopConfig/modules/home/hyprland/config/hyprland.lua` (NixOS-managed; don't edit `~/.config/hypr`). Each window has its own layer-shell namespace, set through its title (`WaylandWindow(title="fabric-dock")`, or `PopupWindow(namespace=...)`, default `fabric-popup`): `fabric-bar`, `-dock`, `-popup`, `-overview`, `-osd`, `-toast`, `-music` are blurred; `fabric-desktop` and `fabric-corners` aren't. A new window needs a namespace and, to be frosted, an entry in that file's `fabric_glass` list. Blur only goes behind pixels above `ignore_alpha = 0.25`, so keep `--bg-glass` above 0.25 and shadows/hover tints below it.
 
 Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-sass emit `@charset "UTF-8"`, which GTK rejects as an unknown @ rule (`//` comments are stripped, so they're fine).
 

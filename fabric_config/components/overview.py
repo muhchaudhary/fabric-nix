@@ -295,6 +295,7 @@ class Overview(PopupWindow):
         # self.client_output.connect("frame-ready", update_pixbuf)
 
         super().__init__(
+            namespace="fabric-overview",
             enable_inhibitor=True,
             anchor="center",
             keyboard_mode="on-demand",
