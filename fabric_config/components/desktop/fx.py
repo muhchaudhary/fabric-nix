@@ -40,6 +40,12 @@ class FxLayer(Gtk.DrawingArea):
         self.show_arc = True
         self.show_bars = False
         self.ink = (1.0, 1.0, 1.0)
+        # a soft shadow behind the clock where the wallpaper is busy:
+        # (x, y, width, height) of the clock, (r, g, b) and peak alpha
+        self.scrim: (
+            tuple[tuple[float, float, float, float], tuple[float, float, float], float]
+            | None
+        ) = None
         self.label_font = "Inter"
         self._bars = [0.0] * CAVA_BARS  # eased copy of cava's levels
         self._tick_id: int | None = None
@@ -81,11 +87,49 @@ class FxLayer(Gtk.DrawingArea):
 
     def _on_draw(self, widget: Gtk.Widget, cr: cairo.Context):
         w, h = widget.get_allocated_width(), widget.get_allocated_height()
+        if self.scrim is not None:
+            self._draw_scrim(cr, *self.scrim)
         if self.show_arc and self.prayer_times:
             self._draw_arc(cr, w, h)
         if any(b > 0.01 for b in self._bars):
             self._draw_bars(cr, w, h)
         return False
+
+    def _draw_scrim(
+        self,
+        cr: cairo.Context,
+        rect: tuple[float, float, float, float],
+        rgb: tuple[float, float, float],
+        alpha: float,
+    ):
+        """
+        A soft shadow (or light) behind the clock: a rounded rectangle whose
+        edge fades out over `feather` pixels, like a large blurred
+        box-shadow. It covers every line of the clock evenly and lifts the
+        text off a busy wallpaper without a visible box. (Don't blur this
+        layer in Hyprland: blur goes behind pixels above ignore_alpha, which
+        would give it a hard edge.)
+        """
+        x, y, width, height = rect
+        feather = min(width, height) * 0.3
+        steps = 16
+        # stacked layers, each a little smaller: their alphas compound to
+        # `alpha` in the middle and fade smoothly towards the outside
+        step_alpha = 1 - (1 - alpha) ** (1 / steps)
+        cr.set_source_rgba(*rgb, step_alpha)
+        for i in range(steps):
+            grow = feather * (1 - i / steps) - feather * 0.35
+            radius = max(8.0, grow + feather * 0.5)
+            left, top = x - grow, y - grow
+            right, bottom = x + width + grow, y + height + grow
+            radius = min(radius, (right - left) / 2, (bottom - top) / 2)
+            cr.new_sub_path()
+            cr.arc(right - radius, top + radius, radius, -math.pi / 2, 0)
+            cr.arc(right - radius, bottom - radius, radius, 0, math.pi / 2)
+            cr.arc(left + radius, bottom - radius, radius, math.pi / 2, math.pi)
+            cr.arc(left + radius, top + radius, radius, math.pi, 3 * math.pi / 2)
+            cr.close_path()
+            cr.fill()
 
     def _arc_point(self, w: int, h: int, t: float) -> tuple[float, float]:
         # quadratic curve: a wide sun path rising from the lower corners,

@@ -3,16 +3,21 @@
 
 // The desktop (components/desktop/): a clock modelled on the macOS lock
 // screen, info lines under it, sticky notes and a drawn layer behind them.
-// The clock has no backdrop, outline or shadow (GTK renders blurred text
-// shadows as smudges). Its colour is near-white with a hint of the wallpaper
-// (near-black on light wallpapers, .on-light), set inline on #desktop-clock;
-// every part inherits it, and it eases into the clock moods. Sizes are per
-// monitor, generated in components/desktop/window.py.
+// No outline or text shadow (GTK renders blurred text shadows as smudges).
+// Its colour is near-white with a hint of the wallpaper, or near-black where
+// the wallpaper behind the clock is light (.on-light), set inline on
+// #desktop-clock; every part inherits it, and it eases into the clock moods.
+// Where the wallpaper behind it is busy or mid-toned, a soft scrim is drawn
+// behind it (fx.py; window.py decides).
+// Sizes are per monitor, generated in components/desktop/window.py.
 
 #desktop-clock {
   color: white;
   font-family: "Inter", "Roboto", sans-serif;
   font-size: 15px;
+  // breathing room, so "auto" placement keeps the scrim's soft edge on the
+  // calm part of the wallpaper too
+  padding: 12px 24px;
   transition: color 4s ease;
 
   // the global `*` rule gives every node its own colour and font; inherit
