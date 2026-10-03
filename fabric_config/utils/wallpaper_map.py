@@ -109,6 +109,38 @@ class WallpaperMap:
         """Brightness statistics of a rectangle in monitor coordinates."""
         return self._stats_cells(*self._cells(rect))
 
+    def _blocked(self, avoid: Sequence[Rect]) -> list[float] | None:
+        """Integral sums of the grid cells any `avoid` rectangle touches."""
+        if not avoid:
+            return None
+        marked = [[0] * self.cols for _ in range(self.rows)]
+        for x, y, w, h in avoid:
+            if (
+                x + w <= 0
+                or y + h <= 0
+                or x >= self.monitor_width
+                or y >= self.monitor_height
+            ):
+                continue  # off this monitor
+            c0, r0, c1, r1 = self._cells((x, y, w, h))
+            for r in range(r0, r1):
+                row = marked[r]
+                for c in range(c0, c1):
+                    row[c] = 1
+        width = self.cols + 1
+        table = [0.0] * (width * (self.rows + 1))
+        for r, row in enumerate(marked):
+            run = 0
+            for c, value in enumerate(row):
+                run += value
+                table[(r + 1) * width + c + 1] = table[r * width + c + 1] + run
+        return table
+
+    def is_clear(self, rect: Rect, avoid: Sequence[Rect]) -> bool:
+        """Whether `rect` stays off every `avoid` rectangle (to grid cells)."""
+        blocked = self._blocked(avoid)
+        return blocked is None or self._box(blocked, *self._cells(rect)) == 0
+
     def calmest(
         self,
         width: float,
@@ -123,6 +155,8 @@ class WallpaperMap:
         `score(stats, x, y)` (lower is better; defaults to busyness).
         """
         score = score or (lambda stats, _x, _y: stats.busyness)
+        # obstacles as a grid mask, so each candidate is one lookup
+        blocked = self._blocked(avoid)
         bx, by, bw, bh = bounds
         if width > bw or height > bh:
             return None
@@ -140,7 +174,8 @@ class WallpaperMap:
         )
         for y in ys:
             for x in xs:
-                if any(_overlaps((x, y, width, height), other) for other in avoid):
+                cells = self._cells((x, y, width, height))
+                if blocked is not None and self._box(blocked, *cells) > 0:
                     continue
                 stats = self.stats((x, y, width, height))
                 value = score(stats, x, y)
@@ -149,15 +184,6 @@ class WallpaperMap:
         if best is None:
             return None
         return best[1], best[2], best[3]
-
-
-def _overlaps(a: Rect, b: Rect) -> bool:
-    return (
-        a[0] < b[0] + b[2]
-        and b[0] < a[0] + a[2]
-        and a[1] < b[1] + b[3]
-        and (b[1] < a[1] + a[3])
-    )
 
 
 def build_map(path: str, monitor_width: int, monitor_height: int) -> WallpaperMap:
