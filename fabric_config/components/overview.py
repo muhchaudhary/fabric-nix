@@ -10,9 +10,10 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
-from hyprland_toplevel_streamer import HyprlandFrameCapture
 from loguru import logger
 
+import fabric_config.config as config
+from fabric_config.services.window_previews import cover_size
 from fabric_config.utils.icon_resolver import get_icon_resolver
 from fabric_config.utils.wallpaper import (
     query_active_wallpapers,
@@ -34,6 +35,8 @@ CARD_RADIUS = 14
 WINDOW_RADIUS = 8
 WORKSPACES = range(1, 9)
 COLUMNS = 4
+# live window previews; a window that doesn't redraw isn't captured
+PREVIEW_FPS = 12
 
 
 # Hyprland 0.56+ (Lua config) only accepts hl.dsp.* dispatches. Always pass an
@@ -130,22 +133,28 @@ class HyprlandWindowButton(Button):
             actions=Gdk.DragAction.COPY,
         )
 
-    def set_frame(self, pixbuf: GdkPixbuf.Pixbuf):
-        # downscale first so we don't keep full-resolution frames in memory;
-        # 2x the preview size keeps it sharp on HiDPI
-        w, h = self.size if self.transform in (0, 2) else (self.size[1], self.size[0])
-        scaled = pixbuf.scale_simple(
-            max(1, w * 2), max(1, h * 2), GdkPixbuf.InterpType.BILINEAR
+    def start_preview(self, owner: object, window_size: tuple[int, int]):
+        """Show a live preview of the window, as part of `owner`'s previews."""
+        scale = self.get_scale_factor()
+        width, height = self.size
+        # windows on a rotated monitor are captured unrotated: ask for the
+        # turned size and let the preview turn it back
+        if self.transform % 2:
+            width, height = height, width
+            window_size = (window_size[1], window_size[0])
+        frame_width, frame_height = cover_size(
+            window_size, width * scale, height * scale
         )
-        self.preview.set_pixbuf(
-            scaled.rotate_simple(
-                {
-                    1: GdkPixbuf.PixbufRotation.CLOCKWISE,
-                    2: GdkPixbuf.PixbufRotation.UPSIDEDOWN,
-                    3: GdkPixbuf.PixbufRotation.COUNTERCLOCKWISE,
-                }.get(self.transform, GdkPixbuf.PixbufRotation.NONE)
-            )
+        last = config.window_previews.subscribe(
+            owner,
+            self.address,
+            frame_width,
+            frame_height,
+            lambda surface: self.preview.set_surface(surface, self.transform),
+            fps=PREVIEW_FPS,
         )
+        if last is not None:
+            self.preview.set_surface(last, self.transform)
 
     def on_button_click(self, *_):
         # Hyprland 0.56+ (Lua config) rejects the old "focuswindow address:..." form
@@ -246,7 +255,6 @@ class WorkspaceCard(Box):
 
 class Overview(PopupWindow):
     def __init__(self):
-        self._capture = HyprlandFrameCapture()
         # self.client_output = ClientOutput()
         self.subtitle = Label(name="overview-subtitle", h_align="start")
         header = CenterBox(
@@ -293,8 +301,19 @@ class Overview(PopupWindow):
             transition_type="crossfade",
             child=self.overview_box,
         )
+        # stop capturing however the overview closes (toggle, Escape, click
+        # outside)
+        self.reveal_child.revealer.connect(
+            "notify::reveal-child",
+            lambda revealer, _: (
+                None
+                if revealer.get_reveal_child()
+                else config.window_previews.unsubscribe(self)
+            ),
+        )
 
     def update(self, signal_update=False):
+        config.window_previews.unsubscribe(self)
         for client in self.clients.values():
             client.destroy()
         self.clients.clear()
@@ -326,6 +345,8 @@ class Overview(PopupWindow):
             if ws["monitorID"] in monitors
         }
 
+        client_sizes: dict[str, tuple[int, int]] = {}
+
         def monitor_for(workspace_id: int) -> MonitorGeometry:
             return monitors[workspace_monitors.get(workspace_id, focused_monitor)]
 
@@ -349,6 +370,7 @@ class Overview(PopupWindow):
             width = max(8, min(round(client["size"][0] * scale), box_width - x))
             height = max(8, min(round(client["size"][1] * scale), box_height - y))
 
+            client_sizes[client["address"]] = tuple(client["size"])
             self.clients[client["address"]] = HyprlandWindowButton(
                 window=self,
                 title=client["title"],
@@ -393,23 +415,7 @@ class Overview(PopupWindow):
         self._sync_wallpapers()
 
         for client_addr, button in self.clients.items():
-            try:
-                frame = self._capture.capture(
-                    int(client_addr, 16), overlay_cursor=False, rgba=True
-                )
-                button.set_frame(
-                    GdkPixbuf.Pixbuf.new_from_bytes(
-                        GLib.Bytes.new(frame.data),
-                        GdkPixbuf.Colorspace.RGB,
-                        True,  # has_alpha
-                        8,  # bits per sample
-                        frame.width,
-                        frame.height,
-                        frame.rowstride,
-                    )
-                )
-            except Exception as e:
-                logger.error(f"Error capturing client {client_addr}: {e}")
+            button.start_preview(self, client_sizes[client_addr])
 
     def _sync_wallpapers(self):
         """

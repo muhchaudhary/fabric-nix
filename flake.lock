@@ -266,11 +266,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1785251166,
-        "narHash": "sha256-OQNrb3bOuEWsCq3tBg9QiMjRdU0jKBdxpiM9VOngbOw=",
+        "lastModified": 1791066882,
+        "narHash": "sha256-ov+fHwSpe5LOyUNMe7aRN3nPtwRIN8aw23Qm37fZlH0=",
         "owner": "muhchaudhary",
         "repo": "toplevel-streamer-rs",
-        "rev": "0542b31e993392ad5dab500bdfaf1a4784ca1419",
+        "rev": "a6b8037a854a2d86b9f277d80edf771d18025d14",
         "type": "github"
       },
       "original": {

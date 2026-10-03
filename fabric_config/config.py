@@ -10,6 +10,7 @@ from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
+from fabric_config.services.window_previews import WindowPreviews
 from fabric_config.utils.process import run_command_async
 
 gi.require_version("AstalNetwork", "0.1")
@@ -29,6 +30,8 @@ cava = Cava()  # audio levels, shared by whoever draws them
 wallpaper_accent = WallpaperAccent()
 # the notification server and its history (the notification center)
 notifications = NotificationCenter()
+# live window previews for the dock and overview; capture starts on first use
+window_previews = WindowPreviews()
 
 
 # the whole theme's accent follows the wallpaper, tuned for light or dark

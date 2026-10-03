@@ -1,6 +1,4 @@
 import json
-import queue
-import threading
 from collections.abc import Callable
 
 import cairo
@@ -13,15 +11,16 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
-from hyprland_toplevel_streamer import Frame, HyprlandFrameCapture
 from loguru import logger
 
+import fabric_config.config as config
+from fabric_config.services.window_previews import cover_size
 from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 from fabric_config.utils.icon_resolver import get_icon_resolver
 from fabric_config.widgets.rounded_cover_image import RoundedCoverImage
 
 gi.require_version("Glace", "0.1")
-from gi.repository import Gdk, GdkPixbuf, Glace, GLib, Gtk  # noqa: E402
+from gi.repository import Gdk, Glace, GLib, Gtk  # noqa: E402
 
 ICON_SIZE = 44
 MAX_DOTS = 3
@@ -37,6 +36,8 @@ PREVIEW_HIDE_MS = 250
 THUMB_HEIGHT = 120
 THUMB_MIN_WIDTH = 100
 THUMB_MAX_WIDTH = 240
+# live preview frame rate; windows that don't redraw cost nothing
+PREVIEW_FPS = 30
 # room for the dock plus the tallest preview. The window never resizes: when a
 # bottom-anchored layer surface grows, its input region (in top-left surface
 # coordinates) lags a frame behind and the pointer seems to leave the dock
@@ -63,115 +64,6 @@ def close_window(address: str):
     get_hyprland_monitors().send_command(
         f"/dispatch hl.dsp.window.close({{ window = 'address:{address}' }})"
     )
-
-
-def frame_to_thumbnail(frame: Frame, width: int, height: int) -> GdkPixbuf.Pixbuf:
-    """
-    Cover-fit a BGRA frame into width x height and return it as RGBA.
-
-    The capture library's own RGBA conversion holds the GIL for ~50 ms on a
-    1440p window (which freezes the GTK loop), so frames are captured as BGRA
-    and the channels swapped here, after downscaling, when there are few
-    pixels left.
-    """
-    full = GdkPixbuf.Pixbuf.new_from_bytes(
-        GLib.Bytes.new(frame.data),
-        GdkPixbuf.Colorspace.RGB,
-        True,  # has_alpha
-        8,  # bits per sample
-        frame.width,
-        frame.height,
-        frame.rowstride,
-    )
-    factor = max(width / frame.width, height / frame.height)
-    scaled_w = max(width, round(frame.width * factor))
-    scaled_h = max(height, round(frame.height * factor))
-    scaled = full.scale_simple(scaled_w, scaled_h, GdkPixbuf.InterpType.BILINEAR)
-    if scaled is None:
-        raise MemoryError("scaling the frame failed")
-    cropped = scaled.new_subpixbuf(
-        (scaled_w - width) // 2, (scaled_h - height) // 2, width, height
-    ).copy()
-    if cropped is None:
-        raise MemoryError("copying the thumbnail failed")
-
-    rowstride = cropped.get_rowstride()
-    pixels = bytearray(cropped.get_pixels())
-    if rowstride == width * 4:
-        pixels[0::4], pixels[2::4] = pixels[2::4], pixels[0::4]
-    else:
-        for row in range(height):
-            start, end = row * rowstride, row * rowstride + width * 4
-            line = pixels[start:end]
-            line[0::4], line[2::4] = line[2::4], line[0::4]
-            pixels[start:end] = line
-    return GdkPixbuf.Pixbuf.new_from_bytes(
-        GLib.Bytes.new(bytes(pixels)),
-        GdkPixbuf.Colorspace.RGB,
-        True,
-        8,
-        width,
-        height,
-        rowstride,
-    )
-
-
-class ThumbnailCapturer:
-    """
-    Captures window thumbnails on a worker thread.
-
-    HyprlandFrameCapture is `unsendable` (it must stay on the thread that made
-    it), so the worker owns its own instance. Results come back on the GTK
-    thread through GLib.idle_add. Requests from an older generation (the
-    pointer has moved to another app) are skipped.
-    """
-
-    def __init__(self):
-        self.generation = 0
-        self._queue: queue.SimpleQueue[
-            tuple[int, str, int, int, Callable[[str, GdkPixbuf.Pixbuf], None]]
-        ] = queue.SimpleQueue()
-        self._thread: threading.Thread | None = None
-
-    def next_generation(self) -> int:
-        self.generation += 1
-        return self.generation
-
-    def request(
-        self,
-        address: str,
-        width: int,
-        height: int,
-        callback: Callable[[str, GdkPixbuf.Pixbuf], None],
-    ):
-        if self._thread is None:
-            self._thread = threading.Thread(
-                target=self._run, name="dock-thumbnails", daemon=True
-            )
-            self._thread.start()
-        self._queue.put((self.generation, address, width, height, callback))
-
-    def _run(self):
-        capture = HyprlandFrameCapture()
-        while True:
-            generation, address, width, height, callback = self._queue.get()
-            if generation != self.generation:
-                continue
-            try:
-                frame = capture.capture(
-                    int(address, 16), overlay_cursor=False, rgba=False
-                )
-                thumbnail = frame_to_thumbnail(frame, width, height)
-            except Exception as e:
-                logger.warning(f"[Dock] capturing {address} failed: {e}")
-                continue
-
-            def deliver(generation=generation, address=address, thumb=thumbnail):
-                if generation == self.generation:
-                    callback(address, thumb)
-                return False
-
-            GLib.idle_add(deliver)
 
 
 class AppButton(Button):
@@ -393,9 +285,7 @@ class AppDock(Window):
         self._preview_hide_id: int | None = None
         self._preview_button: AppButton | None = None
         self._preview_tick_id: int | None = None
-        self._thumbnails: dict[str, GdkPixbuf.Pixbuf] = {}
         self._thumbnail_widgets: dict[str, WindowThumbnail] = {}
-        self._capturer = ThumbnailCapturer()
 
         self.app_bar = AppBar(self)
         self.dock_revealer = Revealer(
@@ -525,7 +415,7 @@ class AppDock(Window):
         self._cancel("_preview_id")
         self._cancel("_preview_hide_id")
         self._preview_button = None
-        self._capturer.next_generation()
+        config.window_previews.unsubscribe(self)
         self.preview_revealer.set_reveal_child(False)
         return False
 
@@ -537,14 +427,9 @@ class AppDock(Window):
             self.hide_preview()
             return False
 
-        # forget thumbnails of windows that are gone
-        alive = {c["address"] for c in clients}
-        for address in [a for a in self._thumbnails if a not in alive]:
-            del self._thumbnails[address]
-
         was_open = self.preview_revealer.get_reveal_child()
         self._preview_button = button
-        self._capturer.next_generation()
+        config.window_previews.unsubscribe(self)
 
         # shrink thumbnails to fit when an app has many windows
         width_available = self.get_allocated_width() - 64
@@ -564,12 +449,20 @@ class AppDock(Window):
                 on_activate=self._activate_window,
                 on_close=self._close_window,
             )
-            # show the last capture straight away, then refresh it
-            if (cached := self._thumbnails.get(thumb.address)) is not None:
-                thumb.image.set_pixbuf(cached)
-            self._capturer.request(
-                thumb.address, width * scale, height * scale, self._on_thumbnail
+            frame_width, frame_height = cover_size(
+                client.get("size") or (width, height), width * scale, height * scale
             )
+            # the window's last frame shows at once, then it goes live
+            last = config.window_previews.subscribe(
+                self,
+                thumb.address,
+                frame_width,
+                frame_height,
+                thumb.image.set_surface,
+                fps=PREVIEW_FPS,
+            )
+            if last is not None:
+                thumb.image.set_surface(last)
             self._thumbnail_widgets[thumb.address] = thumb
             thumbs.append(thumb)
 
@@ -586,11 +479,6 @@ class AppDock(Window):
             round(min(THUMB_MAX_WIDTH, max(THUMB_MIN_WIDTH, THUMB_HEIGHT * aspect))),
             THUMB_HEIGHT,
         )
-
-    def _on_thumbnail(self, address: str, pixbuf: GdkPixbuf.Pixbuf):
-        self._thumbnails[address] = pixbuf
-        if (thumb := self._thumbnail_widgets.get(address)) is not None:
-            thumb.image.set_pixbuf(pixbuf)
 
     def _keep_preview(self):
         self._cancel("_preview_hide_id")

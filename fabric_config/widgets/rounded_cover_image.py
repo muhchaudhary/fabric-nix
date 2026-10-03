@@ -20,6 +20,10 @@ class RoundedCoverImage(Gtk.DrawingArea):
     fit="contain" instead shows the whole image, scaled down to fit (never
     enlarged), centred on a subtle backdrop: better when the content matters
     more than filling the area.
+
+    set_surface() shows a cairo surface instead (e.g. live window frames, at
+    device resolution). It is scaled while drawing, which is cheap for small
+    surfaces and avoids converting every frame to a pixbuf.
     """
 
     def __init__(
@@ -37,6 +41,9 @@ class RoundedCoverImage(Gtk.DrawingArea):
         self._surface: cairo.Surface | None = None
         self._surface_key: tuple[int, int, int] | None = None
         self._surface_size: tuple[float, float] = (0, 0)
+        # set by set_surface(): a device-pixel surface and quarter turns
+        self._live: cairo.ImageSurface | None = None
+        self._live_turns = 0
 
         self.set_size_request(width, height)
         self.get_style_context().add_class("rounded-cover-image")
@@ -44,10 +51,41 @@ class RoundedCoverImage(Gtk.DrawingArea):
         self.show()
 
     def set_pixbuf(self, pixbuf: GdkPixbuf.Pixbuf | None):
+        self._live = None
         self._pixbuf = pixbuf
         self._surface = None
         self._surface_key = None
         self.queue_draw()
+
+    def set_surface(self, surface: cairo.ImageSurface | None, quarter_turns: int = 0):
+        """Show `surface` (device pixels), rotated clockwise by quarter turns."""
+        self._pixbuf = None
+        self._surface = None
+        self._surface_key = None
+        self._live = surface
+        self._live_turns = quarter_turns % 4
+        self.queue_draw()
+
+    def _draw_live(
+        self, cr: cairo.Context, w: int, h: int, surface: cairo.ImageSurface
+    ):
+        src_w, src_h = surface.get_width(), surface.get_height()
+        if src_w <= 0 or src_h <= 0:
+            return
+        turned_w, turned_h = (src_h, src_w) if self._live_turns % 2 else (src_w, src_h)
+        if self._fit == "contain":
+            color = self.get_style_context().get_color(Gtk.StateFlags.NORMAL)
+            cr.set_source_rgba(color.red, color.green, color.blue, 0.06)
+            cr.paint()
+            factor = min(w / turned_w, h / turned_h, 1 / self.get_scale_factor())
+        else:
+            factor = max(w / turned_w, h / turned_h)
+        cr.translate(w / 2, h / 2)
+        cr.scale(factor, factor)
+        cr.rotate(self._live_turns * math.pi / 2)
+        cr.set_source_surface(surface, -src_w / 2, -src_h / 2)
+        cr.get_source().set_filter(cairo.FILTER_GOOD)
+        cr.paint()
 
     def _rounded_rect(self, cr: cairo.Context, w: float, h: float, r: float):
         cr.new_sub_path()
@@ -74,6 +112,8 @@ class RoundedCoverImage(Gtk.DrawingArea):
             scaled = self._pixbuf.scale_simple(
                 draw_w, draw_h, GdkPixbuf.InterpType.BILINEAR
             )
+            if scaled is None:
+                return None
             self._surface = Gdk.cairo_surface_create_from_pixbuf(
                 scaled, scale, self.get_window()
             )
@@ -89,6 +129,8 @@ class RoundedCoverImage(Gtk.DrawingArea):
         scaled = self._pixbuf.scale_simple(
             scaled_w, scaled_h, GdkPixbuf.InterpType.BILINEAR
         )
+        if scaled is None:
+            return None
         cropped = scaled.new_subpixbuf(
             (scaled_w - target_w) // 2,
             (scaled_h - target_h) // 2,
@@ -106,6 +148,10 @@ class RoundedCoverImage(Gtk.DrawingArea):
         w, h = self.get_allocated_width(), self.get_allocated_height()
         self._rounded_rect(cr, w, h, min(self._radius, w / 2, h / 2))
         cr.clip()
+
+        if self._live is not None:
+            self._draw_live(cr, w, h, self._live)
+            return False
 
         surface = self._get_surface(w, h)
         if surface is None:

@@ -61,3 +61,53 @@ class HyprlandFrameCapture:
         rgba: bool = True,
         max_size: int = 0,
     ) -> WindowStream: ...
+
+@final
+class PreviewFrame:
+    """A downscaled live frame of one window.
+
+    ``data`` is premultiplied BGRA with ``stride == width * 4``: cairo's
+    ``FORMAT_ARGB32`` on little-endian machines.
+    """
+
+    @property
+    def window_handle(self) -> int: ...
+    @property
+    def width(self) -> int: ...
+    @property
+    def height(self) -> int: ...
+    @property
+    def stride(self) -> int: ...
+    @property
+    def data(self) -> bytes: ...
+
+@final
+class PreviewHub:
+    """Live previews of many windows, captured on a background Rust thread.
+
+    Each watched window is captured when it redraws, at most ``fps`` times a
+    second. Wait for ``fileno()`` to become readable, then ``take_frames()``.
+    Thread-safe.
+    """
+
+    def __init__(self) -> None: ...
+    def watch(
+        self,
+        window_handle: int,
+        max_width: int,
+        max_height: int,
+        fps: float = 30.0,
+        overlay_cursor: bool = False,
+    ) -> None:
+        """Start or update a preview; frames fit inside max_width x max_height
+        (device pixels), keeping the aspect ratio and never enlarged."""
+    def unwatch(self, window_handle: int) -> None: ...
+    def fileno(self) -> int:
+        """An eventfd that becomes readable when frames or failures wait."""
+    def take_frames(self) -> list[PreviewFrame]:
+        """The newest frame of each window since the last call."""
+    def take_failures(self) -> list[int]:
+        """Windows whose capture started failing; they are retried."""
+    def error(self) -> str | None:
+        """Why the background thread stopped, or None while it runs."""
+    def close(self) -> None: ...
