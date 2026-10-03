@@ -1,65 +1,74 @@
 import math
 import time
+from collections.abc import Callable
 
 import cairo
 import gi
-
-from fabric_config.utils.play_audio import play_sound
-from fabric import Signal
-from fabric.notifications.service import (
-    Notification,
-    NotificationAction,
-    NotificationCloseReason,
-    Notifications,
-)
-from fabric.utils import invoke_repeater, get_relative_path
+from fabric.notifications.service import Notification
+from fabric.utils import get_relative_path
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
-from fabric.widgets.centerbox import CenterBox
-from fabric.widgets.image import Image
-from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
-from loguru import logger
 
+from fabric_config import config
+from fabric_config.services.notifications import URGENCY_CRITICAL, hint
 from fabric_config.snippits.animator import Animator
-from fabric_config.utils.uri import file_uri_to_path
-from fabric_config.widgets.rounded_image import CustomImage
+from fabric_config.utils.play_audio import play_sound
+from fabric_config.widgets.notification_card import NotificationCard
 
-gi.require_version("GdkPixbuf", "2.0")
 gi.require_version("Gtk", "3.0")
 gi.require_version("Gdk", "3.0")
-gi.require_version("Pango", "1.0")
-from gi.repository import Gdk, GdkPixbuf, Gtk, Pango  # noqa: E402
+from gi.repository import Gdk, GLib, Gtk  # noqa: E402
 
-# TODO: make a notification center
-# TODO: group notifications by type
+DEFAULT_TIMEOUT_MS = 5000
+MAX_POPUPS = 4
+# progress bar / countdown update interval
+TICK_MS = 33
+SOUND_PATH = get_relative_path("../assets/sounds/notification.mp3")
 
 
 class AnimationWindow(WaylandWindow):
+    """
+    A full-screen, click-through overlay that the cards fly in and out on.
+    Only mapped while something is on it.
+    """
+
     def __init__(self):
         self.draw_surfaces = []
-        self.drawing_area = Gtk.DrawingArea()
-        self.last_update_time = time.time()
+        self.drawing_area = Gtk.DrawingArea(hexpand=True, vexpand=True)
+        self._shown_on: Gdk.Monitor | None = None
 
         super().__init__(
             anchor="top left bottom right",
             layer="overlay",
-            child=Box(
-                h_expand=True,
-                v_expand=True,
-                children=self.drawing_area,
-            ),
+            child=Box(h_expand=True, v_expand=True, children=self.drawing_area),
             exclusivity="none",
             keyboard_mode="none",
             pass_through=True,
-            visible=True,
-            all_visible=True,
+            visible=False,
         )
-        self.drawing_area.set_size_request(
-            self.get_allocated_width(), self.get_allocated_height()
-        )
+        self.drawing_area.show()
         self.drawing_area.connect("draw", self.on_draw)
+
+    def prepare(self, monitor: Gdk.Monitor | None) -> tuple[int, int]:
+        """Map the window (on `monitor`) if it isn't, and return its size."""
+        if not self.get_visible():
+            if monitor is not None:
+                self.monitor = monitor
+                self._shown_on = monitor
+            self.show()
+        # it covers the whole monitor. Don't ask GTK: right after showing it,
+        # the allocation is a 200x200 default until the compositor configures it
+        # (animations only tick once it's mapped anyway)
+        display = Gdk.Display.get_default()
+        # (a GdkDisplay is falsy: compare with None)
+        target = self._shown_on or (
+            display.get_monitor(0) if display is not None else None
+        )
+        if target is None:
+            return self.get_allocated_width(), self.get_allocated_height()
+        geometry = target.get_geometry()
+        return geometry.width, geometry.height
 
     def move_surface(self, surface: cairo.Surface, x, y, angle, global_rotate=False):
         for i in range(len(self.draw_surfaces)):
@@ -68,9 +77,6 @@ class AnimationWindow(WaylandWindow):
                 self.drawing_area.queue_draw()
 
     def add_surface(self, surface: cairo.Surface, x, y, angle, global_rotate=False):
-        self.drawing_area.set_size_request(
-            self.get_allocated_width(), self.get_allocated_height()
-        )
         self.draw_surfaces.append((surface, x, y, angle, global_rotate))
         self.drawing_area.queue_draw()
 
@@ -79,7 +85,9 @@ class AnimationWindow(WaylandWindow):
             if self.draw_surfaces[i][0] == surface:
                 del self.draw_surfaces[i]
                 self.drawing_area.queue_draw()
-                return
+                break
+        if not self.draw_surfaces:
+            self.hide()
 
     def on_draw(self, _, cr: cairo.Context):
         for surface, x, y, angle, global_rotate in self.draw_surfaces:
@@ -103,226 +111,210 @@ class AnimationWindow(WaylandWindow):
 animate_window = AnimationWindow()
 
 
-class ActionButton(Button):
-    def __init__(
-        self, action: NotificationAction, action_number: int, total_actions: int
-    ):
-        self.action = action
-        super().__init__(
-            label=action.label,
-            h_expand=True,
-            on_clicked=self.on_clicked,
-        )
-        if action_number == 0:
-            self.add_style_class("start-action")
-        elif action_number == total_actions - 1:
-            self.add_style_class("end-action")
-        else:
-            self.add_style_class("middle-action")
-
-    def on_clicked(self, *_):
-        self.action.invoke()
-        self.action.parent.close("dismissed-by-user")
+def _snapshot(widget: Gtk.Widget) -> cairo.ImageSurface:
+    alloc = widget.get_allocation()
+    surface = cairo.ImageSurface(
+        cairo.FORMAT_ARGB32, max(alloc.width, 1), max(alloc.height, 1)
+    )
+    widget.draw(cairo.Context(surface))
+    return surface
 
 
-class NotificationBox(Box):
-    def __init__(self, notification: Notification):
-        header = CenterBox(
-            name="notification-header",
-            start_children=[
-                self.get_icon(notification.app_icon),
-                Label(
-                    str(notification.app_name),
-                    name="notification-app-name",
-                    h_align="start",
-                ),
-            ],
-            end_children=[
-                Button(
-                    name="notification-close-btn",
-                    image=Image(icon_name="window-close-symbolic", icon_size=12),
-                    on_clicked=lambda *_: notification.close("dismissed-by-user"),
-                ),
-            ],
-        )
+def _monitor_of(widget: Gtk.Widget) -> Gdk.Monitor | None:
+    window = widget.get_window()
+    display = Gdk.Display.get_default()
+    if window is None or display is None:  # (a GdkDisplay is falsy)
+        return None
+    return display.get_monitor_at_window(window)
 
-        summary = Label(
-            label=notification.summary,
-            name="notification-summary",
-            h_align="start",
-            max_chars_width=38,
-        )
-        summary.set_line_wrap(True)
-        summary.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-        summary.set_lines(1)
-        summary.set_ellipsize(Pango.EllipsizeMode.END)
 
-        text_children: list = [summary]
-        if notification.body:
-            body_label = Label(
-                label=notification.body,
-                name="notification-body",
-                h_align="start",
-                max_chars_width=38,
-            )
-            body_label.set_line_wrap(True)
-            body_label.set_line_wrap_mode(Pango.WrapMode.WORD_CHAR)
-            body_label.set_lines(3)
-            body_label.set_ellipsize(Pango.EllipsizeMode.END)
-            text_children.append(body_label)
-
-        text_box = Box(orientation="v", h_expand=True, children=text_children)
-
-        if notification.image_pixbuf:
-            content = CenterBox(
-                name="notification-content",
-                start_children=[text_box],
-                end_children=[
-                    Box(
-                        name="notification-image",
-                        children=CustomImage(
-                            pixbuf=notification.image_pixbuf.scale_simple(
-                                52, 52, GdkPixbuf.InterpType.BILINEAR
-                            )
-                        ),
-                    )
-                ],
-            )
-        else:
-            content = Box(name="notification-content", children=[text_box])
-
-        self.progress_bar = Gtk.ProgressBar()
-        self.progress_bar.set_name("notification-progress-bar")
-        self.progress_bar.set_fraction(1.0)
-        self.progress_bar.show()
-
-        box_children = [header, content]
-        if notification.actions:
-            box_children += [
-                Box(name="notification-separator", h_expand=True),
-                Box(
-                    name="notification-action-buttons",
-                    children=[
-                        ActionButton(action, i, len(notification.actions))
-                        for i, action in enumerate(notification.actions)
-                    ],
-                    h_expand=True,
-                ),
-            ]
-        box_children.append(self.progress_bar)
-
-        super().__init__(
-            name="notification-box",
-            orientation="v",
-            children=box_children,
-        )
-
-    def get_icon(self, app_icon) -> Image:
-        match app_icon:
-            case str(x) if x.startswith("file://"):
-                return Image(
-                    name="notification-icon",
-                    image_file=file_uri_to_path(app_icon),
-                    size=16,
-                )
-            case str(x) if len(x) > 0 and "/" == x[0]:
-                return Image(name="notification-icon", image_file=app_icon, size=16)
-            case _:
-                return Image(
-                    name="notification-icon",
-                    icon_name=app_icon if app_icon else "dialog-information-symbolic",
-                    size=16,
-                )
+def _timeout_ms(notification: Notification) -> int | None:
+    """How long the popup stays up; None for until dismissed."""
+    if notification.urgency >= URGENCY_CRITICAL or notification.timeout == 0:
+        return None
+    return notification.timeout if notification.timeout > 0 else DEFAULT_TIMEOUT_MS
 
 
 class NotificationRevealer(Revealer):
-    @Signal
-    def animation_done(self, is_done: bool) -> bool: ...
+    """
+    One popup. It flies in, counts down (paused while hovered) and flies out.
+    Running out of time only hides the popup: the notification stays in the
+    notification center (unless it's marked transient).
+    """
 
-    def __init__(self, notification: Notification, **kwargs):
-        self.popup_timeout = 5000
-        self.not_box = NotificationBox(notification)
+    def __init__(
+        self,
+        notification: Notification,
+        on_hidden: Callable[["NotificationRevealer"], None],
+    ):
         self.notification = notification
-        self.hovered = False
+        self.leaving = False
+        self._on_hidden = on_hidden
+        self._timer: int | None = None
+        self._timeout_ms: int | None = None
+        self._remaining_ms = 0.0
+        self._last_tick = 0.0
+        self._fly_in_anim: Animator | None = None
+        self._fly_in_surface: cairo.ImageSurface | None = None
 
-        # EventBox gives us a GDK window so crossing events actually fire
-        self._event_box = Gtk.EventBox()
-        self._event_box.add_events(
-            Gdk.EventMask.ENTER_NOTIFY_MASK | Gdk.EventMask.LEAVE_NOTIFY_MASK
-        )
-        self._event_box.connect("enter-notify-event", self._on_enter)
-        self._event_box.connect("leave-notify-event", self._on_leave)
-        self._event_box.add(self.not_box)
-        self._event_box.show()
+        self.card = self._make_card(notification)
+        self._holder = Box(style="margin: 1px 0px 1px 1px;")
 
         super().__init__(
-            child=Box(style="margin: 1px 0px 1px 1px;", children=self._event_box),
+            child=self._holder,
             transition_duration=0,
             transition_type="crossfade",
         )
-
         self.connect(
             "notify::child-revealed",
-            lambda *args: self.destroy() if not self.get_child_revealed() else None,
+            lambda *_: (
+                self.destroy()
+                if self.leaving and not self.get_child_revealed()
+                else None
+            ),
         )
-        self.connect(
-            "animation-done",
-            lambda *_: [self.set_reveal_child(True), self.animate_popup_timeout()],
+
+    def _make_card(self, notification: Notification) -> NotificationCard:
+        return NotificationCard(
+            notification, show_progress=True, on_click=self.dismiss_popup
         )
 
-        notification.connect("closed", self.on_resolved)
+    # ---- countdown -------------------------------------------------------
 
-    def _on_enter(self, *_):
-        self.hovered = True
-        logger.debug(f"[Notification {self.notification.id}] hover enter")
+    def _start_timer(self):
+        self._stop_timer()
+        self._timeout_ms = _timeout_ms(self.notification)
+        self.card.progress_bar.set_visible(self._timeout_ms is not None)
+        if self._timeout_ms is None:
+            return
+        self.card.progress_bar.set_fraction(1.0)
+        self._remaining_ms = self._timeout_ms
+        self._last_tick = time.monotonic()
+        self._timer = GLib.timeout_add(TICK_MS, self._tick)
 
-    def _on_leave(self, _, ev):
-        if ev.detail != Gdk.NotifyType.INFERIOR:
-            self.hovered = False
-            logger.debug(f"[Notification {self.notification.id}] hover leave")
+    def _stop_timer(self):
+        if self._timer is not None:
+            GLib.source_remove(self._timer)
+            self._timer = None
 
-    def animate_popup_timeout(self):
-        time_remaining = self.popup_timeout
-
-        def do_animate():
-            nonlocal time_remaining
-            if not self.child_revealed:
-                return False
-            if self.hovered:
-                return True
-            if time_remaining <= 0:
-                self.notification.close("expired")
-                return False
-            time_remaining -= 10
-            self.not_box.progress_bar.set_fraction(time_remaining / self.popup_timeout)
+    def _tick(self) -> bool:
+        now = time.monotonic()
+        elapsed_ms = (now - self._last_tick) * 1000
+        self._last_tick = now
+        if self.card.hovered or not self._timeout_ms:
             return True
+        self._remaining_ms -= elapsed_ms
+        if self._remaining_ms <= 0:
+            self._timer = None
+            if hint(self.notification, "transient"):
+                # not meant to be kept: close it (which flies this out)
+                self.notification.close("expired")
+            else:
+                self.dismiss_popup()
+            return False
+        self.card.progress_bar.set_fraction(self._remaining_ms / self._timeout_ms)
+        return True
 
-        invoke_repeater(10, do_animate)
+    # ---- content ---------------------------------------------------------
 
-    def on_resolved(self, notification, closed_reason: NotificationCloseReason):
-        logger.info(
-            f"Notification {notification.id} resolved with reason: {closed_reason}"
+    def replace(self, notification: Notification):
+        """Show `notification` in place of this one (same id chain, new content)."""
+        self.notification = notification
+        old = self.card
+        self.card = self._make_card(notification)
+        self._holder.remove(old)
+        old.destroy()
+        self._holder.add(self.card)
+        self.card.show_all()
+        if self.get_child_revealed():
+            self._start_timer()
+
+    def dismiss_popup(self, *_):
+        """Hide the popup but keep the notification."""
+        self.fly_out()
+
+    # ---- animations ------------------------------------------------------
+
+    def fly_in(self, monitor: Gdk.Monitor | None, y: int):
+        # lay the card out offscreen to draw the flying copy, then move it in
+        offscreen = Gtk.OffscreenWindow()
+        offscreen.add(self.card)
+        offscreen.show_all()
+        surface = _snapshot(self.card)
+        offscreen.remove(self.card)
+        offscreen.destroy()
+        self._holder.add(self.card)
+        self.card.show_all()
+
+        width, _ = animate_window.prepare(monitor)
+        self._fly_in_surface = surface
+        animate_window.add_surface(surface, width + 1, y, 0)
+
+        def step(p: Animator, *_):
+            tilt = p.value if p.value < p.max_value / 2 else p.max_value - p.value
+            animate_window.move_surface(
+                surface, width - p.value + 1, y + 2, (tilt / 30) % 360, True
+            )
+
+        def finished(*_):
+            animate_window.destroy_surface(surface)
+            self._fly_in_surface = None
+            self._fly_in_anim = None
+            if self.leaving:
+                return
+            self.set_reveal_child(True)
+            self._start_timer()
+
+        self._fly_in_anim = Animator(
+            bezier_curve=(0.42, 0, 0.58, 1),
+            duration=1,
+            min_value=0,
+            max_value=surface.get_width(),
+            tick_widget=animate_window.drawing_area,
+            notify_value=step,
         )
+        self._fly_in_anim.connect("finished", finished)
+        self._fly_in_anim.play()
 
-        alloc = self.get_allocation()
+    def fly_out(self):
+        if self.leaving:
+            return
+        self.leaving = True
+        self._stop_timer()
+        self._on_hidden(self)
 
-        x = animate_window.get_allocated_width() - alloc.width
-        y = alloc.y
-        surface = self.offscreen_surface
-        bound_x = animate_window.get_allocated_width()
-        bound_y = animate_window.get_allocated_height()
+        if not self.get_child_revealed():
+            # still flying in: just stop
+            if self._fly_in_anim is not None:
+                self._fly_in_anim.stop()
+            if self._fly_in_surface is not None:
+                animate_window.destroy_surface(self._fly_in_surface)
+            self.destroy()
+            return
 
-        def do_animate_animator(p: Animator, *_):
+        surface = _snapshot(self.card)
+        y = self.get_allocation().y
+        self._start_fly_out(surface, y)
+
+        self.transition_type = "slide-up"
+        self.transition_duration = 500
+        self.set_reveal_child(False)
+
+    def _start_fly_out(self, surface: cairo.ImageSurface, y: float):
+        bound_x, bound_y = animate_window.prepare(self._monitor())
+        x = bound_x - surface.get_width()
+        animate_window.add_surface(surface, x, y, 0)
+
+        def step(p: Animator, *_):
             nonlocal x, y
-
             angle = -p.value % 360
             x -= p.value / 4
             y += p.value / 6
-
             if 0 <= x + surface.get_width() / 2 <= bound_x and 0 <= y <= bound_y:
                 animate_window.move_surface(surface, x, y, angle)
             else:
-                animate_window.destroy_surface(self.offscreen_surface)
+                animate_window.destroy_surface(surface)
+                GLib.idle_add(anim.stop)
 
         anim = Animator(
             bezier_curve=(0, 0, 1, 1),
@@ -330,82 +322,20 @@ class NotificationRevealer(Revealer):
             min_value=0,
             max_value=(360 * 5),
             tick_widget=animate_window.drawing_area,
-            notify_value=do_animate_animator,
+            notify_value=step,
             on_finished=lambda *_: animate_window.destroy_surface(surface),
         )
         anim.play()
 
-        self.transition_type = "slide-up"
-        self.transition_duration = 500
-        self.set_reveal_child(False)
-
-    def grab_offscreen(self, box_allocation: Gdk.Rectangle):
-        offscreen = Gtk.OffscreenWindow()
-        offscreen.get_style_context().add_class(Gtk.STYLE_CLASS_DND)
-        frame = Gtk.Frame()
-
-        nb = NotificationBox(self.notification)
-        frame.add(nb)
-        frame.show_all()
-
-        offscreen.add(frame)
-        offscreen.show()
-        alloc = frame.get_allocation()
-        frame.draw(cairo.Context(offscreen.get_surface()))
-        self.offscreen_surface = offscreen.get_surface()
-
-        animate_window.add_surface(
-            self.offscreen_surface,
-            animate_window.get_allocated_width() + 1,
-            (alloc.y + box_allocation.height),
-            0,
-        )
-        animate_window.pass_through = True
-        anim_alloc = animate_window.get_allocation()
-
-        def do_animate_animator(p: Animator, *_):
-            animate_window.move_surface(
-                self.offscreen_surface,
-                anim_alloc.width - p.value + 1,
-                (alloc.y + box_allocation.height) + 2,
-                (p.value / 30) % 360
-                if p.value < p.max_value // 2
-                else ((p.max_value - p.value) / 30) % 360,
-                True,
-            )
-
-        def on_anim_finished(*_):
-            # Hide surface
-            animate_window.move_surface(
-                self.offscreen_surface,
-                animate_window.get_allocated_width(),
-                animate_window.get_allocated_height(),
-                0,
-            )
-            self.emit("animation-done", True)
-            # last_frame.destroy()
-
-        anim = Animator(
-            bezier_curve=(0.42, 0, 0.58, 1),
-            duration=1,
-            min_value=0,
-            max_value=alloc.width,
-            tick_widget=animate_window.drawing_area,
-            notify_value=do_animate_animator,
-        )
-        anim.play()
-        anim.connect("finished", on_anim_finished)
-
-        offscreen.remove(frame)
-        frame.destroy()
-        offscreen.destroy()
-
-        # self.emit("animation_done", True)
+    def _monitor(self) -> Gdk.Monitor | None:
+        return _monitor_of(self)
 
 
 class NotificationPopup(WaylandWindow):
     def __init__(self):
-        self._server = Notifications()
+        self.center = config.notifications
+        # showing popups by notification id, oldest first
+        self._popups: dict[int, NotificationRevealer] = {}
         self.notifications = Box(
             v_expand=True,
             h_expand=True,
@@ -413,9 +343,9 @@ class NotificationPopup(WaylandWindow):
             orientation="v",
             spacing=5,
         )
-        self._server.connect("notification-added", self.on_new_notification)
-        # self._server.connect("notification-removed", self.on_notification_removed)
-        self._server.connect("notification-closed", self.on_notification_closed)
+        self.center.connect("notification-added", lambda _, n: self._show(n))
+        self.center.connect("notification-replaced", self._on_replaced)
+        self.center.connect("notification-removed", self._on_removed)
 
         super().__init__(
             anchor="top right",
@@ -425,12 +355,47 @@ class NotificationPopup(WaylandWindow):
             visible=True,
         )
 
-    def on_notification_closed(self, fabric_notif, id, reason):
-        pass
+    def _show(self, notification: Notification):
+        if not self.center.should_popup(notification):
+            return
+        if not self.center.dnd and not hint(notification, "suppress-sound"):
+            play_sound(SOUND_PATH)
 
-    def on_new_notification(self, fabric_notif, id):
-        play_sound(get_relative_path("../assets/sounds/notification.mp3"))
-        new_box = NotificationRevealer(fabric_notif.get_notification_from_id(id))
-        self.notifications.add(new_box)
-        new_box.grab_offscreen(self.notifications.get_allocation())
-        # new_box.set_reveal_child(True)
+        popup = NotificationRevealer(notification, on_hidden=self._forget)
+        self._popups[notification.id] = popup
+        self.notifications.add(popup)
+        popup.show()
+        # it lands at the bottom of the stack
+        popup.fly_in(self._monitor(), self.notifications.get_allocated_height())
+        self._limit()
+
+    def _limit(self):
+        # make room by hiding the oldest; critical ones stay until dismissed
+        popups = list(self._popups.values())
+        excess = len(popups) - MAX_POPUPS
+        for popup in popups:
+            if excess <= 0:
+                break
+            if not popup.card.hovered and popup.notification.urgency < URGENCY_CRITICAL:
+                popup.dismiss_popup()
+                excess -= 1
+
+    def _forget(self, popup: NotificationRevealer):
+        if self._popups.get(popup.notification.id) is popup:
+            del self._popups[popup.notification.id]
+
+    def _on_replaced(self, _, old_id: int, notification: Notification):
+        popup = self._popups.pop(old_id, None)
+        if popup is None:
+            self._show(notification)
+            return
+        popup.replace(notification)
+        self._popups[notification.id] = popup
+
+    def _on_removed(self, _, notification_id: int):
+        popup = self._popups.pop(notification_id, None)
+        if popup is not None:
+            popup.fly_out()
+
+    def _monitor(self) -> Gdk.Monitor | None:
+        return _monitor_of(self)

@@ -6,6 +6,7 @@ from fabric_config.services.brightness import Brightness
 from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.mpris_v2 import MprisPlayerManager
+from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
@@ -26,6 +27,8 @@ network = Network.get_default()
 theme = ThemeService()
 cava = Cava()  # audio levels, shared by whoever draws them
 wallpaper_accent = WallpaperAccent()
+# the notification server and its history (the notification center)
+notifications = NotificationCenter()
 
 
 # the whole theme's accent follows the wallpaper, tuned for light or dark
