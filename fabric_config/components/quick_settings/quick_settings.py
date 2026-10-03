@@ -14,6 +14,8 @@ from fabric_config.components.quick_settings.widgets.sliders import (
 from fabric_config.components.quick_settings.widgets.submenus import (
     BluetoothSubMenu,
     BluetoothToggle,
+    NightLightSubMenu,
+    NightLightToggle,
     WifiSubMenu,
     WifiToggle,
 )
@@ -25,21 +27,19 @@ from fabric_config.components.quick_settings.widgets.buttons.theme_toggle import
 
 gi.require_version("AstalNetwork", "0.1")
 from gi.repository import AstalNetwork as an  # noqa: E402
-from gi.repository import GObject  # noqa: E402
+from gi.repository import GObject, Gtk  # noqa: E402
 
 
-class QuickSettingsButtonBox(Box):
+class QuickSettingsButtonBox(Gtk.Grid):
     def __init__(self, **kwargs):
+        # a grid with equal columns keeps every toggle the same size, across
+        # rows too; each submenu spans both columns, right below its row
+        # (rows whose submenu is closed are empty, and get no spacing)
         super().__init__(
-            orientation="v",
-            spacing=4,
+            row_spacing=8,
+            column_spacing=8,
+            column_homogeneous=True,
             **kwargs,
-        )
-        self.buttons = Box(
-            orientation="h",
-            spacing=4,
-            v_align="center",
-            homogeneous=True,  # Ensures items are the same width
         )
         self.active_submenu = None
 
@@ -57,15 +57,31 @@ class QuickSettingsButtonBox(Box):
             client=config.bluetooth_client,
         )
 
-        self.buttons.pack_start(self.wifi_toggle, True, True, 0)
-        self.buttons.pack_start(self.bluetooth_toggle, True, True, 0)
+        # Night light (hyprsunset), beside the theme toggle on a second row
+        night_light_submenu = NightLightSubMenu(config.hyprsunset)
+        self.night_light_toggle = NightLightToggle(
+            submenu=night_light_submenu,
+            client=config.hyprsunset,
+        )
+        self.theme_toggle = ThemeToggle()
 
         self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
+        self.night_light_toggle.connect("reveal-clicked", self.set_active_submenu)
 
-        self.add(self.buttons)
-        self.add(wifi_submenu)
-        self.add(bluetooth_submenu)
+        rows: list[tuple[Gtk.Widget, ...]] = [
+            (self.wifi_toggle, self.bluetooth_toggle),
+            (wifi_submenu,),
+            (bluetooth_submenu,),
+            (self.night_light_toggle, self.theme_toggle),
+            (night_light_submenu,),
+        ]
+        for top, row in enumerate(rows):
+            for left, widget in enumerate(row):
+                widget.set_hexpand(True)
+                self.attach(widget, left, top, 2 // len(row), 1)
+        # plain GTK widgets start hidden, unlike fabric's
+        self.show()
 
     def set_active_submenu(self, btn: QuickSubToggle):
         if btn.submenu != self.active_submenu and self.active_submenu is not None:
@@ -89,10 +105,8 @@ class QuickSettings(Box):
         self.screen_bright_slider = BrightnessSlider(config.brightness)
         self.audio_slider_box = AudioSlider(config.audio)
         self.buttons_box = QuickSettingsButtonBox()
-        self.theme_toggle = ThemeToggle()
 
         self.add(self.buttons_box)
-        self.add(self.theme_toggle)
         self.add(self.audio_slider_box)
         self.add(self.screen_bright_slider)
         self.add(self.mprisBox)

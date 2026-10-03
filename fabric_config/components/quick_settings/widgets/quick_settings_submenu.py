@@ -7,6 +7,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.widget import Widget
 from fabric.core.service import Signal
 from fabric.utils import invoke_repeater
+from gi.repository import Gtk
 
 
 class QuickSubMenu(Box):
@@ -15,7 +16,7 @@ class QuickSubMenu(Box):
         child: Widget | None,
         title: str | None = None,
         title_icon: str | None = None,
-        title_action: Widget | None = None,
+        title_action: Gtk.Widget | None = None,
         **kwargs,
     ):
         self.title = title
@@ -112,7 +113,9 @@ class QuickSubToggle(Box):
             icon_name=action_icon,
             icon_size=pixel_size,
         )
-        self.action_label = Label(name="panel-text", label=action_label)
+        self.action_label = Label(
+            name="panel-text", label=action_label, ellipsization="end"
+        )
         self.action_button = Button(name="quicksettings-toggle-action")
         self.action_button.add(
             Box(
