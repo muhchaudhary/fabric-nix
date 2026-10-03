@@ -165,3 +165,16 @@
     background-color: a(var(--accent), 0.06);
   }
 }
+
+/* Per-app volume rows: the app icon mutes it */
+.app-volume-mute {
+  padding: 2px;
+  border-radius: $radius-sm;
+  @include transition(background-color opacity);
+
+  &:hover { background-color: a(var(--fg), 0.1); }
+}
+
+.app-volume.muted .app-volume-mute { opacity: 0.4; }
+
+.app-volume #quicksettings-slider { margin-bottom: 0px; }
