@@ -21,6 +21,7 @@ class DigitalFace(EventBox):
             events=["button-press"],
             child=self.time_label,
             h_align="center",
+            style_classes=["clickable"],
             tooltip_text="Click to start a focus timer",
         )
 
