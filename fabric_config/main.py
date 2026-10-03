@@ -21,6 +21,8 @@ from fabric_config.components.wallpaper_picker import wallpaper_picker
 
 from gi.repository import GLib
 
+from fabric_config.utils.cursors import install_pointer_cursors
+
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 CSS_CACHE = CACHE_DIR + "/css"
 CSS_PATH = CSS_CACHE + "/main.css"
@@ -32,6 +34,8 @@ if not os.path.exists(CSS_CACHE):
 
 class MyApp(Application):
     def __init__(self):
+        # a hand cursor over every button, before any window is built
+        install_pointer_cursors()
         self.sc = config.sc
         self.screen_corners = ScreenCorners()
         self.bar = StatusBarSeperated()

@@ -252,7 +252,10 @@ class DesktopWindow(WaylandWindow):
             name="clock-memory", max_chars_width=70, ellipsization="end"
         )
         self.memory = EventBox(
-            events=["button-press"], child=self.memory_label, h_align="center"
+            events=["button-press"],
+            child=self.memory_label,
+            h_align="center",
+            style_classes=["clickable"],
         )
         self.memory.connect("button-press-event", self._on_memory_press)
 

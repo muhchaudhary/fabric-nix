@@ -110,6 +110,7 @@ Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-s
 - `icon_resolver.py` — app icon lookup; use the shared `get_icon_resolver()` (instances share one cache file)
 - `process.py` — `run_command_async(argv, callback(success, stdout, stderr))`
 - `app_search.py` — app menu entries, search scoring, launch stats (`~/.cache/fabric/app_launcher/app_stats.json`), calculator, emoji lookup
+- `cursors.py` — `install_pointer_cursors()` (called in `main.py`): hand cursor over every `Gtk.Button`/`Switch`/`Scale` app-wide via an enter-notify emission hook (GTK3 ignores CSS `cursor`); other clickable widgets opt in with the `clickable` style class
 - `uri.py` — `file_uri_to_path()` (decodes `%20` etc.; don't slice `[7:]`)
 - `accent.py` — accent color extraction from images
 - `snippits/animator.py` — animation utility
