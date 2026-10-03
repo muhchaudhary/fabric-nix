@@ -143,14 +143,43 @@ class FxLayer(Gtk.DrawingArea):
             u * u * y0 + 2 * u * t * y1 + t * t * y2,
         )
 
-    def _draw_arc(self, cr: cairo.Context, w: int, h: int):
+    def _marks(self) -> tuple[dict[str, int], int, int] | None:
+        """Each prayer's minute of the day, and the arc's first and last."""
         try:
             marks = {name: _minutes(self.prayer_times[name]) for name in PRAYERS}
         except (KeyError, ValueError):
-            return
+            return None
         start, end = marks["Fajr"], marks["Isha"]
-        if end <= start:
+        return (marks, start, end) if end > start else None
+
+    def _label_size(self, h: int) -> float:
+        return max(13, h * 0.0145)
+
+    def arc_obstacles(self, w: int, h: int) -> list[tuple[float, float, float, float]]:
+        """
+        Where the arc and its labels are drawn, as small rectangles along
+        the curve with some room around them, for widgets to keep clear of.
+        """
+        if not self.show_arc or (found := self._marks()) is None:
+            return []
+        marks, start, end = found
+        pad = max(16.0, h * 0.02)
+        steps = 48
+        rects = []
+        for i in range(steps + 1):
+            x, y = self._arc_point(w, h, i / steps)
+            rects.append((x - pad, y - pad, 2 * pad, 2 * pad))
+        font = self._label_size(h)
+        label_w, label_h = font * 5, 18 + font * 1.6 + pad
+        for minute in marks.values():
+            x, y = self._arc_point(w, h, (minute - start) / (end - start))
+            rects.append((x - label_w / 2, y, label_w, label_h))
+        return rects
+
+    def _draw_arc(self, cr: cairo.Context, w: int, h: int):
+        if (found := self._marks()) is None:
             return
+        marks, start, end = found
         now = datetime.datetime.now()
         current = (now.hour * 60 + now.minute - start) / (end - start)
 
@@ -159,29 +188,54 @@ class FxLayer(Gtk.DrawingArea):
             for i in range(steps + 1):
                 cr.line_to(*self._arc_point(w, h, t0 + (t1 - t0) * i / steps))
 
+        # It crosses the whole screen, over light and dark parts of the
+        # wallpaper alike, so every stroke and label gets a soft halo in the
+        # opposite tone (like map labels) and reads over either.
+        halo = self._halo_rgb()
         cr.set_line_cap(cairo.LINE_CAP_ROUND)
-        cr.set_line_width(1.5)
-        path(0, 1)
-        cr.set_source_rgba(*self.ink, 0.18)
-        cr.stroke()
-        if current > 0:
-            path(0, min(1.0, current))
-            cr.set_source_rgba(*self.ink, 0.45)
+        cr.set_line_join(cairo.LINE_JOIN_ROUND)
+
+        def stroke_with_halo(width: float, alpha: float):
+            for halo_width, halo_alpha in ((width + 7, 0.3), (width + 3.5, 0.6)):
+                cr.set_line_width(halo_width)
+                cr.set_source_rgba(*halo, halo_alpha)
+                cr.stroke_preserve()
+            cr.set_line_width(width)
+            cr.set_source_rgba(*self.ink, alpha)
             cr.stroke()
 
+        path(0, 1)
+        stroke_with_halo(1.5, 0.4)
+        if current > 0:
+            path(0, min(1.0, current))
+            stroke_with_halo(2.5, 0.85)
+
         cr.select_font_face(
-            self.label_font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_NORMAL
+            self.label_font, cairo.FONT_SLANT_NORMAL, cairo.FONT_WEIGHT_BOLD
         )
-        cr.set_font_size(max(11, h * 0.011))
+        cr.set_font_size(self._label_size(h))
         for name, minute in marks.items():
             x, y = self._arc_point(w, h, (minute - start) / (end - start))
-            cr.arc(x, y, 3, 0, 2 * math.pi)
-            cr.set_source_rgba(*self.ink, 0.5)
+            cr.new_path()
+            cr.arc(x, y, 4, 0, 2 * math.pi)
+            cr.set_source_rgba(*halo, 0.5)
+            cr.set_line_width(4)
+            cr.stroke_preserve()
+            cr.set_source_rgba(*self.ink, 0.9)
             cr.fill()
+
             extents = cr.text_extents(name)
-            cr.move_to(x - extents.width / 2, y + 18 + extents.height)
-            cr.set_source_rgba(*self.ink, 0.45)
-            cr.show_text(name)
+            cr.new_path()
+            cr.move_to(
+                x - extents.width / 2 - extents.x_bearing, y + 18 + extents.height
+            )
+            cr.text_path(name)
+            for halo_width, halo_alpha in ((7, 0.35), (4, 0.75)):
+                cr.set_line_width(halo_width)
+                cr.set_source_rgba(*halo, halo_alpha)
+                cr.stroke_preserve()
+            cr.set_source_rgba(*self.ink, 0.9)
+            cr.fill()
 
         if 0 <= current <= 1:
             x, y = self._arc_point(w, h, current)
@@ -191,9 +245,20 @@ class FxLayer(Gtk.DrawingArea):
             cr.set_source(glow)
             cr.arc(x, y, 22, 0, 2 * math.pi)
             cr.fill()
-            cr.set_source_rgba(*self.ink, 0.95)
+            cr.new_path()
             cr.arc(x, y, 6, 0, 2 * math.pi)
+            cr.set_source_rgba(*halo, 0.6)
+            cr.set_line_width(4)
+            cr.stroke_preserve()
+            cr.set_source_rgba(*self.ink, 0.95)
             cr.fill()
+
+    def _halo_rgb(self) -> tuple[float, float, float]:
+        """Near-white behind dark ink, near-black behind light ink."""
+        r, g, b = self.ink
+        if 0.2126 * r + 0.7152 * g + 0.0722 * b < 0.5:
+            return (0.98, 0.97, 0.95)
+        return (0.04, 0.04, 0.07)
 
     def _draw_bars(self, cr: cairo.Context, w: int, h: int):
         count = len(self._bars)

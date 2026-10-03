@@ -358,6 +358,8 @@ class DesktopWindow(WaylandWindow):
         self.notes.set_visible(self.enabled("notes"))
         self._place_column()
         self.refresh()
+        # the arc, visualizer or music card may have come or gone
+        self._layout_soon()
 
     def _place_column(self):
         margin = self.sizes.margin
@@ -408,7 +410,9 @@ class DesktopWindow(WaylandWindow):
         self.update_meta()
         self.update_memory()
         self.update_color(now, prayer_times)
-        self.fx.prayer_times = prayer_times
+        if prayer_times != self.fx.prayer_times:
+            self.fx.prayer_times = prayer_times
+            self._layout_soon()  # the arc moved: keep the clock clear of it
         self.update_fx()
 
     def update_prayer(self):
@@ -544,7 +548,8 @@ class DesktopWindow(WaylandWindow):
                 stats.busyness + 0.02 * max(0.0, 7 - contrast) + HOME_WEIGHT * distance
             )
 
-        best = wall_map.calmest(width, height, bounds, self._avoid(), score)
+        avoid = self._avoid()
+        best = wall_map.calmest(width, height, bounds, avoid, score)
         if best is None:
             return None
         x, y, stats = best
@@ -553,6 +558,7 @@ class DesktopWindow(WaylandWindow):
             fits = (
                 bounds[0] <= old_x <= bounds[0] + bounds[2] - width
                 and bounds[1] <= old_y <= bounds[1] + bounds[3] - height
+                and wall_map.is_clear((old_x, old_y, width, height), avoid)
             )
             if fits:
                 current = score(
@@ -563,9 +569,10 @@ class DesktopWindow(WaylandWindow):
         return x, y
 
     def _avoid(self) -> list[tuple[float, float, float, float]]:
-        """Areas the clock shouldn't cover: this monitor's music card."""
+        """Areas the clock shouldn't cover: this monitor's music card and the
+        prayer arc."""
         pad = self.sizes.margin / 2
-        return [
+        areas = [
             (
                 w.x - pad,
                 w.y - pad,
@@ -575,6 +582,9 @@ class DesktopWindow(WaylandWindow):
             for w in self.manager.player_windows
             if w.monitor_name == self.monitor_name and w.get_visible()
         ]
+        if self.enabled("prayer_arc"):
+            areas += self.fx.arc_obstacles(*self._monitor_size())
+        return areas
 
     def _apply_legibility(self, stats: RegionStats):
         """Pick light or dark text for what's behind the clock, and lay a
