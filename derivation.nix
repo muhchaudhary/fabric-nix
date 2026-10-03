@@ -10,7 +10,7 @@
   psutil,
   requests,
   thefuzz,
-  colorthief,
+  pillow,
   toplevel-streamer,
   # Extra typelibs / tools supplied by the flake
   astal-depends ? [ ],
@@ -80,7 +80,7 @@ buildPythonApplication {
     psutil
     requests
     thefuzz
-    colorthief
+    pillow
     toplevel-streamer
   ];
 

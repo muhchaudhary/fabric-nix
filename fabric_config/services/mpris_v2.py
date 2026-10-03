@@ -96,8 +96,13 @@ class MprisPlayer(Service):
 
     @Property(dict, "readable")
     def metadata(self) -> dict:
-        prop: Variant | None = self._proxy.get_cached_property("Metadata")  # type: ignore
-        return dict(prop) if prop else {}  # type: ignore
+        # converting the Variant unpacks every field, and title/artist/length/
+        # arturl all read through here (several times a frame for animated
+        # widgets); convert once per change instead
+        if self._metadata is None:
+            prop: Variant | None = self._proxy.get_cached_property("Metadata")  # type: ignore
+            self._metadata = dict(prop) if prop else {}  # type: ignore
+        return self._metadata
 
     # RELY ON METADATA
     @Property(str, "readable")
@@ -190,6 +195,7 @@ class MprisPlayer(Service):
         self.bus_name: str = bus_name
         self._proxy: Gio.DBusProxy
         self._expected_status: Literal["Playing", "Paused", "Stopped"] | None = None
+        self._metadata: dict | None = None  # converted Metadata, until it changes
         self._expected_timeout: int | None = None
 
         # Ahoy!
@@ -263,7 +269,10 @@ class MprisPlayer(Service):
     def _do_handle_properties_changed(
         self, proxy: Gio.DBusProxy, changed_properties, invalidated_properties: str
     ):
-        if "PlaybackStatus" in changed_properties.keys():
+        changed = changed_properties.keys()
+        if "Metadata" in changed:
+            self._metadata = None
+        if "PlaybackStatus" in changed:
             self._clear_expected_status(notify=False)
         for prop_name in set(
             [

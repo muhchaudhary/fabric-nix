@@ -82,7 +82,7 @@
             psutil
             requests
             python-pam
-            colorthief
+            pillow # dominant colours of wallpapers and album art
             thefuzz
             python-fabric
             (callPackage ./nix/pywayland.nix {})
