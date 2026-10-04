@@ -1,13 +1,18 @@
 import datetime
+import json
 import os
 import shlex
+import signal
 import subprocess
+from time import monotonic as time_now
 from typing import Any, Callable
 
 from fabric.core.service import Property, Service, Signal
 from fabric.utils import exec_shell_command_async
 from gi.repository import Gio, GLib
 from loguru import logger
+
+from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 
 
 def exec_shell_command_async_ignore_stdout(
@@ -47,6 +52,15 @@ def exec_shell_command_async_ignore_stdout(
     return process, stdout
 
 
+def _focused_monitor() -> str | None:
+    try:
+        monitors = json.loads(get_hyprland_monitors().send_command("j/monitors").reply)
+    except Exception as e:
+        logger.error(f"[SCREENRECORD] Couldn't read monitors: {e}")
+        return None
+    return next((m["name"] for m in monitors if m.get("focused")), None)
+
+
 class ScreenRecorder(Service):
     @Signal
     def recording(self, value: bool) -> None: ...
@@ -55,6 +69,9 @@ class ScreenRecorder(Service):
         self.screenshot_path = GLib.get_home_dir() + "/Pictures/Screenshots"
         self.screenrecord_path = GLib.get_home_dir() + "/Videos/Screencasting/"
         self._current_screencast_path: str | None = None
+        self._recorder: Gio.Subprocess | None = None
+        # monotonic time the recording started, for the elapsed-time display
+        self.recording_since: float | None = None
 
         super().__init__(**kwargs)
 
@@ -94,7 +111,9 @@ class ScreenRecorder(Service):
             )
             return
         if fullscreen:
-            self._start_wf_recorder(None)
+            # with several monitors wf-recorder asks which one on stdin, and
+            # gives up; record the focused one
+            self._start_wf_recorder(None, output=_focused_monitor())
             return
 
         # run slurp asynchronously so selecting a region doesn't block the UI
@@ -117,32 +136,57 @@ class ScreenRecorder(Service):
 
         slurp.communicate_utf8_async(None, None, on_slurp_done)
 
-    def _start_wf_recorder(self, geometry: str | None):
+    def _start_wf_recorder(self, geometry: str | None, output: str | None = None):
         os.makedirs(self.screenrecord_path, exist_ok=True)
         time = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
         file_path = self.screenrecord_path + str(time) + ".mp4"
         command = ["wf-recorder", f"--file={file_path}", "--pixel-format", "yuv420p"]
         if geometry:
             command += ["-g", geometry]
+        elif output:
+            command += ["-o", output]
         try:
             # wf-recorder writes progress continuously; don't pipe its output, or
             # the unread pipe fills up and stalls the recording
-            Gio.Subprocess.new(
+            recorder = Gio.Subprocess.new(
                 command,
                 Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
             )
         except GLib.Error as e:
             logger.error(f"[SCREENRECORD] Failed to start wf-recorder: {e.message}")
             return
+        self._recorder = recorder
         self._current_screencast_path = file_path
+        self.recording_since = time_now()
+        # however it ends (stopped here, killed, crashed), finish up then
+        recorder.wait_async(None, self._on_recorder_exit)
         self.emit("recording", True)
 
     def screencast_stop(self):
-        exec_shell_command_async("killall -INT wf-recorder")
+        if self._recorder is not None:
+            # SIGINT lets wf-recorder finish writing the file
+            self._recorder.send_signal(signal.SIGINT)
+        else:
+            # one started outside fabric
+            exec_shell_command_async("killall -INT wf-recorder")
+            self.emit("recording", False)
+
+    def _on_recorder_exit(self, recorder: Gio.Subprocess, task: Gio.AsyncResult):
+        try:
+            recorder.wait_finish(task)
+        except GLib.Error as e:
+            logger.error(f"[SCREENRECORD] Waiting for wf-recorder failed: {e.message}")
+        if recorder is not self._recorder:
+            return
+        self._recorder = None
+        self.recording_since = None
         self.emit("recording", False)
         if self._current_screencast_path is None:
             return
-        self.send_screencast_notification(self._current_screencast_path)
+        if os.path.exists(self._current_screencast_path):
+            self.send_screencast_notification(self._current_screencast_path)
+        else:
+            logger.error("[SCREENRECORD] wf-recorder exited without saving a file")
         self._current_screencast_path = None
 
     def send_screencast_notification(self, file_path):
@@ -230,6 +274,8 @@ class ScreenRecorder(Service):
 
     @Property(bool, "readable", default_value=False)
     def is_recording(self) -> bool:
+        if self._recorder is not None:
+            return True
         # exec_shell_command returns False (not "") when it fails, and stderr
         # output when pidof finds nothing, so use the exit status instead
         return subprocess.run(["pidof", "-q", "wf-recorder"]).returncode == 0

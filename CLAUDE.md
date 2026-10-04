@@ -78,7 +78,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 
 - `brightness.py` — Screen/keyboard brightness (writes via `brightnessctl`, throttled)
 - `mpris_v2.py` — `MprisPlayerManager` for media player control. `play_pause()` reports the expected status at once until the player confirms it; `fetch_position()` reads the live position (the cached `Position` goes stale)
-- `screen_record.py` — Screen recording/screenshot via wf-recorder/slurp/hyprshot
+- `screen_record.py` — Screen recording/screenshot via wf-recorder/slurp/hyprshot. Keeps the wf-recorder process: `recording` (False) fires whenever it exits, however it ends; `recording_since` is its start (monotonic). Fullscreen records the focused monitor (`-o`: with several, wf-recorder would prompt on stdin and quit)
 - `clipboard_history.py` — cliphist-backed clipboard history
 - `cava.py` — shared cava audio levels (`config.cava`); callers `set_wanted(owner, bool)` and it runs while anyone wants it
 - `theme.py` — light/dark switching (GTK theme, icon theme, dconf)

@@ -100,3 +100,9 @@
 /* Panel icon/text sizing */
 #panel-icon { margin-left: 2px; margin-right: 2px; font-size: 16px; }
 #panel-text  { margin-top: 1px; font-size: 14px; font-weight: 700; }
+
+/* Screen recording indicator: red dot and elapsed time */
+#recording-indicator {
+  image { color: var(--red); }
+  label { font-weight: 700; font-feature-settings: "tnum"; }
+}
