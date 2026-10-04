@@ -7,6 +7,7 @@ default for that monitor. Older files only have "path" and still load.
 """
 
 import json
+import mimetypes
 import os
 from typing import Callable
 
@@ -15,6 +16,7 @@ from gi.repository import GLib
 from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 from fabric_config.utils.process import run_command_async
 
+WALLPAPER_DIR = os.path.join(GLib.get_home_dir(), "wallpapers")
 LAST_WALLPAPER_FILE = os.path.join(
     GLib.get_user_cache_dir(), "fabric", "wallpaper-picker", "last_selected.json"
 )
@@ -127,3 +129,23 @@ def restore_wallpapers():
         path = wallpaper_for_monitor(monitor["name"])
         if path:
             apply_wallpaper(path, [monitor["name"]])
+
+
+def list_wallpapers() -> list[str]:
+    """Image file names in WALLPAPER_DIR, most recently modified first."""
+    entries = []
+    try:
+        with os.scandir(WALLPAPER_DIR) as it:
+            for entry in it:
+                file_type = mimetypes.guess_type(entry.name)[0]
+                if not (file_type and file_type.startswith("image/")):
+                    continue
+                try:
+                    mtime = entry.stat().st_mtime
+                except OSError:
+                    continue
+                entries.append((mtime, entry.name))
+    except OSError:
+        return []
+    entries.sort(key=lambda e: (-e[0], e[1].lower()))
+    return [name for _, name in entries]

@@ -15,6 +15,7 @@ from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.system_stats import SystemStats
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
+from fabric_config.services.wallpaper_slideshow import WallpaperSlideshow
 from fabric_config.services.window_previews import WindowPreviews
 from fabric_config.utils.process import run_command_async
 
@@ -47,6 +48,8 @@ caffeine = Caffeine()
 power_profiles = PowerProfiles()
 # CPU/GPU/memory/network load and sensors, sampled each second
 system_stats = SystemStats()
+# a new wallpaper every so often (off until switched on in the picker)
+wallpaper_slideshow = WallpaperSlideshow()
 
 
 # the whole theme's accent follows the wallpaper, tuned for light or dark

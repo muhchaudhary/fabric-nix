@@ -1,4 +1,3 @@
-import mimetypes
 import os
 from collections.abc import Callable
 
@@ -14,17 +13,21 @@ from gi.repository import GdkPixbuf, Gio, GLib, Gtk
 from loguru import logger
 
 from fabric_config.utils.process import run_command_async
+import fabric_config.config as config
+from fabric_config.services.wallpaper_slideshow import INTERVALS
 from fabric_config.utils.wallpaper import (
+    WALLPAPER_DIR,
     apply_wallpaper,
     list_monitors,
+    list_wallpapers,
     query_active_wallpapers,
     restore_wallpapers,
     save_wallpaper,
 )
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+from fabric_config.widgets.toggle_pill import ToggleSwitch
 from fabric_config.widgets.rounded_cover_image import RoundedCoverImage
 
-WALLPAPER_DIR = os.path.join(GLib.get_home_dir(), "wallpapers")
 WALLPAPER_THUMBS_DIR = os.path.join(WALLPAPER_DIR, ".thumbs")
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 WALLPAPER_CACHE = CACHE_DIR + "/wallpaper-picker"
@@ -66,23 +69,6 @@ def _load_pixbuf_async(path: str, callback):
         GdkPixbuf.Pixbuf.new_from_stream_async(stream, None, on_pixbuf)
 
     Gio.File.new_for_path(path).read_async(GLib.PRIORITY_DEFAULT, None, on_read)
-
-
-def _list_wallpapers() -> list[str]:
-    """Image file names in WALLPAPER_DIR, most recently modified first."""
-    entries = []
-    with os.scandir(WALLPAPER_DIR) as it:
-        for entry in it:
-            file_type = mimetypes.guess_type(entry.name)[0]
-            if not (file_type and file_type.startswith("image/")):
-                continue
-            try:
-                mtime = entry.stat().st_mtime
-            except OSError:
-                continue
-            entries.append((mtime, entry.name))
-    entries.sort(key=lambda e: (-e[0], e[1].lower()))
-    return [name for _, name in entries]
 
 
 class WallpaperCard(Button):
@@ -239,7 +225,7 @@ class WallpaperGrid(ScrolledWindow):
         self._built = True
         self._monitors = list_monitors()
 
-        names = _list_wallpapers()
+        names = list_wallpapers()
         for name in names:
             card = WallpaperCard(
                 name, on_set=self._set_wallpaper, get_monitors=lambda: self._monitors
@@ -307,6 +293,7 @@ class WallPaperPickerOverlay(PopupWindow):
         )
         header = CenterBox(
             name="wallpaper-picker-header",
+            center_children=self._slideshow_controls(),
             start_children=Box(
                 orientation="v",
                 children=[
@@ -321,11 +308,6 @@ class WallPaperPickerOverlay(PopupWindow):
             end_children=Box(
                 spacing=12,
                 children=[
-                    Label(
-                        "Click: all monitors · Right-click: choose monitor",
-                        name="wallpaper-picker-hint",
-                        v_align="center",
-                    ),
                     open_folder_button,
                 ],
             ),
@@ -353,6 +335,76 @@ class WallPaperPickerOverlay(PopupWindow):
         )
         self._apply_last_selected_wallpaper()
 
+    def _slideshow_controls(self) -> Box:
+        slideshow = config.wallpaper_slideshow
+
+        def interval_text() -> str:
+            minutes = slideshow.interval
+            return (
+                f"Every {minutes // 60} h" if minutes >= 60 else f"Every {minutes} min"
+            )
+
+        def cycle_interval(button: Button):
+            index = (
+                INTERVALS.index(slideshow.interval)
+                if slideshow.interval in INTERVALS
+                else 0
+            )
+            slideshow.interval = INTERVALS[(index + 1) % len(INTERVALS)]
+            button.set_label(interval_text())
+
+        def toggle_day_night(button: Button):
+            slideshow.day_night = not slideshow.day_night
+            sync_chip(button, slideshow.day_night)
+
+        def sync_chip(button: Button, active: bool):
+            if active:
+                button.add_style_class("active")
+            else:
+                button.remove_style_class("active")
+
+        switch = ToggleSwitch(
+            active=slideshow.enabled,
+            on_toggled=lambda active: setattr(slideshow, "enabled", active),
+        )
+        switch.set_valign(Gtk.Align.CENTER)
+        interval = Button(
+            label=interval_text(),
+            name="wallpaper-slideshow-chip",
+            tooltip_text="How often it changes",
+            on_clicked=cycle_interval,
+        )
+        day_night = Button(
+            label="Day & night",
+            name="wallpaper-slideshow-chip",
+            tooltip_text="Brighter wallpapers by day, darker ones after sunset",
+            on_clicked=toggle_day_night,
+        )
+        sync_chip(day_night, slideshow.day_night)
+        next_button = Button(
+            name="wallpaper-slideshow-chip",
+            tooltip_text="Next wallpaper",
+            image=Image(icon_name="media-skip-forward-symbolic", icon_size=14),
+            on_clicked=lambda *_: (
+                slideshow.next(),
+                GLib.timeout_add(
+                    400, lambda: self.wallpaper_grid.refresh_assignments() or False
+                ),
+            ),
+        )
+        return Box(
+            name="wallpaper-slideshow",
+            spacing=8,
+            v_align="center",
+            children=[
+                Label("Slideshow", name="wallpaper-slideshow-label"),
+                switch,
+                interval,
+                day_night,
+                next_button,
+            ],
+        )
+
     def _apply_last_selected_wallpaper(self):
         # each monitor gets its own saved wallpaper back
         restore_wallpapers()
@@ -364,6 +416,7 @@ class WallPaperPickerOverlay(PopupWindow):
             folder = WALLPAPER_DIR.replace(GLib.get_home_dir(), "~")
             self.count_label.set_label(
                 f"{count} image{'s' if count != 1 else ''} · {folder}"
+                " · right-click to pick a monitor"
             )
 
 
