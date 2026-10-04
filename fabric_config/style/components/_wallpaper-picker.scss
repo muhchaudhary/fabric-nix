@@ -77,3 +77,28 @@
   padding: 40px;
   color: var(--fg-dim);
 }
+
+/* Slideshow controls in the header */
+#wallpaper-slideshow-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-dim);
+}
+
+#wallpaper-slideshow-chip {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: $radius-pill;
+  font-size: 12px;
+  font-weight: 600;
+  background-color: a(var(--fg), 0.06);
+  border: 1px solid a(var(--fg), 0.08);
+  @include transition(background-color color border-color);
+
+  &:hover { background-color: a(var(--fg), 0.12); }
+
+  &.active {
+    background-color: a(var(--accent), 0.25);
+    border-color: a(var(--accent), 0.5);
+  }
+}
