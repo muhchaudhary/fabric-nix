@@ -6,7 +6,7 @@
 
 * {
   all: unset;
-  font-family: "Roboto", "Helvetica Neue", sans-serif;
+  font-family: $font-ui;
   font-weight: 500;
   font-size: 15px;
   color: var(--fg);
@@ -19,7 +19,6 @@ tooltip {
   @include glass(10px);
 
   label {
-    font-family: "Roboto", "Helvetica Neue", sans-serif;
     font-weight: 500;
     font-size: 13px;
   }

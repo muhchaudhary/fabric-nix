@@ -10,8 +10,8 @@
   border-style: solid;
   border-width: 2px;
   border-radius: 5px;
-  @include transition(border-color background-color color, 0.4s);
-  font-family: "Roboto", "Helvetica Neue", sans-serif;
+  @include transition(border-color background-color color, $dur-slow);
+  font-family: $font-ui;
 
   &.default  { color: var(--fg);     border-color: a(var(--accent), 0.9); background-color: a(var(--accent), 0.3);  }
   &.charging { color: var(--green);  border-color: a(var(--green), 0.9);  background-color: a(var(--green), 0.25); }

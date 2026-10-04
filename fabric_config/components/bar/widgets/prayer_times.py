@@ -351,7 +351,9 @@ class PrayerTimesButton(Button):
             style_classes=["button-basic", "button-basic-props", "button-border"],
             **kwargs,
         )
-        self.prayer_button_label = Label(label="Prayer Times", name="panel-text")
+        self.prayer_button_label = Label(
+            label="Prayer Times", name="panel-text", style_classes=["tnum"]
+        )
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)

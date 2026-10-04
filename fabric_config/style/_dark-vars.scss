@@ -17,18 +17,18 @@
   --fg-dim2:              #7f849c;
   --fg-dim2-transparent:  alpha(#7f849c, 0.45);
 
-  /* Accent */
-  --accent: #b3aeae;
+  /* Accent: until the wallpaper's colour is known (wallpaper_accent overrides @accent) */
+  --accent: #b4befe;
 
-  /* Semantic colors */
-  --red:    #ff453a;  --red-dim:    #c0392b;
-  --green:  #32d74b;  --green-dim:  #27ae60;
-  --yellow: #ffd60a;  --yellow-dim: #f39c12;
-  --blue:   #0a84ff;  --blue-dim:   #2471a3;
-  --purple: #bf5af2;  --purple-dim: #8e44ad;
-  --aqua:   #5ac8fa;  --aqua-dim:   #1abc9c;
-  --gray:   #98989f;  --gray-dim:   #6e6e73;
-  --orange: #ff9f0a;  --orange-dim: #e67e22;
+  /* Semantic colors - Catppuccin Mocha, like the light theme's Latte */
+  --red:    #f38ba8;  --red-dim:    #d2648a;
+  --green:  #a6e3a1;  --green-dim:  #7cc477;
+  --yellow: #f9e2af;  --yellow-dim: #dcbf7f;
+  --blue:   #89b4fa;  --blue-dim:   #5d8fe0;
+  --purple: #cba6f7;  --purple-dim: #a77fdc;
+  --aqua:   #94e2d5;  --aqua-dim:   #68c2b2;
+  --gray:   #9399b2;  --gray-dim:   #6c7086;
+  --orange: #fab387;  --orange-dim: #e08e5a;
 
   --placeholder_text_color: alpha(#cdd6f4, 0.35);
 }

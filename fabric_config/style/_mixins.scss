@@ -3,10 +3,10 @@
 
 // Standard interactive transition — emits `transition: prop dur ease, ...` shorthand.
 // GTK CSS only accepts a single value for transition-property; shorthand handles multiple.
-@mixin transition($props: background-color color border-color, $dur: 0.15s) {
+@mixin transition($props: background-color color border-color, $dur: $dur-fast, $ease: $ease-out) {
   $result: ();
   @each $prop in $props {
-    $result: list.append($result, $prop $dur ease, $separator: comma);
+    $result: list.append($result, $prop $dur $ease, $separator: comma);
   }
   transition: #{$result};
 }

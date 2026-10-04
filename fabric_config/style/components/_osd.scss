@@ -36,7 +36,7 @@ levelbar.osd-level {
   block {
     border-radius: $radius-pill;
     min-width: 10px;
-    @include transition(background-color, 0.2s);
+    @include transition(background-color, $dur-med);
 
     &.filled { background-color: var(--fg); }
     &.empty  { background-color: transparent; }

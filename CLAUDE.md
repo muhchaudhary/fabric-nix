@@ -101,9 +101,9 @@ SCSS, compiled with `sass` (dart-sass) at startup into `~/.cache/fabric/css/main
 
 - `main.scss` / `main-light.scss` — entry points; each only picks a palette (`_dark-vars.scss` / `_light-vars.scss`) and uses `_base.scss`
 - `_base.scss` — shared root rules; pulls in global classes and components
-- `_tokens.scss` — radius/spacing scales and the GTK-safe `a()` (alpha) / `m()` (mix) functions (dart-sass would otherwise intercept `alpha()`/`mix()`)
+- `_tokens.scss` — radius/spacing scales, type (`$font-ui`: Inter everywhere; cairo-drawn text uses "Inter" too) and motion (`$dur-fast/med/slow`, `$ease-out`, `$ease-spring`; the `transition` mixin defaults to them), and the GTK-safe `a()` (alpha) / `m()` (mix) functions (dart-sass would otherwise intercept `alpha()`/`mix()`)
 - `_mixins.scss` — `glass` (tint, hairline edge, bright top rim), `panel` (glass + padding), `floating-shadow`, `bordered`, `transition`
-- `_global-classes.scss` — shared utility classes (`.button-basic`, `.button-border`, `.cool-border`, etc.)
+- `_global-classes.scss` — shared utility classes (`.tnum` for tabular digits on changing numbers, `.button-basic`, `.button-border`, `.cool-border`, etc.)
 - `components/` — per-component partials, registered in `components/_components.scss`
 
 Palette variables live in a `:vars {}` block and are used as `var(--fg)`, `var(--accent)`, etc. (Fabric's CSS preprocessing; plain GTK3 has no CSS variables). Fabric compiles them to `@define-color`/`@name`, and GTK takes a named colour from the highest-priority provider that defines it: `config.wallpaper_accent` overrides `@accent` that way, so the accent follows the wallpaper without recompiling SCSS. Between providers GTK goes by priority, not selector specificity.
