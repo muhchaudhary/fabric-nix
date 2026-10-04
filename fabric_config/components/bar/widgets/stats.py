@@ -187,7 +187,7 @@ class SystemTemps(Button):
         super().__init__(
             style_classes=["button-basic", "button-basic-props", "button-border"],
             tooltip_text="System monitor",
-            on_clicked=lambda *_: SystemStatsPopup.toggle_popup(),
+            on_clicked=lambda *_: self._toggle_popup(),
             **kwargs,
         )
 
@@ -211,6 +211,12 @@ class SystemTemps(Button):
         SystemStatsPopup.reveal_child.revealer.connect(
             "notify::reveal-child", lambda *_: self._on_popup_toggled()
         )
+
+    def _toggle_popup(self):
+        # drop down right under this button, not at the screen's corner
+        if not SystemStatsPopup.popup_visible:
+            SystemStatsPopup.place_under(self)
+        SystemStatsPopup.toggle_popup()
 
     def _on_popup_toggled(self):
         visible = SystemStatsPopup.popup_visible
