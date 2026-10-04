@@ -1,0 +1,8 @@
+@use '../tokens' as *;
+
+/* Radial quick menu: drawn in cairo from these colours (no blur behind it) */
+#radial-menu {
+  color: var(--fg);
+  background-color: a(var(--bg), 0.8);
+  border-color: a(var(--fg), 0.12);
+}

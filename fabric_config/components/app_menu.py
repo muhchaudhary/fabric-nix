@@ -20,6 +20,7 @@ from fabric_config.utils.app_search import (
     parse_color,
     search_emoji,
 )
+from fabric_config.utils.color_picker import pick_color
 from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 from fabric_config.utils.hyprland_windows import (
     close_window,
@@ -693,32 +694,8 @@ class AppMenu(PopupWindow):
         GLib.timeout_add(150, lambda: self.refresh() or False)
 
     def pick_color(self):
-        def on_picked(success: bool, stdout: str, stderr: str):
-            color = stdout.strip()
-            if not success or not color:
-                # Escape cancels the picker; that's not worth a warning
-                if stderr.strip():
-                    logger.warning(f"[App Menu] hyprpicker: {stderr.strip()}")
-                return
-            run_command_async(["wl-copy", "--", color])
-            run_command_async(
-                [
-                    "notify-send",
-                    "-a",
-                    "Colour Picker",
-                    "-i",
-                    "color-select-symbolic",
-                    f"Copied {color}",
-                ]
-            )
-
         self.close()
-
-        def start():
-            run_command_async(["hyprpicker", "-f", "hex"], on_picked)
-            return False
-
-        GLib.timeout_add(CLOSE_DELAY_MS, start)
+        pick_color(CLOSE_DELAY_MS)
 
     def copy(self, text: str):
         run_command_async(["wl-copy", "--", text])
