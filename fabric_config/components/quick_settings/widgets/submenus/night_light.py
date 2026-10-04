@@ -130,7 +130,8 @@ class NightLightToggle(QuickSubToggle):
     def __init__(self, submenu: QuickSubMenu, client: Hyprsunset, **kwargs):
         super().__init__(
             action_icon="night-light-symbolic",
-            action_label=" Night Light",
+            action_label="Off",
+            title="Night Light",
             submenu=submenu,
             **kwargs,
         )
@@ -138,10 +139,17 @@ class NightLightToggle(QuickSubToggle):
         self.connect("action-clicked", lambda *_: client.toggle())
         client.connect("notify::enabled", self.update_action_button)
         client.connect("notify::available", self.update_action_button)
+        client.connect("notify::temperature", self.update_action_button)
         self.update_action_button()
 
     def update_action_button(self, *_):
         self.set_active_style(self.client.enabled)
+        if not self.client.available:
+            self.action_label.set_label("Unavailable")
+        else:
+            self.action_label.set_label(
+                f"{self.client.temperature} K" if self.client.enabled else "Off"
+            )
         self.set_action_icon(
             "night-light-symbolic"
             if self.client.enabled

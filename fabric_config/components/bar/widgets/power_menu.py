@@ -239,9 +239,20 @@ class PowerMenuPopup(PopupWindow):
         return super().toggle_popup(monitor=True)
 
 
+_power_menu: PowerMenuPopup | None = None
+
+
+def get_power_menu() -> PowerMenuPopup:
+    """The one power menu, opened from the bar and from quick settings."""
+    global _power_menu
+    if _power_menu is None:
+        _power_menu = PowerMenuPopup()
+    return _power_menu
+
+
 class PowerMenuButton(Button):
     def __init__(self):
-        self.powermenu_popup = PowerMenuPopup()
+        self.powermenu_popup = get_power_menu()
         super().__init__(
             style_classes=["button-basic", "button-basic-props", "button-border"],
             child=Image(

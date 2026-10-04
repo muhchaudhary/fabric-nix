@@ -27,14 +27,40 @@
 
     button image,
     button label { color: var(--bg); }
+    #quicksettings-tile-status { color: a(var(--bg), 0.7); }
   }
+
+  /* on, but nothing connected: tinted, not filled */
+  &.partial {
+    button {
+      background-color: a(var(--accent), 0.16);
+      border-color: a(var(--accent), 0.35);
+
+      &:hover { background-color: a(var(--accent), 0.24); }
+    }
+
+    button image { color: var(--accent); }
+  }
+}
+
+/* Two lines: what it is, and its state (network, "Off", ...) */
+#quicksettings-tile-title {
+  font-size: 13.5px;
+  font-weight: 700;
+}
+
+#quicksettings-tile-status {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: var(--fg-dim);
 }
 
 /* Standalone full-width toggle (no revealer) */
 #quicksettings-toggle-standalone {
   border-radius: $radius-md;
   min-width: 230px;
-  min-height: 38px;
+  min-height: 50px;
+  padding: 0 $gap-md;
   border-style: solid;
   border-width: 1px;
   border-color: a(var(--fg), 0.1);
@@ -43,7 +69,8 @@
 /* Left pill: main action */
 #quicksettings-toggle-action {
   border-radius: $radius-md 0px 0px $radius-md;
-  min-height: 38px;
+  min-height: 50px;
+  padding: 0 $gap-md;
   border-style: solid;
   border-width: 1px 0px 1px 1px;
   border-color: a(var(--fg), 0.1);

@@ -92,6 +92,7 @@ class QuickSubToggle(Box):
         action_icon: str = "package-x-generic-symbolic",
         pixel_size: int = 20,
         submenu: QuickSubMenu | None = None,
+        title: str | None = None,
         **kwargs,
     ):
         self.pixel_size = pixel_size
@@ -113,15 +114,34 @@ class QuickSubToggle(Box):
             icon_name=action_icon,
             icon_size=pixel_size,
         )
+        # a fixed title, and a status line under it (action_label: the
+        # network, "Not connected", "Off", ...)
+        self.title_label = Label(
+            name="quicksettings-tile-title",
+            label=title or action_label,
+            h_align="start",
+            ellipsization="end",
+        )
         self.action_label = Label(
-            name="panel-text", label=action_label, ellipsization="end"
+            name="quicksettings-tile-status",
+            label=action_label,
+            h_align="start",
+            ellipsization="end",
         )
         self.action_button = Button(name="quicksettings-toggle-action")
         self.action_button.add(
             Box(
+                spacing=10,
                 h_align="start",
                 v_align="center",
-                children=[self.action_icon, self.action_label],
+                children=[
+                    self.action_icon,
+                    Box(
+                        orientation="v",
+                        v_align="center",
+                        children=[self.title_label, self.action_label],
+                    ),
+                ],
             )
         )
 
@@ -161,7 +181,11 @@ class QuickSubToggle(Box):
         invoke_repeater(10, do_animate)
 
     def set_active_style(self, action: bool) -> None:
-        self.style_classes = ["active"] if action else [""]
+        self.set_state("on" if action else "off")
+
+    def set_state(self, state: str) -> None:
+        """ "on" (filled), "partial" (on, but nothing connected) or "off"."""
+        self.style_classes = {"on": ["active"], "partial": ["partial"]}.get(state, [""])
 
     def set_action_label(self, label: str):
         self.action_label.set_label(label)

@@ -406,7 +406,8 @@ class WifiToggle(QuickSubToggle):
     def __init__(self, submenu: QuickSubMenu, client: an.Network, **kwargs):
         super().__init__(
             action_icon="network-wireless-disabled-symbolic",
-            action_label=" Wifi Disabled",
+            action_label="Off",
+            title="Wi-Fi",
             submenu=submenu,
             **kwargs,
         )
@@ -418,25 +419,27 @@ class WifiToggle(QuickSubToggle):
         wifi = self.client.get_wifi()
         if wifi:
             self.action_icon.set_from_icon_name(wifi.get_icon_name() + "-symbolic", 24)
-            self.action_label.set_label(
-                wifi.get_ssid() if wifi.get_ssid() else "Not Connected"
-            )
-            self.set_active_style(wifi.get_enabled())
 
-            wifi.connect(
-                "notify::enabled",
-                lambda *_: [
-                    self.set_active_style(wifi.get_enabled()),
-                    self.action_label.set_label("Wifi Disabled")
-                    if not wifi.get_enabled()
-                    else self.action_label.set_label(wifi.get_ssid()),
-                ],
-            )
+            def update(*_):
+                # filled when connected; tinted when on but not connected
+                ssid = wifi.get_ssid()
+                if not wifi.get_enabled():
+                    self.set_state("off")
+                    self.action_label.set_label("Off")
+                elif ssid:
+                    self.set_state("on")
+                    self.action_label.set_label(ssid)
+                else:
+                    self.set_state("partial")
+                    self.action_label.set_label("Not connected")
+
+            wifi.connect("notify::enabled", update)
+            wifi.connect("notify::ssid", update)
+            update()
 
             # AstalNetwork objects are plain GObjects, not fabric Services, so
             # they have bind_property() but no fabric-style bind()
             wifi.bind_property("icon-name", self.action_icon, "icon-name")
-            wifi.bind_property("ssid", self.action_label, "label")
 
     def on_action(self, _btn):
         wifi: an.Wifi | None = self.client.get_wifi()
