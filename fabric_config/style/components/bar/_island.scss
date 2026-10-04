@@ -1,0 +1,39 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+/* Dynamic island: the bar's centre (see components/bar/island.py) */
+#island-chip {
+  margin-left: $gap-xs;
+  padding: 3px $gap-sm 3px 3px;
+  border-radius: $radius-sm;
+  background-color: a(var(--fg), 0.08);
+}
+
+#island-bars { color: var(--accent); }
+#island-art  { color: var(--fg); }
+
+#island-media,
+#island-event { padding: 0 $gap-xs; }
+
+#island-title {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+#island-subtitle {
+  font-size: 11px;
+  color: var(--fg-dim);
+}
+
+#island-event-icon { color: var(--accent); }
+
+#island-control {
+  min-width: 26px;
+  min-height: 26px;
+  padding: 0;
+  border-radius: 50%;
+  @include transition(background-color color);
+
+  &:hover  { background-color: a(var(--fg), 0.12); }
+  &:active { background-color: a(var(--accent), 0.6); }
+}
