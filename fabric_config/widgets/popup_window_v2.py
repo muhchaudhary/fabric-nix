@@ -239,6 +239,9 @@ class PopupWindow(WaylandWindow):
         namespace: str = "fabric-popup",
     ):
         self._layer = layer
+        # (not _anchor: WaylandWindow keeps its layer-shell anchor there)
+        self._popup_anchor = anchor
+        self._placed_under: Widget | None = None
         self.timeout = timeout
         self.currtimeout = 0
         self.popup_running = False
@@ -274,6 +277,55 @@ class PopupWindow(WaylandWindow):
             ),
             on_key_release_event=self.on_key_release,
         )
+
+    def place_under(self, widget: Widget, edge_gap: int = 6):
+        """
+        Centre a top-left or top-right popup under `widget` (a bar button),
+        kept `edge_gap` px clear of the screen's sides. The popup's window
+        spans the monitor like the bar, so bar coordinates are screen ones.
+        Placed again once the content is laid out, when its width is known.
+        """
+        self._placed_under = widget
+        self._edge_gap = edge_gap
+        content = self.reveal_child.revealer.get_child()
+        if content is not None and not getattr(self, "_placing_hooked", False):
+            self._placing_hooked = True
+            content.connect(
+                "size-allocate",
+                # not during allocation: changing a margin there re-queues it
+                lambda *_: GLib.idle_add(lambda: self._place() or False),
+            )
+        self._place()
+
+    def _place(self):
+        widget = self._placed_under
+        if widget is None:
+            return
+        toplevel = widget.get_toplevel()
+        coords = widget.translate_coordinates(
+            toplevel, widget.get_allocated_width() // 2, 0
+        )
+        if coords is None:
+            return
+        center = coords[0]
+        screen = toplevel.get_allocated_width()
+        # the content's laid-out width once it's showing; its preferred one
+        # before (the revealer is hidden while the popup's closed)
+        content = self.reveal_child.revealer.get_child() or self.reveal_child
+        width = content.get_allocated_width()
+        if width <= 1:
+            width = content.get_preferred_width()[1]
+        width += 2  # PopupRevealer's decoration padding, either side
+        left = round(center - width / 2)
+        left = max(self._edge_gap, min(left, screen - width - self._edge_gap))
+        if self._popup_anchor == "top-right":
+            margin = max(0, screen - left - width)
+            if self.reveal_child.get_margin_end() != margin:
+                self.reveal_child.set_margin_end(margin)
+        elif self._popup_anchor == "top-left":
+            margin = max(0, left)
+            if self.reveal_child.get_margin_start() != margin:
+                self.reveal_child.set_margin_start(margin)
 
     def on_key_release(self, _, event_key: Gdk.EventKey):
         if event_key.keyval == Gdk.KEY_Escape:
