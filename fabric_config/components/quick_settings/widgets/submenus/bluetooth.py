@@ -278,8 +278,9 @@ class BluetoothSubMenu(QuickSubMenu):
 class BluetoothToggle(QuickSubToggle):
     def __init__(self, submenu: QuickSubMenu, client: BluetoothClient, **kwargs):
         super().__init__(
-            action_label="Not Connected",
+            action_label="Not connected",
             action_icon="bluetooth-active-symbolic",
+            title="Bluetooth",
             submenu=submenu,
             **kwargs,
         )
@@ -301,7 +302,7 @@ class BluetoothToggle(QuickSubToggle):
     def _connected_label(self) -> str:
         connected = self.client.connected_devices
         if not connected:
-            return "Not Connected"
+            return "Not connected"
         device = connected[0]
         percentage = read_battery_percentage(device, self._battery_proxy)
         return f"{device.name} · {percentage}%" if percentage > 0 else device.name
@@ -331,6 +332,8 @@ class BluetoothToggle(QuickSubToggle):
     def _refresh_label(self):
         if self.client.enabled:
             self.action_label.set_label(self._connected_label())
+            # filled with a device connected; tinted when just switched on
+            self.set_state("on" if self.client.connected_devices else "partial")
 
     def toggle_bluetooth(self, client: BluetoothClient, *_):
         if client.enabled:
@@ -339,11 +342,11 @@ class BluetoothToggle(QuickSubToggle):
             # Don't clobber an already-connected device's name: this fires on
             # notify::enabled, which resolves asynchronously at startup.
             self._watch_battery()
-            self.action_label.set_label(self._connected_label())
+            self._refresh_label()
         else:
             self.set_active_style(False)
             self.action_icon.set_from_icon_name("bluetooth-disabled-symbolic", 20)
-            self.action_label.set_label("Disabled")
+            self.action_label.set_label("Off")
 
     def new_device(self, client: BluetoothClient, address):
         device = client.get_device(address)

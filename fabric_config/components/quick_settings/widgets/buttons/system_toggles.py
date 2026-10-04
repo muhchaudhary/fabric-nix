@@ -31,6 +31,7 @@ class CaffeineToggle(QuickSettingsToggleButton):
         super().__init__(
             action_label="Caffeine",
             action_icon="my-caffeine-on-symbolic",
+            status_on="Screen stays awake",
             active=config.caffeine.active,
             on_toggle=lambda active: setattr(config.caffeine, "active", active),
             tooltip_text="Keep the screen awake",
@@ -50,6 +51,8 @@ class ScreenRecordToggle(QuickSettingsToggleButton):
         super().__init__(
             action_label="Record",
             action_icon="media-record-symbolic",
+            status_on="Click to stop",
+            status_off="Select a region",
             on_toggle=self._on_toggled,
             **kwargs,
         )
@@ -67,7 +70,7 @@ class ScreenRecordToggle(QuickSettingsToggleButton):
 
     def _on_recording(self, recording: bool):
         self.sync_active(recording)
-        self.set_action_label("Stop Recording" if recording else "Record")
+        self.set_action_label("Recording" if recording else "Record")
         self.set_action_icon(
             "media-playback-stop-symbolic" if recording else "media-record-symbolic"
         )
@@ -79,6 +82,7 @@ class ScreenshotButton(QuickSettingsToggleButton):
         super().__init__(
             action_label="Screenshot",
             action_icon="camera-photo-symbolic",
+            status_off="Select a region",
             on_toggle=self._on_clicked_shot,
             **kwargs,
         )

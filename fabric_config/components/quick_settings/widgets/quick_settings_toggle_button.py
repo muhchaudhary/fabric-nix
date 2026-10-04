@@ -14,8 +14,13 @@ class QuickSettingsToggleButton(Box):
         active: bool = False,
         on_toggle: Callable[[bool], object] | None = None,
         pixel_size: int = 20,
+        # the status line under the title, when on and off
+        status_on: str = "On",
+        status_off: str = "Off",
         **kwargs,
     ):
+        self.status_on = status_on
+        self.status_off = status_off
         self._active = active
         self._on_toggle = on_toggle
         self.pixel_size = pixel_size
@@ -26,14 +31,31 @@ class QuickSettingsToggleButton(Box):
             icon_size=pixel_size,
         )
         self.action_label = Label(
-            name="panel-text", label=action_label, ellipsization="end"
+            name="quicksettings-tile-title",
+            label=action_label,
+            h_align="start",
+            ellipsization="end",
+        )
+        self.status_label = Label(
+            name="quicksettings-tile-status",
+            label=status_on if active else status_off,
+            h_align="start",
+            ellipsization="end",
         )
         self.action_button = Button(
             name="quicksettings-toggle-standalone",
             child=Box(
+                spacing=10,
                 h_expand=True,
                 v_align="center",
-                children=[self.action_icon, self.action_label],
+                children=[
+                    self.action_icon,
+                    Box(
+                        orientation="v",
+                        v_align="center",
+                        children=[self.action_label, self.status_label],
+                    ),
+                ],
             ),
         )
         self.action_button.connect("clicked", self._on_clicked)
@@ -62,6 +84,7 @@ class QuickSettingsToggleButton(Box):
     def sync_active(self, active: bool):
         """Show `active` without calling back (to follow outside changes)."""
         self._active = active
+        self.status_label.set_label(self.status_on if active else self.status_off)
         if active:
             self.add_style_class("active")
         else:
@@ -73,6 +96,9 @@ class QuickSettingsToggleButton(Box):
 
     def set_action_label(self, label: str):
         self.action_label.set_label(label)
+
+    def set_status(self, status: str):
+        self.status_label.set_label(status)
 
     def set_action_icon(self, icon_name: str):
         self.action_icon.set_from_icon_name(icon_name, 1)

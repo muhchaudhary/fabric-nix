@@ -1,5 +1,9 @@
+from collections.abc import Callable
+
 import gi
 from fabric.widgets.box import Box
+from fabric.widgets.centerbox import CenterBox
+from fabric.widgets.label import Label
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 
@@ -19,6 +23,9 @@ from fabric_config.components.quick_settings.widgets.submenus import (
     WifiSubMenu,
     WifiToggle,
 )
+from fabric_config.components.bar.widgets.power_menu import get_power_menu
+from fabric_config.components.bar.widgets.stats import format_uptime
+from fabric_config.utils.process import run_command_async
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.components.quick_settings.widgets.buttons.system_toggles import (
@@ -132,11 +139,48 @@ class QuickSettings(Box):
             lambda *_: self.buttons_box.set_active_submenu(self.audio_slider_box),
         )
 
+        self.uptime = Label("", name="quicksettings-uptime", h_align="start")
+        self.add(
+            CenterBox(
+                name="quicksettings-header",
+                start_children=self.uptime,
+                end_children=Box(
+                    spacing=6,
+                    children=[
+                        self._header_button(
+                            "changes-prevent-symbolic",
+                            "Lock",
+                            lambda: run_command_async(["loginctl", "lock-session"]),
+                        ),
+                        self._header_button(
+                            "system-shutdown-symbolic",
+                            "Power",
+                            lambda: get_power_menu().toggle_popup(),
+                        ),
+                    ],
+                ),
+            )
+        )
+        self.connect("map", lambda *_: self.uptime.set_label(format_uptime()))
         self.add(self.buttons_box)
         self.add(self.audio_slider_box)
         self.add(self.audio_slider_box.submenu)
         self.add(self.screen_bright_slider)
         self.add(self.mprisBox)
+
+    def _header_button(
+        self, icon_name: str, tooltip: str, action: Callable[[], object]
+    ) -> Button:
+        def clicked(*_):
+            QuickSettingsPopup.toggle_popup()
+            action()
+
+        return Button(
+            name="quicksettings-header-button",
+            tooltip_text=tooltip,
+            image=Image(icon_name=icon_name, icon_size=16),
+            on_clicked=clicked,
+        )
 
 
 class QuickSettingsButton(Button):

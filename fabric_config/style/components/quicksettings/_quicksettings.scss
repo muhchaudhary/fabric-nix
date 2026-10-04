@@ -17,3 +17,32 @@
   padding: $gap-lg;
   min-width: 480px;
 }
+
+/* Header: uptime, lock and power */
+#quicksettings-header { padding: 0 2px 2px $gap-xs; }
+
+#quicksettings-uptime {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg-dim);
+}
+
+#quicksettings-header-button {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 50%;
+  background-color: a(var(--fg), 0.07);
+  border: 1px solid a(var(--fg), 0.08);
+  @include transition(background-color color);
+
+  &:hover  { background-color: a(var(--fg), 0.14); }
+  &:active { background-color: a(var(--accent), 0.5); }
+}
+
+/* Slider value */
+#quicksettings-slider-value {
+  min-width: 40px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--fg-dim);
+}
