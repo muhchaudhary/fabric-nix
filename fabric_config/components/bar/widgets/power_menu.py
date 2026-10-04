@@ -4,13 +4,17 @@ from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.image import Image
 from fabric.widgets.label import Label
-from fabric.widgets.revealer import Revealer
-from gi.repository import Gdk, Gio, GLib
+from fabric.widgets.overlay import Overlay
+from gi.repository import Gdk, Gio, GLib, Gtk
 from loguru import logger
 
 from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
 from fabric_config.utils.process import run_command_async
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+
+TILE_ICON = 30
+# how long an armed action waits for its second click
+CONFIRM_S = 3.0
 
 
 @dataclass(frozen=True)
@@ -27,7 +31,7 @@ class PowerAction:
 
 
 ACTIONS = [
-    PowerAction("lock", "Lock", "system-lock-screen-symbolic", Gdk.KEY_l, False),
+    PowerAction("lock", "Lock", "changes-prevent-symbolic", Gdk.KEY_l, False),
     PowerAction(
         "suspend",
         "Suspend",
@@ -39,7 +43,7 @@ ACTIONS = [
     PowerAction(
         "hibernate",
         "Hibernate",
-        "drive-harddisk-symbolic",
+        "system-hibernate-symbolic",
         Gdk.KEY_h,
         True,
         "CanHibernate",
@@ -98,118 +102,70 @@ def run_action(action_id: str):
             run_command_async(["systemctl", "poweroff"], report)
 
 
-class PowerMenuActionButton(Button):
-    def __init__(self, action: PowerAction, icon_size: int, **kwargs):
+class PowerTile(Button):
+    """One action: an icon, its name and its key. Destructive ones arm first."""
+
+    def __init__(self, action: PowerAction, **kwargs):
         self.action = action
+        key = (Gdk.keyval_name(action.key) or "").upper()
+        self.label = Label(action.label, name="powermenu-tile-label")
+        # counts down while armed: click again (or Enter) before it runs out
+        self.countdown = Gtk.LevelBar(min_value=0, max_value=1, value=1)
+        self.countdown.set_name("powermenu-countdown")
+        self.countdown.set_no_show_all(True)
         super().__init__(
-            style_classes=["button-basic", "button-basic-props", "button-border"],
-            tooltip_text=f"{action.label} ({Gdk.keyval_name(action.key).upper()})",  # type: ignore
-            child=Box(
-                orientation="v",
-                children=[
-                    Image(icon_name=action.icon_name, icon_size=icon_size),
-                    Label(action.label),
-                ],
+            name="powermenu-tile",
+            tooltip_text=f"{action.label} ({key})",
+            child=Overlay(
+                child=Box(
+                    orientation="v",
+                    spacing=8,
+                    v_align="center",
+                    children=[
+                        Image(icon_name=action.icon_name, icon_size=TILE_ICON),
+                        self.label,
+                        self.countdown,
+                    ],
+                ),
+                overlays=Label(
+                    key, name="powermenu-key", h_align="end", v_align="start"
+                ),
             ),
             **kwargs,
         )
+        if action.confirm:
+            self.add_style_class("destructive")
 
-
-class PowerMenuConfirmMenu(Revealer):
-    def __init__(self, popup: "PowerMenuPopup", **kwargs):
-        self.active_button: Button | None = None
-        self.selected: PowerAction | None = None
-        self.popup = popup
-
-        button_name = "powermenu-button"
-        self.question = Label("Are You Sure?")
-        super().__init__(
-            child=Box(
-                orientation="v",
-                children=[
-                    self.question,
-                    Button(
-                        name=button_name,
-                        style_classes=[
-                            "button-basic",
-                            "button-basic-props",
-                            "button-border",
-                            "warning",
-                        ],
-                        label="YES  (Enter)",
-                        on_clicked=lambda _: self.do_confirm(True),
-                    ),
-                    Button(
-                        name=button_name,
-                        label="NO  (Esc)",
-                        style_classes=[
-                            "button-basic",
-                            "button-basic-props",
-                            "button-border",
-                            "okay",
-                        ],
-                        on_clicked=lambda _: self.do_confirm(False),
-                    ),
-                ],
-            ),
-            transition_type="slide-down",
-            **kwargs,
-        )
-
-    def reveal_menu(
-        self,
-        reveal_menu: bool,
-        active_button: Button | None = None,
-        selected: PowerAction | None = None,
-    ):
-        if active_button and self.active_button:
-            return
-
-        if active_button:
-            active_button.add_style_class("button-basic-active")
-        elif self.active_button:
-            self.active_button.remove_style_class("button-basic-active")
-
-        if selected:
-            self.question.set_label(f"{selected.label}?")
-        self.selected = selected
-        self.active_button = active_button
-        self.set_reveal_child(reveal_menu)
-
-    def do_confirm(self, confirmation: bool):
-        if confirmation and self.selected:
-            selected = self.selected
-            self.popup.toggle_popup()
-            run_action(selected.id)
+    def set_armed(self, armed: bool):
+        self.label.set_label("Click again" if armed else self.action.label)
+        self.countdown.set_visible(armed)
+        self.countdown.set_value(1)
+        if armed:
+            self.add_style_class("armed")
         else:
-            self.reveal_menu(False)
+            self.remove_style_class("armed")
 
 
 class PowerMenuPopup(PopupWindow):
     def __init__(self):
-        self.confirm_menu = PowerMenuConfirmMenu(
-            self,
-            notify_reveal_child=lambda *_: self.set_action_buttons_focus(
-                not self.confirm_menu.get_reveal_child()
-            ),
-        )
-        self.action_buttons = Box(
-            children=[
-                PowerMenuActionButton(
-                    action=action,
-                    icon_size=96,
-                    on_clicked=self.on_button_press,
-                )
-                for action in ACTIONS
-                if action.logind_check is None or logind_can(action.logind_check)
-            ],
+        self.armed: PowerTile | None = None
+        self._armed_at = 0
+        self._tick: int | None = None
+        self.tiles = [
+            PowerTile(action, on_clicked=self.on_tile_clicked)
+            for action in ACTIONS
+            if action.logind_check is None or logind_can(action.logind_check)
+        ]
+        self.hint = Label(
+            "Press a key, or click · destructive actions ask twice",
+            name="powermenu-hint",
         )
         self.menu = Box(
             name="powermenu-box",
             orientation="v",
-            children=[self.action_buttons, self.confirm_menu],
+            spacing=12,
+            children=[Box(spacing=10, children=self.tiles), self.hint],
         )
-
         super().__init__(
             transition_type="crossfade",
             child=self.menu,
@@ -219,46 +175,67 @@ class PowerMenuPopup(PopupWindow):
         )
         self.connect("key-press-event", self.on_key_press)
 
-    @property
-    def buttons(self) -> list[PowerMenuActionButton]:
-        return self.action_buttons.children  # type: ignore
+    # Arming
 
-    def set_action_buttons_focus(self, can_focus: bool):
-        for child in self.buttons:
-            child.set_sensitive(can_focus)
+    def on_tile_clicked(self, tile: PowerTile):
+        if not tile.action.confirm or tile is self.armed:
+            self._run(tile)
+            return
+        self.disarm()
+        self.armed = tile
+        tile.set_armed(True)
+        self._armed_at = GLib.get_monotonic_time()
+        self._tick = tile.add_tick_callback(self._count_down)
 
-    def on_button_press(self, button: PowerMenuActionButton):
-        if button.action.confirm:
-            self.confirm_menu.reveal_menu(True, button, button.action)
-        else:
-            self.toggle_popup()
-            run_action(button.action.id)
+    def _count_down(self, tile: PowerTile, clock: Gdk.FrameClock) -> bool:
+        elapsed = (clock.get_frame_time() - self._armed_at) / 1_000_000
+        remaining = 1 - elapsed / CONFIRM_S
+        if remaining <= 0:
+            self._tick = None
+            self.disarm()
+            return False
+        tile.countdown.set_value(remaining)
+        return True
+
+    def disarm(self):
+        if self.armed is not None:
+            if self._tick is not None:
+                self.armed.remove_tick_callback(self._tick)
+                self._tick = None
+            self.armed.set_armed(False)
+            self.armed = None
+
+    def _run(self, tile: PowerTile):
+        self.disarm()
+        self.toggle_popup()
+        run_action(tile.action.id)
+
+    # Keys
 
     def on_key_press(self, _, event: Gdk.EventKey) -> bool:
         if not self.popup_visible:
             return False
-        if self.confirm_menu.get_reveal_child():
-            if event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
-                self.confirm_menu.do_confirm(True)
+        if event.keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter):
+            if self.armed is not None:
+                self._run(self.armed)
                 return True
             return False
         keyval = Gdk.keyval_to_lower(event.keyval)
-        for button in self.buttons:
-            if button.action.key == keyval:
-                self.on_button_press(button)
+        for tile in self.tiles:
+            if tile.action.key == keyval:
+                self.on_tile_clicked(tile)
                 return True
         return False
 
     def on_key_release(self, widget, event_key: Gdk.EventKey):
-        # Escape backs out of the question first; the popup stays open
-        if event_key.keyval == Gdk.KEY_Escape and self.confirm_menu.get_reveal_child():
-            self.confirm_menu.do_confirm(False)
+        # Escape backs out of an armed action first; the menu stays open
+        if event_key.keyval == Gdk.KEY_Escape and self.armed is not None:
+            self.disarm()
             return
         super().on_key_release(widget, event_key)
 
     def toggle_popup(self, monitor: bool = False):
-        self.confirm_menu.reveal_menu(False)
-        self.set_action_buttons_focus(True)
+        self.disarm()
         return super().toggle_popup(monitor=True)
 
 

@@ -3,51 +3,79 @@
 
 #powermenu-box {
   @include panel($radius-xl);
-  margin: 6px;
+  @include floating-shadow;
+  margin: 12px;
   padding: 14px;
 }
 
-#powermenu-button {
-  margin: $gap-xs;
-  padding: 10px 14px;
-  border-radius: $radius-md;
-  @include transition(background-color color);
+/* One tile per action */
+#powermenu-tile {
+  min-width: 96px;
+  min-height: 96px;
+  padding: 10px 6px 8px;
+  border-radius: $radius-lg;
+  background-color: a(var(--fg), 0.05);
+  border: 1px solid a(var(--fg), 0.07);
+  @include transition(background-color border-color color);
 
-  label { font-weight: 600; font-size: 15px; }
+  image { color: var(--fg); @include transition(color); }
 
-  &:hover  { background-color: a(var(--fg), 0.12); }
-  &:focus  { background-color: a(var(--fg), 0.2);  }
-  &.active,
-  &:active { background-color: a(var(--fg), 0.28); }
-
-  &.warning {
-    background-color: a(var(--red), 0.25);
-    border-style: solid;
-    border-width: 1px;
-    border-color: a(var(--red), 0.35);
-
-    label { color: var(--fg); }
-
-    &:hover,
-    &:focus {
-      background-color: a(var(--red), 0.55);
-      border-color: a(var(--red), 0.6);
-    }
+  &:hover {
+    background-color: a(var(--fg), 0.1);
+    border-color: a(var(--fg), 0.14);
+    image { color: var(--accent); }
   }
 
-  &.okay {
-    background-color: a(var(--green), 0.35);
-    border-style: solid;
-    border-width: 1px;
-    border-color: a(var(--green), 0.45);
+  &:active { background-color: a(var(--accent), 0.3); }
 
-    label { color: var(--bg); }
-
-    &:hover,
-    &:focus {
-      background-color: a(var(--green), 0.6);
-      border-color: a(var(--green), 0.7);
-      label { color: var(--bg); }
-    }
+  /* power off, reboot, log out, hibernate warm up in red on hover */
+  &.destructive:hover {
+    background-color: a(var(--red), 0.14);
+    border-color: a(var(--red), 0.3);
+    image { color: var(--red); }
   }
+
+  /* armed: waiting for the second click */
+  &.armed,
+  &.armed:hover {
+    background-color: a(var(--red), 0.28);
+    border-color: a(var(--red), 0.6);
+    image, label { color: var(--fg); }
+  }
+}
+
+#powermenu-tile-label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+#powermenu-key {
+  margin: -4px -2px 0 0;
+  padding: 0 5px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--fg-dim2);
+  background-color: a(var(--fg), 0.06);
+}
+
+#powermenu-countdown {
+  margin: 0 10px;
+
+  trough {
+    min-height: 3px;
+    border-radius: 2px;
+    background-color: a(var(--fg), 0.15);
+  }
+  block {
+    min-height: 3px;
+    border-radius: 2px;
+    &.filled { background-color: var(--red); }
+    &.empty  { background-color: transparent; }
+  }
+}
+
+#powermenu-hint {
+  font-size: 11px;
+  color: var(--fg-dim2);
 }
