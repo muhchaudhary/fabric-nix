@@ -30,6 +30,7 @@ from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, Word
 from fabric_config.components.desktop.focus import FocusTimer
 from fabric_config.components.desktop.fx import FxLayer
 from fabric_config.components.desktop.media import get_media_state
+from fabric_config.components.desktop.weather_fx import KINDS, weather_kind
 from fabric_config.components.desktop.info import (
     OnThisDay,
     WeatherService,
@@ -625,7 +626,13 @@ class DesktopWindow(WaylandWindow):
         visible = self.manager.visibility.visible(self.monitor_name)
         self.fx.show_arc = self.enabled("prayer_arc")
         self.fx.show_bars = self.enabled("visualizer") and self.manager.cava.running
-        self.fx.set_animating(visible and self.fx.show_bars)
+        self.fx.set_weather(
+            self.manager.weather_kind() if self.enabled("weather_fx") else None,
+            self.manager.weather.wind,
+        )
+        self.fx.set_animating(
+            visible and (self.fx.show_bars or self.fx.weather is not None)
+        )
         self.fx.queue_draw()
 
     # Greeting
@@ -792,6 +799,9 @@ class DesktopManager:
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
         self.media = get_media_state()
+        # a weather kind to show instead of the real one (preview_weather)
+        self._weather_preview: str | None = None
+        self._weather_preview_timeout: int | None = None
         self.windows: list[DesktopWindow] = []
         self.player_windows: list[MusicPlayerWindow] = []
         self._hidden_since: dict[str, float] = {}
@@ -822,6 +832,7 @@ class DesktopManager:
         self.weather.connect(
             "changed", lambda *_: self._each(DesktopWindow.update_meta)
         )
+        self.weather.connect("changed", lambda *_: self._each(DesktopWindow.update_fx))
         self.on_this_day.connect(
             "changed", lambda *_: self._each(DesktopWindow.update_memory)
         )
@@ -973,6 +984,30 @@ class DesktopManager:
                 window.update_focus()
             else:
                 window.refresh()
+
+    # Weather
+
+    def weather_kind(self) -> str | None:
+        if self._weather_preview is not None:
+            return self._weather_preview
+        return weather_kind(self.weather.code, self.weather.is_day)
+
+    def preview_weather(self, kind: str, seconds: int = 30):
+        """Show `kind` (see weather_fx.KINDS) for a while; "" goes back."""
+        if self._weather_preview_timeout is not None:
+            GLib.source_remove(self._weather_preview_timeout)
+            self._weather_preview_timeout = None
+        self._weather_preview = kind if kind in KINDS else None
+
+        def end():
+            self._weather_preview_timeout = None
+            self._weather_preview = None
+            self._each(DesktopWindow.update_fx)
+            return False
+
+        if self._weather_preview is not None:
+            self._weather_preview_timeout = GLib.timeout_add_seconds(seconds, end)
+        self._each(DesktopWindow.update_fx)
 
     # Visibility
 

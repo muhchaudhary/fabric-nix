@@ -114,6 +114,11 @@ def main():
         the_app.wallpaper_picker.toggle_popup()
 
     @the_app.action()
+    def preview_weather(kind: str = ""):
+        """Show a weather effect on the desktop for 30 s (rain, snow, storm, ...)."""
+        the_app.desktop.preview_weather(kind)
+
+    @the_app.action()
     def quit():
         logger.info("[Main] Quitting application")
         the_app.quit()
