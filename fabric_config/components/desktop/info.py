@@ -94,6 +94,10 @@ class WeatherService(Service):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.text: str | None = None
+        # for the drawn weather: WMO code, day or night, wind in km/h
+        self.code: int | None = None
+        self.is_day = True
+        self.wind = 0.0
         self.refresh()
         GLib.timeout_add_seconds(WEATHER_REFRESH_S, lambda: self.refresh() or True)
 
@@ -111,19 +115,33 @@ class WeatherService(Service):
                 params={
                     "latitude": lat,
                     "longitude": lon,
-                    "current": "temperature_2m,weather_code",
+                    "current": "temperature_2m,weather_code,is_day,wind_speed_10m",
                     "timezone": "auto",
                 },
                 timeout=10,
             )
             response.raise_for_status()
             current = response.json()["current"]
-            condition = _WEATHER_CODES.get(int(current["weather_code"]), "")
-            return f"{round(current['temperature_2m'])}° {condition}".strip()
+            code = int(current["weather_code"])
+            condition = _WEATHER_CODES.get(code, "")
+            return (
+                f"{round(current['temperature_2m'])}° {condition}".strip(),
+                code,
+                bool(current.get("is_day", 1)),
+                float(current.get("wind_speed_10m") or 0.0),
+            )
 
-        def done(text):
-            if text and text != self.text:
-                self.text = str(text)
+        def done(result):
+            if not result:
+                return
+            text, code, is_day, wind = result
+            if (text, code, is_day) != (self.text, self.code, self.is_day):
+                self.text, self.code, self.is_day, self.wind = (
+                    text,
+                    code,
+                    is_day,
+                    wind,
+                )
                 self.changed()
 
         _in_thread(fetch, done)

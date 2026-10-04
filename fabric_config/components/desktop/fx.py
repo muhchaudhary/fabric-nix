@@ -1,6 +1,6 @@
 """
-The desktop's drawn layer, under the clock: the prayer arc across the lower
-half and the audio visualizer along the bottom.
+The desktop's drawn layer, under the clock: the weather (rain, snow, ...),
+the prayer arc across the lower half and the audio visualizer along the bottom.
 
 It animates only while something is moving and the monitor's desktop is
 showing; otherwise it redraws once a minute for the arc.
@@ -12,6 +12,7 @@ import math
 import cairo
 from gi.repository import GLib, Gtk
 
+from fabric_config.components.desktop.weather_fx import WeatherParticles
 from fabric_config.services.cava import CAVA_BARS, Cava
 
 FRAME_MS = 33  # ~30 fps
@@ -47,11 +48,20 @@ class FxLayer(Gtk.DrawingArea):
             | None
         ) = None
         self.label_font = "Inter"
+        self.weather: WeatherParticles | None = None
+        self._weather_dt = 0.0
         self._bars = [0.0] * CAVA_BARS  # eased copy of cava's levels
         self._tick_id: int | None = None
         self._last: float | None = None
         self._t = 0.0
         self.connect("draw", self._on_draw)
+
+    def set_weather(self, kind: str | None, wind_kmh: float = 0.0):
+        if kind is None:
+            self.weather = None
+        elif self.weather is None or self.weather.kind != kind:
+            self.weather = WeatherParticles(kind, wind_kmh)
+        self.queue_draw()
 
     # Animation
 
@@ -76,9 +86,17 @@ class FxLayer(Gtk.DrawingArea):
         self._bars = [
             b + (v - b) * (0.6 if v > b else 0.15) for b, v in zip(self._bars, target)
         ]
+        w, h = self.get_allocated_width(), self.get_allocated_height()
+        if self.weather is not None:
+            # the weather covers the whole screen; repaint it at its own pace
+            self._weather_dt += dt
+            if self._weather_dt >= self.weather.frame_s * 0.95:
+                self.weather.step(self._weather_dt)
+                self._weather_dt = 0.0
+                self.queue_draw()
+                return True
         # only the bars move: repaint the strip along the bottom, not the
         # whole screen (which would repaint the clock and notes on top too)
-        w, h = self.get_allocated_width(), self.get_allocated_height()
         strip = int(h * BARS_HEIGHT) + 16
         self.queue_draw_area(0, h - strip, w, strip)
         return True
@@ -87,6 +105,8 @@ class FxLayer(Gtk.DrawingArea):
 
     def _on_draw(self, widget: Gtk.Widget, cr: cairo.Context):
         w, h = widget.get_allocated_width(), widget.get_allocated_height()
+        if self.weather is not None:
+            self.weather.draw(cr, w, h, self.ink)
         if self.scrim is not None:
             self._draw_scrim(cr, *self.scrim)
         if self.show_arc and self.prayer_times:

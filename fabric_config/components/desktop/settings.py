@@ -34,6 +34,7 @@ WIDGETS: dict[str, tuple[str, bool]] = {
     "lyrics": ("Lyrics", True),
     "music_player": ("Music player", True),
     "weather": ("Weather", True),
+    "weather_fx": ("Weather effects", True),
     "hijri": ("Hijri date", True),
     "greeting": ("Greeting", True),
     "on_this_day": ("On this day", True),
