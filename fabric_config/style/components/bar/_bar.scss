@@ -25,6 +25,18 @@
   &.center { min-width: 140px; }
 }
 
+/* Hairline between clusters of buttons */
+#bar-divider {
+  min-width: 1px;
+  min-height: 16px;
+  margin: 0 $gap-sm;
+  background-color: a(var(--fg), 0.14);
+}
+
+/* Workspace hover: the windows on it */
+#workspace-tooltip-title { font-size: 12px; font-weight: 700; color: var(--fg-dim); }
+#workspace-tooltip-empty { font-size: 12px; color: var(--fg-dim2); }
+
 /* Bar panel buttons */
 #panel-button-active,
 #date-time,

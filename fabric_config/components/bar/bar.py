@@ -4,8 +4,11 @@ from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
+from fabric.widgets.image import Image
+from fabric.widgets.label import Label
 from fabric.widgets.shapes import Corner
 from fabric.widgets.wayland import WaylandWindow
+from gi.repository import Gtk
 
 from fabric_config.components.bar.island import DynamicIsland
 from fabric_config.components.bar.widgets import (
@@ -26,6 +29,8 @@ from fabric_config.components.bar.widgets.recording_indicator import (
 )
 from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
+from fabric_config.utils.hyprland_windows import hyprland_clients
+from fabric_config.utils.icon_resolver import get_icon_resolver
 
 
 class HyprlandWorkspaceFix(HyprlandWorkspaces):
@@ -86,24 +91,74 @@ class StatusBarCorner(Box):
         )
 
 
+class BarDivider(Box):
+    """A short hairline between clusters of bar buttons."""
+
+    def __init__(self):
+        super().__init__(name="bar-divider", v_align="center")
+
+
+def workspace_tooltip(button: WorkspaceButton, tooltip: Gtk.Tooltip) -> bool:
+    """On hover: the icons and titles of the windows on that workspace."""
+    clients = [
+        c
+        for c in hyprland_clients()
+        if (c.get("workspace") or {}).get("id") == button.id
+    ]
+    icons = get_icon_resolver()
+    rows: list[Gtk.Widget] = [
+        Label(f"Workspace {button.id}", name="workspace-tooltip-title", h_align="start")
+    ]
+    if not clients:
+        rows.append(Label("Empty", name="workspace-tooltip-empty", h_align="start"))
+    for client in clients[:8]:
+        app_class = client.get("class") or ""
+        rows.append(
+            Box(
+                spacing=8,
+                children=[
+                    Image(pixbuf=icons.get_icon_pixbuf(app_class, 20)),
+                    Label(
+                        client.get("title") or app_class,
+                        max_chars_width=40,
+                        ellipsization="end",
+                        h_align="start",
+                    ),
+                ],
+            )
+        )
+    if len(clients) > 8:
+        rows.append(Label(f"+{len(clients) - 8} more", name="workspace-tooltip-empty"))
+    content = Box(orientation="v", spacing=6, children=rows)
+    content.show_all()
+    tooltip.set_custom(content)
+    return True
+
+
 class StatusBarSeperated(WaylandWindow):
     def __init__(self):
         self.bar_content = CenterBox(name="system-bar")
 
+        self.workspace_buttons = [
+            WorkspaceButton(
+                i,
+                style_classes=[
+                    "button-basic",
+                    "button-basic-props",
+                    "button-border",
+                ],
+            )
+            for i in range(1, 7)
+        ]
+        for button in self.workspace_buttons:
+            button.set_has_tooltip(True)
+            button.connect(
+                "query-tooltip", lambda b, _x, _y, _kb, tip: workspace_tooltip(b, tip)
+            )
         self.workspaces = HyprlandWorkspaceFix(
             name="workspaces",
             spacing=2,
-            buttons=[
-                WorkspaceButton(
-                    i,
-                    style_classes=[
-                        "button-basic",
-                        "button-basic-props",
-                        "button-border",
-                    ],
-                )
-                for i in range(1, 7)
-            ],
+            buttons=self.workspace_buttons,
             buttons_factory=None,
         )
 
@@ -131,14 +186,18 @@ class StatusBarSeperated(WaylandWindow):
             StatusBarCorner("top-right"),
             Box(
                 name="system-bar-group",
+                # clusters: readouts | status and settings | clock | power
                 children=[
                     self.recording_indicator,
                     self.system_temps,
+                    BarDivider(),
                     self.system_tray,
                     self.notification_button,
                     self.quick_settings,
                     self.battery,
+                    BarDivider(),
                     self.date_time,
+                    BarDivider(),
                     self.power_menu,
                 ],
                 style_classes="right",
@@ -152,6 +211,7 @@ class StatusBarSeperated(WaylandWindow):
                 name="system-bar-group",
                 children=[
                     self.prayer_times,
+                    BarDivider(),
                     self.wallpaper_button,
                     self.clipboard_button,
                 ],
