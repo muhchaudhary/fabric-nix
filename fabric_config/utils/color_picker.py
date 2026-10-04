@@ -1,7 +1,18 @@
+from fabric.core.service import Service, Signal
 from gi.repository import GLib
 from loguru import logger
 
 from fabric_config.utils.process import run_command_async
+
+
+class ColorPicker(Service):
+    @Signal
+    def picked(self, color: str) -> None:
+        """A colour was picked and copied (hex, e.g. #ff8800)."""
+
+
+# whoever wants to know about picks (the bar's island) connects here
+color_picker = ColorPicker()
 
 
 def pick_color(delay_ms: int = 0):
@@ -18,6 +29,7 @@ def pick_color(delay_ms: int = 0):
                 logger.warning(f"[Colour picker] hyprpicker: {stderr.strip()}")
             return
         run_command_async(["wl-copy", "--", color])
+        color_picker.picked(color)
         run_command_async(
             [
                 "notify-send",

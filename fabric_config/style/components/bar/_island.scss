@@ -1,35 +1,58 @@
 @use '../../tokens' as *;
 @use '../../mixins' as *;
 
-/* Dynamic island: the bar's centre (see components/bar/island.py) */
+/* Dynamic island (components/bar/island.py): chips beside the workspaces, and
+   a panel that drops from under the centre pill */
 #island-chip {
   margin-left: $gap-xs;
   padding: 3px $gap-sm 3px 3px;
   border-radius: $radius-sm;
   background-color: a(var(--fg), 0.08);
+
+  image { color: var(--accent); margin-left: 4px; }
 }
 
-#island-bars { color: var(--accent); }
-#island-art  { color: var(--fg); }
+#island-chip-label { font-size: 12px; font-weight: 700; }
+#island-bars       { color: var(--accent); }
+#island-art        { color: var(--fg); }
 
-#island-media,
-#island-event { padding: 0 $gap-xs; }
+/* the pill squares off its bottom while the panel hangs from it */
+#system-bar-group.center.island-open {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+/* The panel: the pill's glass, carried on downwards. DROP_PADDING in
+   island.py is this left + right padding */
+#island-drop {
+  background-color: var(--bg-glass);
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  padding: 10px 16px 14px;
+}
 
 #island-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
 }
 
 #island-subtitle {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--fg-dim);
 }
 
+#island-time {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--fg-dim);
+}
+
+#island-seek { color: var(--fg); }
 #island-event-icon { color: var(--accent); }
 
 #island-control {
-  min-width: 26px;
-  min-height: 26px;
+  min-width: 30px;
+  min-height: 30px;
   padding: 0;
   border-radius: 50%;
   @include transition(background-color color);
@@ -37,3 +60,6 @@
   &:hover  { background-color: a(var(--fg), 0.12); }
   &:active { background-color: a(var(--accent), 0.6); }
 }
+
+/* room for a song title before it ellipsizes */
+#island-media { min-width: 360px; }

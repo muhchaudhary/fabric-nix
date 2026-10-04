@@ -14,6 +14,12 @@ class FocusTimer(Service):
     @Signal
     def changed(self) -> None: ...
 
+    @Signal
+    def started(self, minutes: int) -> None: ...
+
+    @Signal
+    def finished(self, minutes: int) -> None: ...
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._ends_at: float | None = None
@@ -44,6 +50,7 @@ class FocusTimer(Service):
         self._ends_at = time.monotonic() + minutes * 60
         self._tick_id = GLib.timeout_add_seconds(1, self._tick)
         self.changed()
+        self.started(minutes)
 
     def cancel(self, notify: bool = True):
         if self._tick_id is not None:
@@ -67,6 +74,7 @@ class FocusTimer(Service):
         self._tick_id = None
         self._ends_at = None
         self.changed()
+        self.finished(self._minutes)
         run_command_async(
             [
                 "notify-send",
@@ -77,3 +85,14 @@ class FocusTimer(Service):
             ]
         )
         return False
+
+
+_focus_timer: FocusTimer | None = None
+
+
+def get_focus_timer() -> FocusTimer:
+    """The one focus timer: the desktop clock runs it, the bar shows it."""
+    global _focus_timer
+    if _focus_timer is None:
+        _focus_timer = FocusTimer()
+    return _focus_timer

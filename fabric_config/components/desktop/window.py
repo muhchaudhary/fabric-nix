@@ -27,7 +27,7 @@ from gi.repository import Gdk, GLib, Gtk
 
 import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
-from fabric_config.components.desktop.focus import FocusTimer
+from fabric_config.components.desktop.focus import get_focus_timer
 from fabric_config.components.desktop.fx import FxLayer
 from fabric_config.components.desktop.media import get_media_state
 from fabric_config.components.desktop.weather_fx import KINDS, weather_kind
@@ -793,7 +793,7 @@ class DesktopManager:
     def __init__(self):
         self.settings = DesktopSettings()
         self.visibility = DesktopVisibility()
-        self.focus = FocusTimer()
+        self.focus = get_focus_timer()
         self.cava = config.cava
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()

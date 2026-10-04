@@ -163,7 +163,7 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.recording_indicator = RecordingIndicator()
-        # the workspaces live in the island, which grows to announce things
+        # the island: the workspaces, chips, and a panel that drops down from them
         self.island = DynamicIsland(self.workspaces)
 
         # self.open_apps_bar = OpenAppsBar()
@@ -221,13 +221,16 @@ class StatusBarSeperated(WaylandWindow):
         ]
         self.bar_content.center_children = [
             StatusBarCorner("top-right"),
-            CenterBox(
+            island_pill := CenterBox(
                 name="system-bar-group",
                 center_children=[self.island],
                 style_classes="center",
             ),
             StatusBarCorner("top-left"),
         ]
+
+        # the island widens this group, and squares it off, while it's open
+        self.island.attach_pill(island_pill)
 
         super().__init__(
             title="fabric-bar",

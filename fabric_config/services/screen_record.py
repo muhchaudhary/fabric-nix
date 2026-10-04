@@ -65,6 +65,10 @@ class ScreenRecorder(Service):
     @Signal
     def recording(self, value: bool) -> None: ...
 
+    @Signal
+    def screenshot_taken(self, path: str) -> None:
+        """A screenshot was saved ("" when it only went to the clipboard)."""
+
     def __init__(self, **kwargs):
         self.screenshot_path = GLib.get_home_dir() + "/Pictures/Screenshots"
         self.screenrecord_path = GLib.get_home_dir() + "/Videos/Screencasting/"
@@ -96,8 +100,11 @@ class ScreenRecorder(Service):
         try:
             exec_shell_command_async_ignore_stdout(
                 " ".join(command),
-                lambda file_path: self.send_screenshot_notification(
-                    file_path=file_path if file_path else None,
+                lambda file_path: (
+                    self.send_screenshot_notification(
+                        file_path=file_path if file_path else None,
+                    ),
+                    self.screenshot_taken(file_path or ""),
                 ),
             )
 
