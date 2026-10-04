@@ -29,7 +29,7 @@ import fabric_config.config as config
 from fabric_config.components.desktop.faces import AnalogFace, DigitalFace, WordFace
 from fabric_config.components.desktop.focus import FocusTimer
 from fabric_config.components.desktop.fx import FxLayer
-from fabric_config.components.desktop.media import MediaState
+from fabric_config.components.desktop.media import get_media_state
 from fabric_config.components.desktop.info import (
     OnThisDay,
     WeatherService,
@@ -791,7 +791,7 @@ class DesktopManager:
         self.weather = WeatherService()
         self.on_this_day = OnThisDay()
         self.notes = NotesStore()
-        self.media = MediaState()
+        self.media = get_media_state()
         self.windows: list[DesktopWindow] = []
         self.player_windows: list[MusicPlayerWindow] = []
         self._hidden_since: dict[str, float] = {}

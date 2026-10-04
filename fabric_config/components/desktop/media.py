@@ -300,3 +300,14 @@ class MediaState(Service):
         with open(path, "w") as f:
             json.dump({"synced": synced}, f)
         return parse_lrc(synced)
+
+
+_media_state: MediaState | None = None
+
+
+def get_media_state() -> MediaState:
+    """The shared MediaState: the desktop and the bar show the same player."""
+    global _media_state
+    if _media_state is None:
+        _media_state = MediaState()
+    return _media_state
