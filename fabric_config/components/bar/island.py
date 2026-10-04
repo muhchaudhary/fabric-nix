@@ -2,15 +2,12 @@
 The bar's centre as a "dynamic island": normally the workspaces (plus a small
 now-playing chip while music plays), it grows to show what just happened (a
 new track, recording started, caffeine on, ...) and shrinks back after a few
-seconds. Hovering it while something is playing opens the media view, with
-the current lyric line when the track has synced lyrics.
+seconds. Hovering it while something is playing opens the media view.
 
 It's a Gtk.Stack with `interpolate_size`, so the pill animates its width
 between views. Every view has the bar's height (`vhomogeneous`): the bar
 reserves space by its height, and a growing bar would push windows around.
 """
-
-from collections.abc import Sequence
 
 import cairo
 from fabric.widgets.box import Box
@@ -27,7 +24,6 @@ EVENT_MS = 3500
 TRACK_MS = 4500
 # leaving the pill closes the media view after this; brushing past doesn't
 LEAVE_DELAY_MS = 350
-LYRIC_TICK_MS = 300
 TRANSITION_MS = 280
 # players turn up just after startup; what's already playing isn't news
 STARTUP_QUIET_S = 6
@@ -139,11 +135,9 @@ class DynamicIsland(Gtk.EventBox):
         self.media = get_media_state()
         self._timeout: int | None = None
         self._leave_timeout: int | None = None
-        self._lyric_tick: int | None = None
         self._hovered = False
         self._art_url: str | None = None
         self._track_key: tuple | None = None
-        self._artist = ""
         self._quiet_until = GLib.get_monotonic_time() / 1e6 + STARTUP_QUIET_S
 
         # Idle: workspaces, and a now-playing chip while music plays
@@ -163,7 +157,7 @@ class DynamicIsland(Gtk.EventBox):
         self.chip_events.set_no_show_all(True)
         idle = Box(children=[workspaces, self.chip_events], v_align="center")
 
-        # Media: art, title and artist (or the lyric), controls
+        # Media: art, title and artist, controls
         self.media_art = ArtThumb(28, 7)
         self.media_title = Label(
             "", name="island-title", h_align="start", ellipsization="end",
@@ -255,10 +249,6 @@ class DynamicIsland(Gtk.EventBox):
         if self.stack.get_visible_child_name() == name:
             return
         self.stack.set_visible_child_name(name)
-        if name == "media":
-            self._start_lyrics()
-        else:
-            self._stop_lyrics()
         for view in ("media", "event"):
             if name == view:
                 self.get_style_context().add_class(view)
@@ -354,8 +344,7 @@ class DynamicIsland(Gtk.EventBox):
 
         artists = ", ".join(player.artist or [])
         self.media_title.set_label(player.title or "Unknown title")
-        self._artist = artists
-        self._update_subtitle()
+        self.media_subtitle.set_label(artists)
 
         url = player.arturl or None
         if url != self._art_url:
@@ -375,23 +364,6 @@ class DynamicIsland(Gtk.EventBox):
             return
         self.chip_art.set_pixbuf(pixbuf)
         self.media_art.set_pixbuf(pixbuf)
-
-    def _update_subtitle(self) -> bool:
-        lines: Sequence[str] | None = (
-            self.media.lyric_lines() if self.media.lyrics else None
-        )
-        lyric = lines[0] if lines else ""
-        self.media_subtitle.set_label(f"♪ {lyric}" if lyric else self._artist)
-        return True
-
-    def _start_lyrics(self):
-        if self._lyric_tick is None:
-            self._lyric_tick = GLib.timeout_add(LYRIC_TICK_MS, self._update_subtitle)
-
-    def _stop_lyrics(self):
-        if self._lyric_tick is not None:
-            GLib.source_remove(self._lyric_tick)
-            self._lyric_tick = None
 
     # What gets announced
 
