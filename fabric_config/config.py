@@ -12,6 +12,7 @@ from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.power_profiles import PowerProfiles
 from fabric_config.services.screen_record import ScreenRecorder
+from fabric_config.services.system_stats import SystemStats
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
 from fabric_config.services.window_previews import WindowPreviews
@@ -44,6 +45,8 @@ window_previews = WindowPreviews()
 caffeine = Caffeine()
 # power-profiles-daemon; `available` is False without it
 power_profiles = PowerProfiles()
+# CPU/GPU/memory/network load and sensors, sampled each second
+system_stats = SystemStats()
 
 
 # the whole theme's accent follows the wallpaper, tuned for light or dark
