@@ -54,11 +54,20 @@
 .button-basic-active *,
 .button-basic:active * { color: var(--bg); }
 
+/* Tabular digits for numbers that change (clocks, countdowns, readings), so
+   the text doesn't jiggle; names keep Inter's proportional digits */
+.tnum,
+.tnum label,
+#date-time label,
+.prayer-info-time-label,
+.submenu-card-battery-label,
+#osd-value { font-feature-settings: "tnum"; }
+
 /* Title text */
 .label-title {
   font-size: 28px;
   font-weight: 700;
-  font-family: "Roboto", "Helvetica Neue", sans-serif;
+  font-family: $font-ui;
 }
 
 /* iOS-style toggle switch (Gtk.Switch) */

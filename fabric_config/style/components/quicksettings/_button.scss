@@ -7,7 +7,7 @@
   button image,
   button label {
     color: var(--fg);
-    @include transition(background-color color border-color, 0.18s);
+    @include transition(background-color color border-color, $dur-med);
   }
 
   button {
