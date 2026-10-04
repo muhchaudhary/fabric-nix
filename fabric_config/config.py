@@ -4,11 +4,13 @@ import gi
 
 from fabric_config.services.audio_devices import AudioDevices
 from fabric_config.services.brightness import Brightness
+from fabric_config.services.caffeine import Caffeine
 from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.hyprsunset import Hyprsunset
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
+from fabric_config.services.power_profiles import PowerProfiles
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
@@ -38,6 +40,10 @@ wallpaper_accent = WallpaperAccent()
 notifications = NotificationCenter()
 # live window previews for the dock and overview; capture starts on first use
 window_previews = WindowPreviews()
+# keeps the screen awake (a logind idle lock)
+caffeine = Caffeine()
+# power-profiles-daemon; `available` is False without it
+power_profiles = PowerProfiles()
 
 
 # the whole theme's accent follows the wallpaper, tuned for light or dark

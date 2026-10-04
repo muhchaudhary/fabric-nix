@@ -21,6 +21,13 @@ from fabric_config.components.quick_settings.widgets.submenus import (
 )
 from fabric_config.widgets.player import PlayerBoxStack
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+from fabric_config.components.quick_settings.widgets.buttons.system_toggles import (
+    CaffeineToggle,
+    DoNotDisturbToggle,
+    PowerProfileRow,
+    ScreenRecordToggle,
+    ScreenshotButton,
+)
 from fabric_config.components.quick_settings.widgets.buttons.theme_toggle import (
     ThemeToggle,
 )
@@ -65,6 +72,17 @@ class QuickSettingsButtonBox(Gtk.Grid):
         )
         self.theme_toggle = ThemeToggle()
 
+        # the popup is made after this box, so look it up when clicked
+        def close_popup():
+            if QuickSettingsPopup.popup_visible:
+                QuickSettingsPopup.toggle_popup()
+
+        self.dnd_toggle = DoNotDisturbToggle()
+        self.caffeine_toggle = CaffeineToggle()
+        self.record_toggle = ScreenRecordToggle(close_popup)
+        self.screenshot_button = ScreenshotButton(close_popup)
+        self.power_profile_row = PowerProfileRow()
+
         self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.night_light_toggle.connect("reveal-clicked", self.set_active_submenu)
@@ -75,6 +93,9 @@ class QuickSettingsButtonBox(Gtk.Grid):
             (bluetooth_submenu,),
             (self.night_light_toggle, self.theme_toggle),
             (night_light_submenu,),
+            (self.dnd_toggle, self.caffeine_toggle),
+            (self.record_toggle, self.screenshot_button),
+            (self.power_profile_row,),
         ]
         for top, row in enumerate(rows):
             for left, widget in enumerate(row):

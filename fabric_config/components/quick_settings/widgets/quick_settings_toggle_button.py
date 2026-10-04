@@ -55,13 +55,17 @@ class QuickSettingsToggleButton(Box):
         self.set_active(not self._active)
 
     def set_active(self, active: bool):
+        self.sync_active(active)
+        if self._on_toggle:
+            self._on_toggle(active)
+
+    def sync_active(self, active: bool):
+        """Show `active` without calling back (to follow outside changes)."""
         self._active = active
         if active:
             self.add_style_class("active")
         else:
             self.remove_style_class("active")
-        if self._on_toggle:
-            self._on_toggle(active)
 
     @property
     def active(self) -> bool:
