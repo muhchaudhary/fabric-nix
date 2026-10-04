@@ -14,11 +14,21 @@ from fabric_config.utils.app_search import (
     AppEntry,
     AppStats,
     calculate,
+    color_formats,
     load_entries,
     match_score,
+    parse_color,
     search_emoji,
 )
 from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
+from fabric_config.utils.hyprland_windows import (
+    close_window,
+    focus_window,
+    hyprland_clients,
+    kill_window,
+)
+from fabric_config.utils.icon_resolver import get_icon_resolver
+from fabric_config.utils.units import convert
 from fabric_config.utils.process import run_command_async
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 
@@ -32,7 +42,12 @@ SHINE_STAGGER_MS = 20
 SHINE_ROWS = 10
 CORNER_SIZE = 32
 
-HINTS = "=  calculate    >  run    :  emoji    !  hidden apps"
+HINTS = (
+    "=  calc    >  run    :  emoji    ?  web    #  colour    @  windows    !  hidden"
+)
+WEB_SEARCH = "https://duckduckgo.com/?q={}"
+# the menu's fade-out, so hyprpicker doesn't pick from it
+CLOSE_DELAY_MS = 350
 
 
 class ResultRow(Button):
@@ -46,11 +61,16 @@ class ResultRow(Button):
         entry: AppEntry | None = None,
         icon_name: str | None = None,
         glyph: str | None = None,
+        icon_widget: Gtk.Widget | None = None,
     ):
         self.entry = entry
         self._on_activate = on_activate
+        # a window row's Hyprland address (for its context menu)
+        self.address: str | None = None
 
-        if glyph is not None:
+        if icon_widget is not None:
+            icon = icon_widget
+        elif glyph is not None:
             icon = Label(glyph, name="appmenu-glyph", size=(ICON_SIZE, ICON_SIZE))
         elif entry is not None:
             icon = Image(pixbuf=entry.app.get_icon_pixbuf(size=ICON_SIZE))
@@ -249,8 +269,14 @@ class AppMenu(PopupWindow):
             widgets = self._emoji_view(text[1:])
         elif text.startswith("!"):
             widgets = self._hidden_view(text[1:].strip().lower())
+        elif text.startswith("?"):
+            widgets = self._web_view(text[1:].strip())
+        elif text.startswith("#"):
+            widgets = self._color_view(text[1:].strip())
+        elif text.startswith("@"):
+            widgets = self._windows_view(text[1:].strip().lower())
         else:
-            widgets = self._search_view(query.lower())
+            widgets = self._search_view(query)
 
         for widget in widgets:
             self.results_box.add(widget)
@@ -311,7 +337,8 @@ class AppMenu(PopupWindow):
         ]
         return widgets
 
-    def _search_view(self, query: str) -> list[Gtk.Widget]:
+    def _search_view(self, text: str) -> list[Gtk.Widget]:
+        query = text.lower()
         scored: list[tuple[float, str, Gtk.Widget]] = []
         for entry in self.entries:
             if entry.id in self.stats.hidden:
@@ -339,25 +366,40 @@ class AppMenu(PopupWindow):
         scored.sort(key=lambda s: (-s[0], s[1].lower()))
         widgets = [row for _, _, row in scored[:MAX_RESULTS]]
 
-        # a bare expression like "12*4" gets an answer without the "=" prefix
-        if any(c.isdigit() for c in query) and any(c in query for c in "+-*/^%("):
-            if (result := calculate(query)) is not None:
+        # a bare expression like "12*4" gets an answer without the "=" prefix,
+        # and "10 km to mi" a conversion (case kept: MB isn't Mb)
+        if any(c.isdigit() for c in query):
+            if (converted := convert(text)) is not None:
+                widgets.insert(0, self._calc_row(text, converted))
+            elif (
+                any(c in query for c in "+-*/^%(")
+                and (result := calculate(query)) is not None
+            ):
                 widgets.insert(0, self._calc_row(query, result))
 
-        return widgets or [self._message("No matching apps")]
+        if not widgets:
+            return [
+                self._message("No matching apps"),
+                self._web_row(text),
+            ]
+        return widgets
 
     def _calc_row(self, expression: str, result: str) -> ResultRow:
+        # a conversion reads "6,213.7 mi"; copy just the number
+        number = result.split(" ")[0].replace(",", "")
         return self._transient_row(
             f"= {result}",
             f"{expression}  ·  Enter to copy",
-            on_activate=lambda: self.copy(result),
+            on_activate=lambda: self.copy(number),
             icon_name="accessories-calculator-symbolic",
         )
 
     def _calc_view(self, expression: str) -> list[Gtk.Widget]:
         if not expression:
-            return [self._message("Type an expression, e.g. =sqrt(2)*pi")]
-        result = calculate(expression)
+            return [
+                self._message("Type an expression, e.g. =sqrt(2)*pi or =10 km to mi")
+            ]
+        result = convert(expression) or calculate(expression)
         if result is None:
             return [self._message("Not a valid expression")]
         return [self._calc_row(expression, result)]
@@ -395,6 +437,91 @@ class AppMenu(PopupWindow):
             )
             for char, name in matches
         ]
+
+    def _web_row(self, query: str) -> ResultRow:
+        return self._transient_row(
+            f"Search the web for \u201c{query}\u201d",
+            "DuckDuckGo",
+            on_activate=lambda: self.open_uri(
+                WEB_SEARCH.format(GLib.uri_escape_string(query, None, False))
+            ),
+            icon_name="web-browser-symbolic",
+        )
+
+    def _web_view(self, query: str) -> list[Gtk.Widget]:
+        if not query:
+            return [self._message("Type to search the web (DuckDuckGo !bangs work)")]
+        widgets: list[Gtk.Widget] = []
+        # something that looks like an address opens directly
+        if " " not in query and "." in query.strip("."):
+            url = query if "://" in query else f"https://{query}"
+            widgets.append(
+                self._transient_row(
+                    query,
+                    "Open website",
+                    on_activate=lambda: self.open_uri(url),
+                    icon_name="network-workgroup-symbolic",
+                )
+            )
+        widgets.append(self._web_row(query))
+        return widgets
+
+    def _color_view(self, text: str) -> list[Gtk.Widget]:
+        pick = self._transient_row(
+            "Pick a colour from the screen",
+            "Copies its hex code",
+            on_activate=self.pick_color,
+            icon_name="color-select-symbolic",
+        )
+        if not text:
+            return [pick]
+        rgb = parse_color(text)
+        if rgb is None:
+            return [
+                self._message("Type a colour, e.g. #ff8800 or rgb(255, 136, 0)"),
+                pick,
+            ]
+        widgets: list[Gtk.Widget] = []
+        for label, value in color_formats(rgb):
+            swatch = Box(
+                name="appmenu-swatch",
+                size=(ICON_SIZE, ICON_SIZE),
+                style=f"background-color: rgb{rgb};",
+            )
+            widgets.append(
+                self._transient_row(
+                    value,
+                    f"{label}  ·  Enter to copy",
+                    on_activate=lambda v=value: self.copy(v),
+                    icon_widget=swatch,
+                )
+            )
+        return widgets
+
+    def _windows_view(self, query: str) -> list[Gtk.Widget]:
+        clients = sorted(hyprland_clients(), key=lambda c: c.get("focusHistoryID", 0))
+        icons = get_icon_resolver()
+        widgets: list[Gtk.Widget] = []
+        for client in clients:
+            title = client.get("title") or client.get("class") or "Window"
+            app_class = client.get("class") or ""
+            workspace = (client.get("workspace") or {}).get("name", "?")
+            if query and query not in f"{title} {app_class}".lower():
+                continue
+            address = client["address"]
+            row = self._transient_row(
+                title,
+                f"{app_class}  ·  workspace {workspace}",
+                on_activate=lambda a=address: self.focus(a),
+                icon_widget=Image(pixbuf=icons.get_icon_pixbuf(app_class, ICON_SIZE)),
+            )
+            row.address = address
+            row.connect("button-press-event", self._on_row_button_press)
+            row.connect("popup-menu", lambda r: self._show_menu(r) or True)
+            widgets.append(row)
+        if not widgets:
+            return [self._message("No matching windows" if query else "No windows")]
+        return widgets
 
     def _hidden_view(self, query: str) -> list[Gtk.Widget]:
         hidden = [e for i in self.stats.hidden if (e := self._entry(i))]
@@ -443,7 +570,7 @@ class AppMenu(PopupWindow):
 
     def _show_menu(self, row: ResultRow, event: Gdk.EventButton | None = None):
         entry = row.entry
-        if entry is None:
+        if entry is None and row.address is None:
             return
         menu = Gtk.Menu()
         menu.get_style_context().add_class("tray")  # shared menu styling
@@ -452,6 +579,15 @@ class AppMenu(PopupWindow):
             item = Gtk.MenuItem(label=label)
             item.connect("activate", lambda *_: callback())
             menu.append(item)
+
+        if entry is None:
+            address = row.address
+            assert address is not None
+            add("Focus", lambda: self.focus(address))
+            add("Close", lambda: self._window_action(close_window, address))
+            add("Kill", lambda: self._window_action(kill_window, address))
+            self._popup_menu(menu, row, event)
+            return
 
         for action_id, label in entry.actions:
             add(label, lambda a=action_id: self.launch(entry, a))
@@ -468,6 +604,11 @@ class AppMenu(PopupWindow):
             lambda: self._toggle(self.stats.hidden, entry),
         )
 
+        self._popup_menu(menu, row, event)
+
+    def _popup_menu(
+        self, menu: Gtk.Menu, row: ResultRow, event: Gdk.EventButton | None
+    ):
         menu.show_all()
         # Wayland needs a parent to place the menu relative to
         menu.attach_to_widget(row, None)
@@ -531,6 +672,53 @@ class AppMenu(PopupWindow):
 
         run_command_async(argv, on_done)
         self.close()
+
+    def open_uri(self, uri: str):
+        def on_done(success: bool, _stdout: str, stderr: str):
+            if not success:
+                logger.error(f"[App Menu] Couldn't open {uri}: {stderr.strip()}")
+
+        run_command_async(
+            ["uwsm", "app", "-t", "service", "--", "xdg-open", uri], on_done
+        )
+        self.close()
+
+    def focus(self, address: str):
+        focus_window(address)
+        self.close()
+
+    def _window_action(self, action: Callable[[str], None], address: str):
+        action(address)
+        # the window takes a moment to go; then list what's left
+        GLib.timeout_add(150, lambda: self.refresh() or False)
+
+    def pick_color(self):
+        def on_picked(success: bool, stdout: str, stderr: str):
+            color = stdout.strip()
+            if not success or not color:
+                # Escape cancels the picker; that's not worth a warning
+                if stderr.strip():
+                    logger.warning(f"[App Menu] hyprpicker: {stderr.strip()}")
+                return
+            run_command_async(["wl-copy", "--", color])
+            run_command_async(
+                [
+                    "notify-send",
+                    "-a",
+                    "Colour Picker",
+                    "-i",
+                    "color-select-symbolic",
+                    f"Copied {color}",
+                ]
+            )
+
+        self.close()
+
+        def start():
+            run_command_async(["hyprpicker", "-f", "hex"], on_picked)
+            return False
+
+        GLib.timeout_add(CLOSE_DELAY_MS, start)
 
     def copy(self, text: str):
         run_command_async(["wl-copy", "--", text])
