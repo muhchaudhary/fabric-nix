@@ -20,11 +20,14 @@ from fabric_config.components.bar.widgets.notification_center import (
 from fabric_config.components.overview import Overview
 
 from fabric_config.components.dock import AppDock
+from fabric_config.components.radial_menu import RadialItem, RadialMenu
 from fabric_config.components.wallpaper_picker import wallpaper_picker
 
 from gi.repository import GLib
 
+from fabric_config.utils.color_picker import pick_color
 from fabric_config.utils.cursors import install_pointer_cursors
+from fabric_config.utils.process import run_command_async
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 CSS_CACHE = CACHE_DIR + "/css"
@@ -49,6 +52,7 @@ class MyApp(Application):
         self.appMenu = AppMenu()
         self.dock = AppDock()
         self.wallpaper_picker = wallpaper_picker
+        self.radial_menu = RadialMenu(self._radial_items())
         super().__init__(
             "fabric-bar",
             self.bar,
@@ -59,9 +63,50 @@ class MyApp(Application):
             self.appMenu,
             self.overview,
             self.dock,
+            self.radial_menu,
         )
         config.theme.connect("notify::is-light", lambda *_: self.apply_style())
         self.apply_style()
+
+    def _radial_items(self) -> list[RadialItem]:
+        return [
+            RadialItem(
+                "Apps", "view-app-grid-symbolic", lambda: self.appMenu.toggle_popup()
+            ),
+            RadialItem(
+                "Overview",
+                "focus-windows-symbolic",
+                lambda: self.overview.toggle_popup(),
+            ),
+            RadialItem(
+                "Screenshot", "camera-photo-symbolic", lambda: self.sc.screenshot()
+            ),
+            RadialItem(
+                "Record",
+                "media-record-symbolic",
+                lambda: (
+                    self.sc.screencast_stop()
+                    if self.sc.is_recording
+                    else self.sc.screencast_start()
+                ),
+            ),
+            RadialItem("Colour", "color-select-symbolic", lambda: pick_color()),
+            RadialItem(
+                "Wallpaper",
+                "preferences-desktop-wallpaper-symbolic",
+                lambda: config.wallpaper_slideshow.next(),
+            ),
+            RadialItem(
+                "Caffeine",
+                "my-caffeine-on-symbolic",
+                lambda: setattr(config.caffeine, "active", not config.caffeine.active),
+            ),
+            RadialItem(
+                "Lock",
+                "system-lock-screen-symbolic",
+                lambda: run_command_async(["loginctl", "lock-session"]),
+            ),
+        ]
 
     def apply_style(self):
         logger.info("[Main] Compiling SCSS and applying style")
@@ -80,6 +125,10 @@ def main():
     @the_app.action()
     def toggle_appmenu():
         the_app.appMenu.toggle_popup()
+
+    @the_app.action()
+    def toggle_radial_menu():
+        the_app.radial_menu.toggle()
 
     @the_app.action()
     def toggle_overview():
