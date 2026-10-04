@@ -396,6 +396,21 @@ class DynamicIsland(Gtk.EventBox):
     # What gets announced
 
     def _watch_events(self):
+        # imported here: the prayer widgets import this package's siblings
+        from fabric_config.components.bar.widgets.prayer_times import (
+            _get_prayer_service,
+        )
+
+        _get_prayer_service().connect(
+            "prayer-time",
+            lambda _, prayer: self.show_event(
+                "weather-clear-night-symbolic"
+                if prayer in ("Fajr", "Maghrib", "Isha")
+                else "weather-clear-symbolic",
+                prayer,
+                "It's time to pray",
+            ),
+        )
         config.sc.connect(
             "recording",
             lambda _, recording: self.show_event(

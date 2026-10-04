@@ -114,6 +114,14 @@ def main():
         the_app.wallpaper_picker.toggle_popup()
 
     @the_app.action()
+    def stop_adhan():
+        from fabric_config.components.bar.widgets.prayer_times import (
+            _get_prayer_service,
+        )
+
+        _get_prayer_service().adhan.stop()
+
+    @the_app.action()
     def preview_weather(kind: str = ""):
         """Show a weather effect on the desktop for 30 s (rain, snow, storm, ...)."""
         the_app.desktop.preview_weather(kind)
