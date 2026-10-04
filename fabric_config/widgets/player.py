@@ -113,7 +113,8 @@ class PlayerBox(Box):
         on_switch: Callable[[int], None] | None = None,
         **kwargs,
     ):
-        super().__init__(h_align="start", name="player-box", **kwargs)
+        # fill the panel: player_width is the narrowest the card gets
+        super().__init__(h_align="fill", h_expand=True, name="player-box", **kwargs)
         self._on_switch = on_switch
         # Setup
         self.player: MprisPlayer = player
@@ -205,7 +206,7 @@ class PlayerBox(Box):
             spacing=0,
             orientation="v",
             v_align="start",
-            h_align="start",
+            h_align="fill",
             style=f"min-width: {self.player_width - self.image_size - 20}px;",
             children=[
                 # the title gets the whole row; the compact source chip
@@ -336,9 +337,10 @@ class PlayerBox(Box):
 
         self.player_info_box = Box(
             style=f"margin-left: {self.image_size + 10}px;"
+            + "margin-right: 14px;"
             + f"min-width: {self.player_width - self.image_size - 20}px;",
             v_align="center",
-            h_align="start",
+            h_align="fill",
             orientation="v",
             children=[self.track_info, self.seek_bar, self.time_label, self.button_box],
         )
@@ -353,15 +355,17 @@ class PlayerBox(Box):
             style_classes=["cool-border"],
             style=self._inner_style,
             v_align="center",
-            h_align="start",
+            h_align="fill",
         )
         # resize the inner box
         self.outer_box = Box(
-            h_align="start",
+            h_align="fill",
+            h_expand=True,
             style=f"min-width:{self.player_width}px;"
             f" min-height:{max(self.image_size, self.player_height)}px;",
         )
         self.overlay_box = Overlay(
+            h_expand=True,
             child=self.outer_box,
             overlays=[
                 self.inner_box,
