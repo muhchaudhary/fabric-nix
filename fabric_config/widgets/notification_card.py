@@ -50,6 +50,10 @@ def notification_image(notification: Notification) -> GdkPixbuf.Pixbuf | None:
         if path := notification.image_file:
             if path.startswith("file://"):
                 path = file_uri_to_path(path)
+            # image-path may also be an icon name (notify-send -i puts it
+            # there); app_icon() shows that one
+            if not os.path.isabs(path):
+                return None
             return GdkPixbuf.Pixbuf.new_from_file_at_scale(
                 path, IMAGE_LOAD_SIZE, IMAGE_LOAD_SIZE, True
             )
@@ -60,6 +64,14 @@ def notification_image(notification: Notification) -> GdkPixbuf.Pixbuf | None:
 
 def app_icon(notification: Notification, size: int) -> Image:
     icon = notification.app_icon or ""
+    image = notification.image_file or ""
+    if (
+        not icon
+        and image
+        and not image.startswith("file://")
+        and not os.path.isabs(image)
+    ):
+        icon = image
     if icon.startswith("file://"):
         icon = file_uri_to_path(icon)
     if not icon:

@@ -1,0 +1,67 @@
+@use '../../tokens' as *;
+@use '../../mixins' as *;
+
+/* Bar readout: fixed-width digits, so the bar doesn't shift as they change */
+#stats-bar-label { font-feature-settings: "tnum"; }
+
+/* System monitor popup */
+#stats-panel {
+  @include panel($radius-xl);
+  margin: 6px;
+  min-width: 380px;
+}
+
+#stats-title  { font-size: 16px; font-weight: 700; }
+#stats-uptime { font-size: 12px; color: var(--fg-dim); }
+
+#stats-card {
+  padding: 10px $gap-md;
+  border-radius: $radius-md;
+  background-color: a(var(--fg), 0.06);
+  border: 1px solid a(var(--fg), 0.08);
+
+  image { color: var(--fg-dim); }
+}
+
+#stats-card-title  { font-size: 12px; font-weight: 600; color: var(--fg-dim); }
+#stats-card-value  { font-size: 22px; font-weight: 700; font-feature-settings: "tnum"; }
+#stats-card-detail { font-size: 12px; color: var(--fg-dim); font-feature-settings: "tnum"; }
+#stats-sparkline   { color: var(--accent); margin-top: $gap-xs; }
+
+#stats-disk {
+  padding: $gap-sm $gap-md;
+  border-radius: $radius-md;
+  background-color: a(var(--fg), 0.06);
+
+  levelbar trough {
+    min-height: 6px;
+    border-radius: 3px;
+    border: none;
+    background-color: a(var(--fg), 0.12);
+  }
+  levelbar block {
+    border-radius: 3px;
+    border: none;
+    &.filled { background-color: var(--accent); }
+    &.empty  { background-color: transparent; }
+  }
+}
+
+#stats-disk-label { font-size: 12px; color: var(--fg-dim); font-feature-settings: "tnum"; }
+
+#stats-section {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-dim);
+  margin-top: $gap-xs;
+}
+
+#stats-process {
+  padding: 3px $gap-sm;
+  border-radius: $radius-sm;
+  &:hover { background-color: a(var(--fg), 0.06); }
+}
+
+#stats-process-name   { font-size: 13px; }
+#stats-process-memory { font-size: 12px; color: var(--fg-dim); font-feature-settings: "tnum"; min-width: 60px; }
+#stats-process-cpu    { font-size: 13px; font-weight: 600; font-feature-settings: "tnum"; min-width: 44px; }

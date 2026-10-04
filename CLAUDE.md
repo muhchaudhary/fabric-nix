@@ -46,7 +46,7 @@ basedpyright .        # type check
 ### Entry points
 
 - `run_fabric.py` → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
-- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.audio_devices` (outputs/inputs to switch between), `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews), `config.hyprsunset` (night light), `config.caffeine` (idle lock), `config.power_profiles` (power-profiles-daemon). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
+- `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.audio_devices` (outputs/inputs to switch between), `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews), `config.hyprsunset` (night light), `config.caffeine` (idle lock), `config.power_profiles` (power-profiles-daemon), `config.system_stats` (load and sensors). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
 
 ### Components (`fabric_config/components/`)
 
@@ -55,7 +55,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 | Component | Description |
 |---|---|
 | `bar/bar.py` | `StatusBarSeperated` — the main top bar (workspaces, clock, system tray, quick settings) |
-| `bar/widgets/` | Bar buttons and their popups (prayer times, clipboard history, power menu, temps, tray, battery) |
+| `bar/widgets/` | Bar buttons and their popups (prayer times, clipboard history, power menu, temps + system monitor popup (`stats.py`: CPU/memory/GPU/network sparklines, disk, top processes), recording indicator, tray, battery) |
 | `quick_settings/` | Quick settings popup panel (wifi/bluetooth toggles, night light + theme toggles, DND, caffeine, record, screenshot, a power-profile row when power-profiles-daemon runs, sliders, media player; the volume slider's arrow opens the sound panel: per-app volume, output and input pickers) |
 | `notification_popup.py` | Notification toasts (cards fly in/out on a click-through overlay that's only mapped while animating). Timing out only hides a toast; max 4 shown, critical ones stay until dismissed |
 | `bar/widgets/notification_center.py` | Notification center: bell button + popup listing notifications grouped by app, Do Not Disturb, clear (actions `toggle_notification_center`, `toggle_do_not_disturb`). Cards come from `widgets/notification_card.py` |
@@ -88,6 +88,7 @@ Custom GObject services built on `fabric.core.service.Service`. Use `@Property` 
 - `hyprsunset.py` — `Hyprsunset` (`config.hyprsunset`): night light via `hyprctl hyprsunset` (temperature, gamma, `identity` when off). hyprsunset can't report whether it's filtering, so on/off, temperature and gamma are kept here, saved to `~/.cache/fabric/hyprsunset.json` and pushed on startup; commands go one at a time with only the latest state sent (slider drags)
 - `caffeine.py` — `Caffeine` (`config.caffeine`): keeps the screen awake by holding a logind `idle` inhibitor fd (hypridle honours it); closing the fd, or fabric exiting, releases it
 - `power_profiles.py` — `PowerProfiles` (`config.power_profiles`): power-profiles-daemon over DBus; `available` is False without it
+- `system_stats.py` — `SystemStats` (`config.system_stats`): psutil + NVML (`utils/nvml.py`, ctypes; no `nvidia-smi` processes) sampled each second on a thread, `updated(sample)` on the main thread, a minute of `history` per metric. Top processes only while someone `set_wanted(owner, True)`
 - `wallpaper_accent.py` — dominant colour of each monitor's wallpaper (Pillow at reduced size, off the main thread; ColorThief is pure Python and blocks the GTK loop on large images) and the theme accent made from it
 
 Networking uses AstalNetwork (`config.network`) directly, plus the NM API for connecting/forgetting Wi-Fi (no `nmcli`, so passwords never appear in argv).
@@ -124,6 +125,7 @@ Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-s
 - `uri.py` — `file_uri_to_path()` (decodes `%20` etc.; don't slice `[7:]`)
 - `accent.py` — accent color extraction from images
 - `snippits/animator.py` — animation utility
+- `widgets/sparkline.py` — `Sparkline`, a filled line chart in the widget's CSS `color`
 
 Note: fabric's `exec_shell_command_async` only calls back per **stdout line** and never reads stderr. A command that prints nothing never triggers the callback, and failures go unnoticed. Use `run_command_async` when you need completion or error handling. For long-running chatty processes (e.g. wf-recorder), silence their output rather than piping it unread.
 
