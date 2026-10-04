@@ -290,6 +290,9 @@ class NotificationCenterButton(Button):
         config.notifications.connect("notify::count", self._update)
         config.notifications.connect("notify::dnd", self._update)
         self._update()
+        # drop down under this button, however it's opened (click or the
+        # toggle_notification_center action); placed as the popup lays out
+        NotificationCenterPopup.place_under(self)
 
         NotificationCenterPopup.reveal_child.revealer.connect(
             "notify::reveal-child",

@@ -70,7 +70,7 @@ Top-level UI windows. All are `WaylandWindow` subclasses registered with the `Ap
 
 ### Popup windows (`fabric_config/widgets/popup_window_v2.py`)
 
-`PopupWindow` is the standard base for all overlay windows. It wraps content in a `PopupRevealer` (animated slide/fade via `Revealer`) and fills the screen with transparent `Padding` `EventBox` areas that dismiss the popup on click. Use `toggle_popup()` to show/hide; `popup_timeout()` for auto-dismissing popups (OSD pattern). `place_under(button)` centres a top-left/top-right popup under a bar button (re-placed once the content is laid out; the stats popup uses it). Its anchor is `_popup_anchor`: `WaylandWindow` already uses `_anchor`.
+`PopupWindow` is the standard base for all overlay windows. It wraps content in a `PopupRevealer` (animated slide/fade via `Revealer`) and fills the screen with transparent `Padding` `EventBox` areas that dismiss the popup on click. Use `toggle_popup()` to show/hide; `popup_timeout()` for auto-dismissing popups (OSD pattern). `place_under(button)` centres a top-left/top-right popup under a bar button (re-placed once the content is laid out; the stats popup and notification center use it). Its anchor is `_popup_anchor`: `WaylandWindow` already uses `_anchor`.
 
 Popups use the shared commands-only Hyprland connection from `utils/hyprland_monitor.get_hyprland_monitors()`. Don't construct `Hyprland()`/`HyprlandWithMonitors()` per widget: each non-commands-only instance opens its own event-socket listener.
 
