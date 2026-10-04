@@ -232,8 +232,38 @@ class QuickSettingsButton(Button):
         config.network.connect("notify::primary", get_network_icon)
         get_network_icon()
 
+        # what's switched on shows here too, left of the usual icons
+        self.status_icons = [
+            self._status_icon(
+                "my-caffeine-on-symbolic",
+                config.caffeine,
+                "active",
+                lambda: config.caffeine.active,
+            ),
+            self._status_icon(
+                "notifications-disabled-symbolic",
+                config.notifications,
+                "dnd",
+                lambda: config.notifications.dnd,
+            ),
+            self._status_icon(
+                "night-light-symbolic",
+                config.hyprsunset,
+                "enabled",
+                lambda: config.hyprsunset.enabled,
+            ),
+            self._power_profile_icon(),
+        ]
+
         self.add(
-            Box(children=[self.network_icon, self.bluetooth_icon, self.audio_icon])
+            Box(
+                children=[
+                    *self.status_icons,
+                    self.network_icon,
+                    self.bluetooth_icon,
+                    self.audio_icon,
+                ]
+            )
         )
         self.connect("clicked", self.on_click)
 
@@ -251,6 +281,45 @@ class QuickSettingsButton(Button):
                 ]
             ),
         )
+
+    def _status_icon(
+        self, icon_name: str, service, prop: str, is_on: Callable[[], bool]
+    ) -> Image:
+        """An icon shown while `prop` on `service` is on."""
+        icon = Image(
+            name="panel-icon",
+            style_classes=["panel-status-icon"],
+            icon_name=icon_name,
+            icon_size=self.planel_icon_size,
+        )
+        # stays hidden through the bar's show_all() while off
+        icon.set_no_show_all(True)
+        service.connect(f"notify::{prop}", lambda *_: icon.set_visible(is_on()))
+        icon.set_visible(is_on())
+        return icon
+
+    def _power_profile_icon(self) -> Image:
+        """Power saver or performance (balanced is the default, so no icon)."""
+        icon = Image(
+            name="panel-icon",
+            style_classes=["panel-status-icon"],
+            icon_size=self.planel_icon_size,
+        )
+        icon.set_no_show_all(True)
+
+        def update(*_):
+            profile = config.power_profiles.profile
+            shown = config.power_profiles.available and profile != "balanced"
+            if shown:
+                icon.set_from_icon_name(
+                    f"power-profile-{profile}-symbolic", self.planel_icon_size
+                )
+            icon.set_visible(shown)
+
+        config.power_profiles.connect("notify::profile", update)
+        config.power_profiles.connect("notify::available", update)
+        update()
+        return icon
 
     def update_audio(self, *args):
         self.audio_icon.set_from_icon_name(
