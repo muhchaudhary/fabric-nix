@@ -1,8 +1,10 @@
 import ast
+import colorsys
 import json
 import math
 import operator
 import os
+import re
 import time
 import unicodedata
 from dataclasses import dataclass, field
@@ -282,3 +284,37 @@ def search_emoji(query: str, limit: int = 40) -> list[tuple[str, str]]:
         scored.append((score, len(name), char, name))
     scored.sort(key=lambda s: (-s[0], s[1]))
     return [(char, name) for _, _, char, name in scored[:limit]]
+
+
+# Colours ("#" prefix)
+
+_HEX = re.compile(r"^#?([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+_RGB = re.compile(
+    r"^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*(?:,[^)]*)?\)$"
+)
+
+
+def parse_color(text: str) -> tuple[int, int, int] | None:
+    """`#rgb`, `#rrggbb` (the `#` optional) or `rgb(r, g, b)` as an RGB tuple."""
+    text = text.strip()
+    if match := _HEX.match(text):
+        digits = match[1]
+        if len(digits) == 3:
+            digits = "".join(c * 2 for c in digits)
+        return tuple(int(digits[i : i + 2], 16) for i in (0, 2, 4))  # type: ignore[return-value]
+    if match := _RGB.match(text.lower()):
+        rgb = tuple(int(v) for v in match.groups())
+        if all(v <= 255 for v in rgb):
+            return rgb  # type: ignore[return-value]
+    return None
+
+
+def color_formats(rgb: tuple[int, int, int]) -> list[tuple[str, str]]:
+    """(label, value) pairs for copying a colour in common notations."""
+    r, g, b = rgb
+    h, lightness, s = colorsys.rgb_to_hls(r / 255, g / 255, b / 255)
+    return [
+        ("Hex", f"#{r:02x}{g:02x}{b:02x}"),
+        ("RGB", f"rgb({r}, {g}, {b})"),
+        ("HSL", f"hsl({round(h * 360)}, {round(s * 100)}%, {round(lightness * 100)}%)"),
+    ]

@@ -95,3 +95,9 @@ $appmenu-radius: 32px;
 #appmenu-app-name { color: var(--fg); font-size: 14px; font-weight: 600; }
 #appmenu-app-desc { color: var(--fg-dim); font-size: 12px; }
 #appmenu-glyph    { font-size: 22px; }
+
+/* Colour swatch in "#" results */
+#appmenu-swatch {
+  border-radius: 8px;
+  border: 1px solid a(var(--fg), 0.15);
+}

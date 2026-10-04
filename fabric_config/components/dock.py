@@ -1,4 +1,3 @@
-import json
 from collections.abc import Callable
 
 import cairo
@@ -11,11 +10,14 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow as Window
-from loguru import logger
 
 import fabric_config.config as config
 from fabric_config.services.window_previews import cover_size
-from fabric_config.utils.hyprland_monitor import get_hyprland_monitors
+from fabric_config.utils.hyprland_windows import (
+    close_window,
+    focus_window,
+    hyprland_clients,
+)
 from fabric_config.utils.icon_resolver import get_icon_resolver
 from fabric_config.widgets.rounded_cover_image import RoundedCoverImage
 
@@ -42,28 +44,6 @@ PREVIEW_FPS = 30
 # bottom-anchored layer surface grows, its input region (in top-left surface
 # coordinates) lags a frame behind and the pointer seems to leave the dock
 WINDOW_HEIGHT = THUMB_HEIGHT + 200
-
-
-def hyprland_clients() -> list[dict]:
-    try:
-        clients = json.loads(get_hyprland_monitors().send_command("j/clients").reply)
-    except Exception as e:
-        logger.error(f"[Dock] fetching Hyprland clients failed: {e}")
-        return []
-    return [c for c in clients if c.get("mapped", True)]
-
-
-def focus_window(address: str):
-    # Hyprland 0.56+ (Lua config) rejects the old "focuswindow address:..." form
-    get_hyprland_monitors().send_command(
-        f"/dispatch hl.dsp.focus({{ window = 'address:{address}' }})"
-    )
-
-
-def close_window(address: str):
-    get_hyprland_monitors().send_command(
-        f"/dispatch hl.dsp.window.close({{ window = 'address:{address}' }})"
-    )
 
 
 class AppButton(Button):
