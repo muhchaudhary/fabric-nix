@@ -2,14 +2,11 @@ from typing import Callable, Iterable, Literal, override
 
 from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.widgets.box import Box
-from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.datetime import DateTime
-from fabric.widgets.image import Image
 from fabric.widgets.shapes import Corner
 from fabric.widgets.wayland import WaylandWindow
 
-from fabric_config import config
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
     PrayerTimesButton,
@@ -23,6 +20,9 @@ from fabric_config.components.bar.widgets.notification_center import (
     NotificationCenterButton,
 )
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
+from fabric_config.components.bar.widgets.recording_indicator import (
+    RecordingIndicator,
+)
 from fabric_config.components.bar.widgets.wallpaper_picker import WallpapperPickerButton
 from fabric_config.components.quick_settings.quick_settings import QuickSettingsButton
 
@@ -106,17 +106,7 @@ class StatusBarSeperated(WaylandWindow):
             buttons_factory=None,
         )
 
-        self.recording_indicator = Button(
-            style_classes=["button-basic", "button-basic-props", "button-border"],
-            child=Image(icon_name="media-record-symbolic"),
-            visible=False,
-            on_clicked=lambda *_: config.sc.screencast_stop(),
-        )
-
-        config.sc.connect(
-            "recording",
-            lambda _, status: self.recording_indicator.set_visible(status),
-        )
+        self.recording_indicator = RecordingIndicator()
 
         # self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime(
