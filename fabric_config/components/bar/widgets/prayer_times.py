@@ -5,14 +5,26 @@ import threading
 
 import gi
 from fabric.core.service import Property, Service, Signal
-from fabric.utils import exec_shell_command_async, invoke_repeater
+from fabric.utils import invoke_repeater
 from fabric.widgets.box import Box
 from fabric.widgets.button import Button
 from fabric.widgets.centerbox import CenterBox
 from fabric.widgets.label import Label
-from gi.repository import Gio, GLib
+from gi.repository import Gio, GLib, Gtk
+from loguru import logger
 
+from fabric_config.components.bar.widgets.prayer_extras import (
+    AdhanPlayer,
+    QiblaCompass,
+    compass_point,
+    load_settings,
+    notify,
+    qibla_bearing,
+    ramadan_countdown,
+    save_settings,
+)
 from fabric_config.widgets.popup_window_v2 import PopupWindow
+from fabric_config.widgets.toggle_pill import ToggleSwitch
 
 gi.require_version("Geoclue", "2.0")
 from gi.repository import Geoclue  # noqa: E402
@@ -72,17 +84,25 @@ class PrayerTimesService(Service):
     @Signal
     def changed(self) -> None: ...
 
+    @Signal
+    def prayer_time(self, prayer: str) -> None:
+        """A prayer's time has come (not fired for the one current at startup)."""
+
     def __init__(self, **kwargs):
         self.prayer_info: dict = {}
+        self.settings = load_settings()
+        self.adhan = AdhanPlayer()
         self._current_prayer = "None"
         self._next_prayer = "None"
         self._time_to_next_prayer = "None"
         self._location_name = ""
+        self._announced: str | None = None
         super().__init__(**kwargs)
         cached = _load_location()
         if cached:
             self._location_name = cached.get("city", "")
-        invoke_repeater(1000 * 60, self.update_prayer_state)
+        # often enough to announce a prayer within seconds of its time
+        invoke_repeater(15 * 1000, self.update_prayer_state)
         invoke_repeater(86400 * 1000, self._daily_refresh)
 
     def _daily_refresh(self) -> bool:
@@ -91,11 +111,45 @@ class PrayerTimesService(Service):
         self.refresh()
         return True
 
-    def notify_next_prayer(self):
-        exec_shell_command_async(
-            f"notify-send 'Next Prayer' 'Next prayer is {self.next_prayer}'",
-            lambda *_: None,
+    @property
+    def adhan_enabled(self) -> bool:
+        return bool(self.settings.get("adhan", False))
+
+    @adhan_enabled.setter
+    def adhan_enabled(self, value: bool):
+        self.settings["adhan"] = value
+        save_settings(self.settings)
+        if not value:
+            self.adhan.stop()
+
+    @property
+    def hijri_month(self) -> int | None:
+        data = self._read_json()
+        try:
+            return int(data["date"]["hijri"]["month"]["number"]) if data else None
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def location(self) -> tuple[float, float] | None:
+        cached = _load_location()
+        if not cached:
+            return None
+        try:
+            return float(cached["lat"]), float(cached["lon"])
+        except (KeyError, TypeError, ValueError):
+            return None
+
+    def ramadan_countdown(self) -> str | None:
+        return ramadan_countdown(
+            self.prayer_info, self.hijri_month, datetime.datetime.now()
         )
+
+    def _on_prayer_time(self, prayer: str):
+        logger.info(f"[Prayer] {prayer} time")
+        notify(f"{prayer}", f"It's time for {prayer}")
+        if self.adhan_enabled:
+            self.adhan.play(prayer)
+        self.prayer_time(prayer)
 
     def update_prayer_state(self):
         # always return True: this runs on a repeating timer, and a falsy
@@ -124,6 +178,13 @@ class PrayerTimesService(Service):
             self.current_prayer = prayer_names[-1]
             self.next_prayer = prayer_names[0]
 
+        # a change after the first reading means a prayer's time just came
+        # (the first reading is whatever was current at startup)
+        current = str(self.current_prayer)
+        if self._announced is not None and current != self._announced:
+            self._on_prayer_time(current)
+        self._announced = current
+
         next_prayer_time_obj = prayer_times[self.next_prayer]
         if (
             self.next_prayer == prayer_names[0]
@@ -141,9 +202,6 @@ class PrayerTimesService(Service):
         hours, remainder = divmod(int(time_to_next_prayer.total_seconds()), 3600)
         minutes, _ = divmod(remainder, 60)
         self.time_to_next_prayer = f"{hours}h {minutes}m"
-
-        if 0 <= time_to_next_prayer.total_seconds() <= 60:
-            self.notify_next_prayer()
 
         return True
 
@@ -320,6 +378,10 @@ class PrayerTimesButton(Button):
         PrayerTimesPopup.toggle_popup()
 
     def update_label(self, *_):
+        # in Ramadan, the countdown to Iftar or the end of Suhoor matters most
+        if countdown := self.prayer_service.ramadan_countdown():
+            self.prayer_button_label.set_label(countdown)
+            return
         self.prayer_button_label.set_label(
             f"{self.prayer_service.current_prayer} ({self.prayer_service.time_to_next_prayer} left)"
         )
@@ -365,6 +427,100 @@ class PrayerTimes(Box):
             "notify::current-prayer", self.update_prayer_label
         )
         self.update_prayer_label()
+        self._add_extras()
+
+    def _add_extras(self):
+        service = self.prayer_info_service
+        # rows go after the prayers; those arrive later, so keep them apart
+        self.prayer_box = Box(orientation="v")
+        for child in list(self.children)[2:]:
+            self.remove(child)
+            self.prayer_box.add(child)
+        self.add(self.prayer_box)
+
+        self.ramadan_label = Label("", name="prayer-info-ramadan")
+        self.ramadan_label.set_no_show_all(True)
+
+        self.compass = QiblaCompass()
+        self.qibla_label = Label("", name="prayer-info-qibla", h_align="start")
+        self.qibla_detail = Label("", name="prayer-info-detail", h_align="start")
+        qibla = Box(
+            name="prayer-info-extra",
+            spacing=12,
+            children=[
+                self.compass,
+                Box(
+                    orientation="v",
+                    v_align="center",
+                    children=[self.qibla_label, self.qibla_detail],
+                ),
+            ],
+        )
+
+        self.adhan_switch = ToggleSwitch(
+            active=service.adhan_enabled,
+            on_toggled=lambda active: setattr(service, "adhan_enabled", active),
+        )
+        self.adhan_switch.set_valign(Gtk.Align.CENTER)
+        self.stop_button = Button(
+            label="Stop",
+            name="prayer-info-stop",
+            on_clicked=lambda *_: self._stop_adhan(),
+        )
+        self.stop_button.set_no_show_all(True)
+        adhan = CenterBox(
+            name="prayer-info-extra",
+            start_children=Box(
+                orientation="v",
+                v_align="center",
+                children=[
+                    Label("Adhan", name="prayer-info-qibla", h_align="start"),
+                    Label(
+                        "At each prayer's time",
+                        name="prayer-info-detail",
+                        h_align="start",
+                    ),
+                ],
+            ),
+            end_children=Box(spacing=8, children=[self.stop_button, self.adhan_switch]),
+        )
+
+        self.add(self.ramadan_label)
+        self.add(Box(style_classes=["prayer-info-separator"]))
+        self.add(qibla)
+        self.add(adhan)
+
+        service.connect("prayer-time", lambda *_: self.stop_button.show())
+        service.connect("notify::location-name", lambda *_: self.update_extras())
+        service.connect("notify::time-to-next-prayer", lambda *_: self.update_extras())
+        self.update_extras()
+
+    def _stop_adhan(self):
+        self.prayer_info_service.adhan.stop()
+        self.stop_button.hide()
+
+    def update_extras(self):
+        service = self.prayer_info_service
+        location = service.location()
+        if location is None:
+            self.compass.set_bearing(None)
+            self.qibla_label.set_label("Qibla")
+            self.qibla_detail.set_label("Location unknown")
+        else:
+            bearing = qibla_bearing(*location)
+            self.compass.set_bearing(bearing)
+            self.qibla_label.set_label(
+                f"Qibla {round(bearing)}° {compass_point(bearing)}"
+            )
+            self.qibla_detail.set_label("Clockwise from true north")
+
+        countdown = service.ramadan_countdown()
+        self.ramadan_label.set_visible(countdown is not None)
+        self.ramadan_label.set_label(
+            f"Ramadan Mubarak · {countdown}" if countdown else ""
+        )
+        if not service.adhan.playing:
+            self.stop_button.hide()
 
     def update_location_label(self, *_):
         name = self.prayer_info_service.location_name
@@ -384,8 +540,9 @@ class PrayerTimes(Box):
             )
 
     def _add_prayer_row(self, prayer: str):
+        parent = getattr(self, "prayer_box", self)
         if self.prayer_rows:
-            self.add(Box(style_classes=["prayer-info-separator"]))
+            parent.add(Box(style_classes=["prayer-info-separator"]))
         labels = (
             Label(style_classes=["prayer-info-prayer-label"]),
             Label(style_classes=["prayer-info-time-label"]),
@@ -397,7 +554,7 @@ class PrayerTimes(Box):
         )
         self.prayer_labels[prayer] = labels
         self.prayer_rows[prayer] = row
-        self.add(row)
+        parent.add(row)
 
     def on_prayer_update(self, _, prayer_info):
         def time_format(time):
