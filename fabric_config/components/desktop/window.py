@@ -340,12 +340,18 @@ class DesktopWindow(WaylandWindow):
         self.show_all()
         self.apply_settings()
 
-    def do_destroy(self):
-        self.fx.set_animating(False)
-        screen = Gdk.Screen.get_default()
-        if screen is not None:
-            Gtk.StyleContext.remove_provider_for_screen(screen, self._size_provider)
-        WaylandWindow.do_destroy(self)
+        # A signal handler, not a do_destroy override: GTK emits destroy again
+        # at finalization, when PyGObject hands the vfunc a fresh wrapper with
+        # none of our attributes; the vfunc raised before chaining up and the
+        # object was disposed over and over (a busy loop on monitor unplug)
+        fx, size_provider = self.fx, self._size_provider
+
+        def on_destroy(*_):
+            fx.set_animating(False)
+            if screen is not None:
+                Gtk.StyleContext.remove_provider_for_screen(screen, size_provider)
+
+        self.connect("destroy", on_destroy)
 
     # Settings and layout
 

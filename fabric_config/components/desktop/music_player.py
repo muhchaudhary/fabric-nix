@@ -292,7 +292,10 @@ class MusicPlayer(Gtk.EventBox):
         self._cursor_name: str | None = None
 
         self._layout()
-        GLib.timeout_add_seconds(1, self._second)
+        self._second_id: int | None = GLib.timeout_add_seconds(1, self._second)
+        # monitor hotplug destroys the desktop's windows; a timer left running
+        # keeps the old card alive, still drawing
+        self.connect("destroy", lambda *_: self._stop_timers())
 
     # Layout
 
@@ -528,6 +531,12 @@ class MusicPlayer(Gtk.EventBox):
         self.visible_on_desktop = visible
         self._update_lyrics_poll()
         self._ensure_tick()
+
+    def _stop_timers(self):
+        for name in ("_second_id", "_lyrics_poll", "_tick_id"):
+            if (source := getattr(self, name, None)) is not None:
+                GLib.source_remove(source)
+                setattr(self, name, None)
 
     def _second(self):
         # the seek bar and times move on their own
