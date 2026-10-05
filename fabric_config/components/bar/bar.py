@@ -10,7 +10,6 @@ from fabric.widgets.shapes import Corner
 from fabric.widgets.wayland import WaylandWindow
 from gi.repository import Gtk
 
-from fabric_config.components.bar.island import DynamicIsland
 from fabric_config.components.bar.widgets import (
     BatteryIndicator,
     PrayerTimesButton,
@@ -163,8 +162,6 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.recording_indicator = RecordingIndicator()
-        # the island: the workspaces, chips, and a panel that drops down from them
-        self.island = DynamicIsland(self.workspaces)
 
         # self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime(
@@ -221,16 +218,13 @@ class StatusBarSeperated(WaylandWindow):
         ]
         self.bar_content.center_children = [
             StatusBarCorner("top-right"),
-            island_pill := CenterBox(
+            CenterBox(
                 name="system-bar-group",
-                center_children=[self.island],
+                center_children=[self.workspaces],
                 style_classes="center",
             ),
             StatusBarCorner("top-left"),
         ]
-
-        # the island widens this group, and squares it off, while it's open
-        self.island.attach_pill(island_pill)
 
         super().__init__(
             title="fabric-bar",
