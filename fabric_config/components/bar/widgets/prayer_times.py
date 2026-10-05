@@ -35,9 +35,6 @@ PRAYER_TIMES_FILE = os.path.join(PRAYER_TIMES_CACHE, "current_times.json")
 LOCATION_CACHE_FILE = os.path.join(PRAYER_TIMES_CACHE, "location.json")
 os.makedirs(PRAYER_TIMES_CACHE, exist_ok=True)
 
-# a heads-up this long before each prayer
-REMIND_MINUTES = 10
-
 # Geoclue can wait forever when it has no usable source (e.g. Wi-Fi off on a
 # wired desktop) instead of failing, so give up and use the cached location
 GEOCLUE_TIMEOUT_S = 10
@@ -88,10 +85,6 @@ class PrayerTimesService(Service):
     def changed(self) -> None: ...
 
     @Signal
-    def prayer_soon(self, prayer: str, minutes: int) -> None:
-        """The next prayer is REMIND_MINUTES away (once per prayer)."""
-
-    @Signal
     def prayer_time(self, prayer: str) -> None:
         """A prayer's time has come (not fired for the one current at startup)."""
 
@@ -104,7 +97,6 @@ class PrayerTimesService(Service):
         self._time_to_next_prayer = "None"
         self._location_name = ""
         self._announced: str | None = None
-        self._reminded: str | None = None
         super().__init__(**kwargs)
         cached = _load_location()
         if cached:
@@ -206,12 +198,6 @@ class PrayerTimesService(Service):
 
         if time_to_next_prayer.total_seconds() < 0:
             time_to_next_prayer += datetime.timedelta(days=1)
-
-        seconds_left = time_to_next_prayer.total_seconds()
-        upcoming = str(self.next_prayer)
-        if 0 < seconds_left <= REMIND_MINUTES * 60 and self._reminded != upcoming:
-            self._reminded = upcoming
-            self.prayer_soon(upcoming, max(1, round(seconds_left / 60)))
 
         hours, remainder = divmod(int(time_to_next_prayer.total_seconds()), 3600)
         minutes, _ = divmod(remainder, 60)
