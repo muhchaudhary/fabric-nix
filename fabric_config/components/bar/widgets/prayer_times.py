@@ -357,7 +357,10 @@ class PrayerTimesButton(Button):
         self.prayer_button_icon = Label(label="󰥹 ", name="panel-icon")
         self.add(Box(children=[self.prayer_button_icon, self.prayer_button_label]))
         self.connect("clicked", self.on_click)
+        self.connect("button-press-event", self.on_button_press)
         self.prayer_service = _get_prayer_service()
+        self.prayer_service.adhan.connect("notify::playing", self.update_icon)
+        self.prayer_service.adhan.connect("notify::muted", self.update_icon)
         self.prayer_service.connect("notify::current-prayer", self.update_label)
         self.prayer_service.connect("notify::time-to-next-prayer", self.update_label)
         self.update_label()
@@ -378,6 +381,22 @@ class PrayerTimesButton(Button):
 
     def on_click(self, *_):
         PrayerTimesPopup.toggle_popup()
+
+    def on_button_press(self, _, event) -> bool:
+        # right-click stops the adhan without opening the popup
+        if event.button == 3 and self.prayer_service.adhan.playing:
+            self.prayer_service.adhan.stop()
+            return True
+        return False
+
+    def update_icon(self, *_):
+        adhan = self.prayer_service.adhan
+        if adhan.playing:
+            self.prayer_button_icon.set_label("󰖁 " if adhan.muted else "󰕾 ")
+            self.set_tooltip_text("Adhan playing · right-click to stop")
+        else:
+            self.prayer_button_icon.set_label("󰥹 ")
+            self.set_tooltip_text(None)
 
     def update_label(self, *_):
         # in Ramadan, the countdown to Iftar or the end of Suhoor matters most
@@ -464,12 +483,21 @@ class PrayerTimes(Box):
             on_toggled=lambda active: setattr(service, "adhan_enabled", active),
         )
         self.adhan_switch.set_valign(Gtk.Align.CENTER)
+        self.mute_button = Button(
+            name="prayer-info-mute",
+            on_clicked=lambda *_: setattr(
+                service.adhan, "muted", not service.adhan.muted
+            ),
+        )
         self.stop_button = Button(
             label="Stop",
             name="prayer-info-stop",
-            on_clicked=lambda *_: self._stop_adhan(),
+            on_clicked=lambda *_: service.adhan.stop(),
         )
-        self.stop_button.set_no_show_all(True)
+        self.adhan_controls = Box(
+            spacing=8, children=[self.mute_button, self.stop_button]
+        )
+        self.adhan_controls.set_no_show_all(True)
         adhan = CenterBox(
             name="prayer-info-extra",
             start_children=Box(
@@ -484,7 +512,9 @@ class PrayerTimes(Box):
                     ),
                 ],
             ),
-            end_children=Box(spacing=8, children=[self.stop_button, self.adhan_switch]),
+            end_children=Box(
+                spacing=8, children=[self.adhan_controls, self.adhan_switch]
+            ),
         )
 
         self.add(self.ramadan_label)
@@ -492,14 +522,20 @@ class PrayerTimes(Box):
         self.add(qibla)
         self.add(adhan)
 
-        service.connect("prayer-time", lambda *_: self.stop_button.show())
+        service.adhan.connect("notify::playing", lambda *_: self.update_adhan())
+        service.adhan.connect("notify::muted", lambda *_: self.update_adhan())
+        self.update_adhan()
         service.connect("notify::location-name", lambda *_: self.update_extras())
         service.connect("notify::time-to-next-prayer", lambda *_: self.update_extras())
         self.update_extras()
 
-    def _stop_adhan(self):
-        self.prayer_info_service.adhan.stop()
-        self.stop_button.hide()
+    def update_adhan(self):
+        adhan = self.prayer_info_service.adhan
+        self.adhan_controls.set_visible(adhan.playing)
+        if adhan.playing:
+            self.adhan_controls.show_all()
+        self.mute_button.set_label("󰖁" if adhan.muted else "󰕾")
+        self.mute_button.set_tooltip_text("Unmute" if adhan.muted else "Mute")
 
     def update_extras(self):
         service = self.prayer_info_service
@@ -521,8 +557,6 @@ class PrayerTimes(Box):
         self.ramadan_label.set_label(
             f"Ramadan Mubarak · {countdown}" if countdown else ""
         )
-        if not service.adhan.playing:
-            self.stop_button.hide()
 
     def update_location_label(self, *_):
         name = self.prayer_info_service.location_name

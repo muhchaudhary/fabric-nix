@@ -12,10 +12,12 @@ import math
 import os
 
 import cairo
+from fabric.core.service import Property, Service
 from fabric.utils import get_relative_path
 from gi.repository import Gio, GLib, Gtk
 from loguru import logger
 
+import fabric_config.config as config
 from fabric_config.utils.process import run_command_async
 
 KAABA = (21.4225, 39.8262)
@@ -25,6 +27,7 @@ SETTINGS_FILE = os.path.join(
 )
 CHIME = get_relative_path("../../../assets/sounds/notification.mp3")
 RAMADAN = 9
+ADHAN_STREAM = "Adhan"
 
 _COMPASS = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
@@ -147,15 +150,46 @@ def adhan_file(prayer: str) -> str | None:
     return None
 
 
-class AdhanPlayer:
-    """Plays one sound at a time with sox's `play`; stop() cuts it short."""
+class AdhanPlayer(Service):
+    """Plays one sound at a time with sox's `play`; stop() cuts it short.
+
+    Its audio stream is named "Adhan", so muting it leaves other sox sounds
+    alone. WirePlumber remembers a stream's mute by name, so the stream is kept
+    at `muted` while it plays (otherwise one mute would silence every adhan
+    after it).
+    """
+
+    @Property(bool, "readable", default_value=False)
+    def playing(self) -> bool:
+        return self._process is not None
+
+    @Property(bool, "read-write", default_value=False)
+    def muted(self) -> bool:
+        return self._muted
+
+    @muted.setter
+    def muted(self, value: bool):
+        self._muted = value
+        self._sync_stream()
 
     def __init__(self):
         self._process: Gio.Subprocess | None = None
+        self._muted = False
+        super().__init__()
+        # the remembered mute lands after the stream is announced, so check on
+        # every change, not just when streams come and go
+        config.audio.connect("changed", lambda *_: self._sync_stream())
 
-    @property
-    def playing(self) -> bool:
-        return self._process is not None
+    def _sync_stream(self):
+        if self._process is None:
+            return
+        for stream in config.audio.applications:
+            if stream.name == ADHAN_STREAM and stream.muted != self._muted:
+                stream.muted = self._muted
+
+    def _set_process(self, process: Gio.Subprocess | None):
+        self._process = process
+        self.notify("playing")
 
     def play(self, prayer: str):
         self.stop()
@@ -165,15 +199,17 @@ class AdhanPlayer:
                 f"[Prayer] No adhan recording in {DATA_DIR} (adhan.mp3); chiming"
             )
             path = CHIME
+        launcher = Gio.SubprocessLauncher.new(
+            Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE
+        )
+        launcher.setenv("PULSE_PROP_OVERRIDE", f"application.name={ADHAN_STREAM}", True)
         try:
-            process = Gio.Subprocess.new(
-                ["play", "-q", path],
-                Gio.SubprocessFlags.STDOUT_SILENCE | Gio.SubprocessFlags.STDERR_SILENCE,
-            )
+            process = launcher.spawnv(["play", "-q", path])
         except GLib.Error as e:
             logger.error(f"[Prayer] Couldn't play {path}: {e.message}")
             return
-        self._process = process
+        self.muted = False
+        self._set_process(process)
 
         def done(proc: Gio.Subprocess, result: Gio.AsyncResult):
             try:
@@ -181,14 +217,14 @@ class AdhanPlayer:
             except GLib.Error:
                 pass
             if proc is self._process:
-                self._process = None
+                self._set_process(None)
 
         process.wait_async(None, done)
 
     def stop(self):
         if self._process is not None:
             self._process.force_exit()
-            self._process = None
+            self._set_process(None)
 
 
 def notify(title: str, body: str):
