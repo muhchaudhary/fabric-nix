@@ -69,6 +69,13 @@
 #prayer-info-detail { font-size: 12px; color: var(--fg-dim); }
 #qibla-compass      { color: var(--fg); }
 
+#prayer-info-mute {
+  padding: 2px 10px;
+  border-radius: $radius-sm;
+  background-color: a(var(--fg), 0.08);
+  &:hover { background-color: a(var(--fg), 0.16); }
+}
+
 #prayer-info-stop {
   padding: 2px 10px;
   border-radius: $radius-sm;
