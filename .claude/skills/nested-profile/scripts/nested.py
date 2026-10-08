@@ -256,7 +256,7 @@ def up(args) -> dict:
     }
     STATE_FILE.write_text(json.dumps(state, indent=2))
     try:
-        _populate(state, compositor_pid, env, names, monitors, walls)
+        _populate(state, env, names, monitors, walls)
     except BaseException:
         log("setup failed; tearing down")
         down()
@@ -268,7 +268,6 @@ def up(args) -> dict:
 
 def _populate(
     state: dict,
-    hypr_pid: int,
     env: dict[str, str],
     names: list[str],
     monitors: list[dict],
@@ -281,21 +280,29 @@ def _populate(
     def nested_monitors():
         return hyprctl("monitors", env=inner, json_out=True) or []
 
+    # the first output exists once the compositor is up; creating more
+    # before then is acknowledged but does nothing
+    wait_for(lambda: True if nested_monitors() else None, 15, "the first output")
+
+    def host_window(name: str) -> str | None:
+        return host_windows(state).get(name)
+
     # outputs past the first are new windows on the host: size them exactly
     for name, m in list(zip(names, monitors))[1:]:
-        hyprctl("output", "create", "wayland", env=inner)
-        address = wait_for(
-            lambda: next(
-                (
-                    c["address"]
-                    for c in hyprctl("clients", json_out=True) or []
-                    if c["pid"] == hypr_pid and c["title"].endswith(name)
-                ),
-                None,
-            ),
-            10,
-            f"host window for {name}",
-        )
+        address = None
+        for _attempt in range(3):
+            # a slow one may still be on its way: don't make a second
+            if not any(o["name"] == name for o in nested_monitors()):
+                hyprctl("output", "create", "wayland", env=inner)
+            try:
+                address = wait_for(
+                    lambda: host_window(name), 5, f"host window for {name}"
+                )
+                break
+            except TimeoutError:
+                continue
+        if address is None:
+            raise TimeoutError(f"no host window for {name}")
         hyprctl(
             "dispatch",
             f"hl.dsp.window.resize({{ window = 'address:{address}', "
@@ -402,12 +409,20 @@ def down(_args=None):
     log("down")
 
 
+def in_group(pid: int, pgid: int) -> bool:
+    try:
+        return os.getpgid(pid) == pgid
+    except OSError:
+        return False
+
+
 def host_windows(state: dict) -> dict[str, str]:
-    """Nested output name -> address of its window on the host."""
-    pid = state["hyprland_pid"]
+    """Nested output name -> address of its window on the host. Matched by
+    process group: start-hyprland runs more than one Hyprland process."""
+    pgid = state.get("pgid", state["hyprland_pid"])
     windows = {}
     for client in hyprctl("clients", json_out=True) or []:
-        if client["pid"] == pid and client["class"] == "aquamarine":
+        if client["class"] == "aquamarine" and in_group(client["pid"], pgid):
             windows[client["title"].rsplit(" ", 1)[-1]] = client["address"]
     return windows
 
