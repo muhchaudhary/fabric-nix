@@ -167,6 +167,10 @@ class SystemOSD(PopupWindow):
             ),
             **kwargs,
         )
+        # fabric's Window resets the input region to the whole window at the
+        # end of each of its allocations (pass_through), after the panel's
+        # size-allocate; this runs after that
+        self.connect("size-allocate", lambda *_: self._update_input_region())
 
         config.audio.connect("notify::speaker", self._on_speaker_switched)
         config.audio.connect("notify::microphone", self._on_microphone_switched)
