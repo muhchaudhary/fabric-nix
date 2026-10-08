@@ -12,13 +12,13 @@ import datetime
 import json
 import os
 import random
-import threading
 import time
 
 from fabric.core.service import Property, Service
 from gi.repository import GLib
 from loguru import logger
 
+from fabric_config.utils import image_worker
 from fabric_config.utils.wallpaper import (
     WALLPAPER_DIR,
     apply_wallpaper,
@@ -209,15 +209,16 @@ class WallpaperSlideshow(Service):
                 try:
                     with Image.open(path) as image:
                         image.draft("L", (128, 128))
-                        image = image.convert("L")
+                        # shrink before converting (PNGs decode full size)
                         image.thumbnail((128, 128))
-                        mean = ImageStat.Stat(image).mean[0] / 255
+                        mean = ImageStat.Stat(image.convert("L")).mean[0] / 255
                     results[path] = [os.path.getmtime(path), mean]
                 except Exception as e:
                     logger.debug(f"[Slideshow] Couldn't measure {path}: {e}")
-            GLib.idle_add(lambda: self._measured(results) or False)
+            return results
 
-        threading.Thread(target=work, daemon=True).start()
+        # one image at a time, with the other wallpaper decoding
+        image_worker.submit(work, lambda results: self._measured(results or {}))
 
     def _measured(self, results: dict):
         self._measuring = False

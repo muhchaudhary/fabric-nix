@@ -16,6 +16,8 @@ from fabric.core.service import Service, Signal
 from gi.repository import GLib
 from loguru import logger
 
+from fabric_config.utils.http import get_json
+
 CACHE_DIR = os.path.join(GLib.get_user_cache_dir(), "fabric")
 PRAYER_TIMES_FILE = os.path.join(CACHE_DIR, "prayer-times", "current_times.json")
 LOCATION_FILE = os.path.join(CACHE_DIR, "prayer-times", "location.json")
@@ -108,9 +110,7 @@ class WeatherService(Service):
         lat, lon = location
 
         def fetch():
-            import requests
-
-            response = requests.get(
+            current = get_json(
                 "https://api.open-meteo.com/v1/forecast",
                 params={
                     "latitude": lat,
@@ -118,10 +118,7 @@ class WeatherService(Service):
                     "current": "temperature_2m,weather_code,is_day,wind_speed_10m",
                     "timezone": "auto",
                 },
-                timeout=10,
-            )
-            response.raise_for_status()
-            current = response.json()["current"]
+            )["current"]
             code = int(current["weather_code"])
             condition = _WEATHER_CODES.get(code, "")
             return (
@@ -248,14 +245,8 @@ class OnThisDay(Service):
                 return cached["text"]
         except (OSError, ValueError, KeyError):
             pass
-        import requests
-
         number = random.Random(today.toordinal()).randint(1, QURAN_AYAHS)
-        response = requests.get(
-            f"https://api.alquran.cloud/v1/ayah/{number}/en.sahih", timeout=10
-        )
-        response.raise_for_status()
-        data = response.json()["data"]
+        data = get_json(f"https://api.alquran.cloud/v1/ayah/{number}/en.sahih")["data"]
         text = f"“{data['text']}” — {data['surah']['englishName']} {data['surah']['number']}:{data['numberInSurah']}"
         try:
             with open(VERSE_CACHE, "w") as f:

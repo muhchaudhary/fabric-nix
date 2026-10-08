@@ -13,13 +13,12 @@ linearises it for WCAG-style contrast.
 """
 
 import math
-import threading
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 
-from gi.repository import GLib
-from loguru import logger
 from PIL import Image, ImageChops
+
+from fabric_config.utils import image_worker
 
 # grid cells across the monitor; the grid's height follows its aspect ratio
 GRID_WIDTH = 128
@@ -187,11 +186,9 @@ class WallpaperMap:
 
 
 def build_map(path: str, monitor_width: int, monitor_height: int) -> WallpaperMap:
-    """Blocking: decode `path` and measure it as shown on the monitor."""
-    image = Image.open(path)
-    # JPEGs decode straight to a reduced size; plenty for measuring
-    image.draft("L", (DETAIL_WIDTH * 2, DETAIL_WIDTH * 2))
-    image = image.convert("L")
+    """Blocking (on the image worker): measure `path` as shown on the monitor."""
+    # decoded once (reduced) and shared with the accent and other monitors
+    image = image_worker.open_reduced(path).convert("L")
 
     # hyprpaper's default fit: scale to cover the monitor, centred, cropped
     aspect = monitor_width / monitor_height
@@ -234,14 +231,8 @@ def build_map_async(
     monitor_height: int,
     callback: Callable[[WallpaperMap | None], None],
 ):
-    """`build_map` on a worker thread; calls back on the main loop."""
-
-    def work():
-        try:
-            result = build_map(path, monitor_width, monitor_height)
-        except Exception as e:
-            logger.warning(f"[Wallpaper] couldn't measure {path}: {e}")
-            result = None
-        GLib.idle_add(lambda: callback(result) or False)
-
-    threading.Thread(target=work, name="wallpaper-map", daemon=True).start()
+    """`build_map` on the image worker; calls back on the main loop (`None`
+    if the wallpaper couldn't be read)."""
+    image_worker.submit(
+        lambda: build_map(path, monitor_width, monitor_height), callback
+    )

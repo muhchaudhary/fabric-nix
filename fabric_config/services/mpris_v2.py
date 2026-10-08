@@ -418,7 +418,7 @@ class MprisPlayerManager(Service):
     @Signal
     def player_vanished(self, bus_name: str) -> str:
         logger.info(f"[MPRIS] Lost Player: {bus_name}")
-        self._players.pop(bus_name)
+        self._players.pop(bus_name, None)
         self.notify("players")
         return bus_name
 
@@ -499,8 +499,12 @@ class MprisPlayerManager(Service):
             return
 
         player = MprisPlayer(bus_name)
+        # "closed" can fire more than once for a player (seen with Firefox);
+        # announce it gone only the first time
         player.connect(
             "closed",
-            lambda *_: self.player_vanished(bus_name),
+            lambda *_: (
+                self._players.get(bus_name) is player and self.player_vanished(bus_name)
+            ),
         )
         self.player_appeared(player)

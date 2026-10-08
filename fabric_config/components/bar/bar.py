@@ -238,63 +238,26 @@ class StatusBarSeperated(WaylandWindow):
         # self.show_all()
 
 
-class ScreenCorners(WaylandWindow):
+class ScreenCorners:
+    """
+    Rounded screen corners: one small window per corner. A single
+    full-screen click-through window drew the same four corners into a
+    monitor-sized buffer (~14 MB at 1440p) that the compositor blended
+    over everything.
+    """
+
     def __init__(self):
-        super().__init__(
-            title="fabric-corners",
-            layer="top",
-            anchor="top left bottom right",
-            pass_through=True,
-            child=Box(
-                orientation="vertical",
-                children=[
-                    Box(
-                        children=[
-                            self.make_corner("top-left"),
-                            Box(h_expand=True),
-                            self.make_corner("top-right"),
-                        ]
-                    ),
-                    Box(v_expand=True),
-                    Box(
-                        children=[
-                            self.make_corner("bottom-left"),
-                            Box(h_expand=True),
-                            self.make_corner("bottom-right"),
-                        ]
-                    ),
-                ],
-            ),
-        )
-
-    def make_corner(self, orientation) -> Box:
-        return Box(
-            h_expand=False,
-            v_expand=False,
-            name="system-bar-corner",
-            children=Corner(
-                orientation=orientation,
-                size=20,
-            ),
-        )
-
-
-# Uses up a lot more memory
-# class ScreenCorner(WaylandWindow):
-#     def __init__(
-#         self,
-#         orientation: Literal["top left", "top right", "bottom left", "bottom right"],
-#     ):
-#         print(orientation.replace(" ", "-"))
-#         super().__init__(
-#             layer="top",
-#             anchor=orientation,
-#             # pass_through=True,
-#             child=Box(
-#                 name="system-bar-corner",
-#                 children=Corner(
-#                     orientation=orientation.replace(" ", "-"),  # type: ignore
-#                     size=15,
-#                 ),
-#             ),
-#         )
+        self.windows = [
+            WaylandWindow(
+                title="fabric-corners",
+                layer="top",
+                anchor=anchor,
+                pass_through=True,
+                visible=True,
+                child=Box(
+                    name="system-bar-corner",
+                    children=Corner(orientation=anchor.replace(" ", "-"), size=20),  # type: ignore[arg-type]
+                ),
+            )
+            for anchor in ("top left", "top right", "bottom left", "bottom right")
+        ]

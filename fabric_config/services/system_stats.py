@@ -70,6 +70,7 @@ class SystemStats(Service):
         }
         self._wanted: set[object] = set()
         self._nvml = Nvml()
+        self._sensors = _Sensors()
         self._processes: dict[int, psutil.Process] = {}
         self._cores = psutil.cpu_count() or 1
         threading.Thread(target=self._run, name="system-stats", daemon=True).start()
@@ -107,8 +108,8 @@ class SystemStats(Service):
         disk = psutil.disk_usage("/")
         return StatsSample(
             cpu=psutil.cpu_percent(),
-            cpu_temp=_cpu_temp(),
-            fan_rpm=_fan_rpm(),
+            cpu_temp=self._sensors.cpu_temp(),
+            fan_rpm=self._sensors.fan_rpm(),
             memory_used=memory.total - memory.available,
             memory_total=memory.total,
             swap_used=psutil.swap_memory().used,
@@ -166,17 +167,90 @@ def _display_name(info: dict) -> str:
     return name.removeprefix(".").removesuffix("-wrapped")
 
 
-def _cpu_temp() -> float | None:
-    temps = psutil.sensors_temperatures()
-    for chip in ("coretemp", "k10temp", "zenpower"):
-        if temps.get(chip):
-            return round(temps[chip][0].current, 1)
-    return None
+class _Sensors:
+    """
+    CPU temperature and fan speed straight from hwmon. psutil's
+    sensors_temperatures() globs and reads every sensor file of every chip
+    on each call (~3.5 ms a second here); the files wanted are found once,
+    and again only if one goes away (hwmon numbering can change when a
+    driver reloads).
+    """
+
+    CPU_CHIPS = ("coretemp", "k10temp", "zenpower")
+
+    def __init__(self):
+        self._temp: str | None = None
+        self._fans: list[str] = []
+        self._resolved = False
+
+    def _resolve(self):
+        self._resolved = True
+        self._temp, self._fans = None, []
+        chips: dict[str, str] = {}
+        try:
+            entries = sorted(os.listdir(HWMON))
+        except OSError:
+            return
+        for entry in entries:
+            path = os.path.join(HWMON, entry)
+            name = _read(os.path.join(path, "name"))
+            if name is not None:
+                chips.setdefault(name, path)
+            fans = sorted(
+                f
+                for f in _listdir(path)
+                if f.startswith("fan") and f.endswith("_input")
+            )
+            if fans:
+                self._fans.append(os.path.join(path, fans[0]))
+        for chip in self.CPU_CHIPS:
+            if chip in chips:
+                temps = sorted(
+                    f
+                    for f in _listdir(chips[chip])
+                    if f.startswith("temp") and f.endswith("_input")
+                )
+                if temps:
+                    self._temp = os.path.join(chips[chip], temps[0])
+                break
+
+    def cpu_temp(self) -> float | None:
+        if not self._resolved:
+            self._resolve()
+        if self._temp is None:
+            return None
+        value = _read(self._temp)
+        if value is None:
+            self._resolved = False
+            return None
+        return round(int(value) / 1000, 1)
+
+    def fan_rpm(self) -> int | None:
+        if not self._resolved:
+            self._resolve()
+        for path in self._fans:
+            value = _read(path)
+            if value is None:
+                self._resolved = False
+                return None
+            if int(value):
+                return int(value)
+        return None
 
 
-def _fan_rpm() -> int | None:
-    fans = psutil.sensors_fans()
-    for chip in fans.values():
-        if chip and chip[0].current:
-            return chip[0].current
-    return None
+HWMON = "/sys/class/hwmon"
+
+
+def _read(path: str) -> str | None:
+    try:
+        with open(path) as f:
+            return f.read().strip()
+    except (OSError, ValueError):
+        return None
+
+
+def _listdir(path: str) -> list[str]:
+    try:
+        return os.listdir(path)
+    except OSError:
+        return []

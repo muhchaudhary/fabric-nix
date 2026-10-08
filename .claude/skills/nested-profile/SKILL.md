@@ -83,6 +83,7 @@ then samples for `--duration` seconds and quits. Output goes to
 N=.claude/skills/nested-profile/scripts/nested.py
 python $N up                     # start (prints the state file)
 python $N run -- python run_fabric.py &   # anything, inside the nested session
+python $N action toggle-overview # a fabric action, over the private bus
 python $N show                   # every nested output 1:1 over the monitor it mirrors
 python $N show WAYLAND-1 --monitor DP-1
 python $N hide
