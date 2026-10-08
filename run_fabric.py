@@ -1,3 +1,3 @@
-from fabric_config.main import main
+from fabric_config.run import main
 
 main()

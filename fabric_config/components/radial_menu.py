@@ -274,5 +274,5 @@ def _pointer_on_focused_monitor() -> tuple[float, float]:
 def _run(item: RadialItem):
     try:
         item.action()
-    except Exception as e:
-        logger.error(f"[Radial] {item.label} failed: {e}")
+    except Exception:
+        logger.exception(f"[Radial] {item.label} failed")

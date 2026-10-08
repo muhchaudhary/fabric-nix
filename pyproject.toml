@@ -12,7 +12,7 @@ description = "Fabric (GTK3) status bar and overlays for Hyprland."
 readme = "readme.md"
 
 [project.scripts]
-fabric-config = "fabric_config.main:main"
+fabric-config = "fabric_config.run:main"
 
 [tool.setuptools.packages]
 find = { namespaces = true }

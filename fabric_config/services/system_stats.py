@@ -114,9 +114,10 @@ class SystemStats(Service):
                     (net.bytes_sent - last_net.bytes_sent) / elapsed,
                 )
                 last_net, last_time = net, now
-            except Exception as e:
-                # a failing sensor mustn't end the thread
-                logger.warning(f"[SystemStats] Sampling failed: {e}")
+            except Exception:
+                # a failing sensor mustn't end the thread (repeats are
+                # collapsed by the log setup)
+                logger.exception("[SystemStats] Sampling failed")
                 continue
             GLib.idle_add(self._publish, sample)
 
