@@ -8,6 +8,8 @@ version: 0.1.0
 
 Profile this Python GTK4 status bar to find initialization bottlenecks and slow component construction.
 
+For steady-state RAM/CPU, leaks, or profiling without the live bar in the way, use the **nested-profile** skill (runs the whole bar in a hidden nested Hyprland and reports memory by kind, Wayland buffers, CPU per thread).
+
 ## Two profiling modes
 
 ### 1. Full cProfile startup trace
