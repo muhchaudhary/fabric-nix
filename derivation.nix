@@ -8,7 +8,6 @@
   # Python dependencies
   python-fabric,
   psutil,
-  requests,
   thefuzz,
   pillow,
   toplevel-streamer,
@@ -30,6 +29,8 @@ let
     ffmpegthumbnailer
     hyprshot
     slurp
+    grim # copy text: capture the selected region
+    (tesseract.override { enableLanguages = [ "eng" ]; }) # copy text (OCR)
     wf-recorder
     swappy
     libnotify # notify-send
@@ -78,7 +79,6 @@ buildPythonApplication {
   dependencies = [
     python-fabric
     psutil
-    requests
     thefuzz
     pillow
     toplevel-streamer
