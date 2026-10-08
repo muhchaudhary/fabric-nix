@@ -33,6 +33,10 @@ dbus-send --session --print-reply --dest=org.Fabric.fabric.fabric-bar \
 
 Available actions are registered in `fabric_config/main.py` with `@the_app.action()` (DBus names use dashes: `toggle_appmenu` is `toggle-appmenu`). `Evaluate` runs code in `run_fabric.py`'s namespace, where only `main` is defined.
 
+## Logging
+
+`utils/log.py:setup_logging()` (run first by `fabric_config/run.py`) sends everything through one loguru sink on stderr: our logs, the fabric library's, GLib/GTK warnings and criticals (`GLib.log_set_handler`), and uncaught exceptions (`sys.excepthook`, which PyGObject uses for exceptions in callbacks and signal handlers, plus `threading.excepthook`). A message repeated more than 5 times in 10 s from one place (for exceptions, where they were raised) is dropped, and the next one shown says how many were. `FABRIC_LOG_LEVEL` (default INFO) sets our level, `FABRIC_LIB_LOG_LEVEL` (default WARNING) fabric's own. Use `logger.exception(...)` in a broad `except Exception` so the traceback is kept. The running bar's log is `~/.local/state/fabric/fabric.log` (the previous run's: `fabric.log.1`).
+
 ## Linting and type checking
 
 ```bash
@@ -45,7 +49,7 @@ basedpyright .        # type check
 
 ### Entry points
 
-- `run_fabric.py` → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
+- `run_fabric.py` → `fabric_config/run.py` (sets up logging before anything is imported) → `fabric_config/main.py:main()` — creates `MyApp(Application)`, registers DBus actions, starts the GTK main loop.
 - `fabric_config/config.py` — module-level singleton services. Import `fabric_config.config as config` anywhere to access `config.audio`, `config.audio_devices` (outputs/inputs to switch between), `config.network` (AstalNetwork), `config.bluetooth_client`, `config.mprisplayer`, `config.brightness`, `config.sc` (screen recorder), `config.theme` (light/dark), `config.clipboard_history`, `config.wallpaper_accent` (wallpaper colours; drives the theme accent), `config.notifications` (notification server + history), `config.window_previews` (live window previews), `config.hyprsunset` (night light), `config.caffeine` (idle lock), `config.power_profiles` (power-profiles-daemon), `config.low_power` (power-saver or on battery), `config.system_stats` (load and sensors), `config.system_health` (failed units, stale pins, full store, pending reboot). Services are initialized once at import time. Also holds shared helpers such as `audio_icon_name()`.
 
 ### Components (`fabric_config/components/`)

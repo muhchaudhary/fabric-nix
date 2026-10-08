@@ -95,8 +95,8 @@ class SystemTrayWidget(Box):
             case 1:
                 try:
                     item.activate(event.x, event.y)
-                except Exception as e:
-                    logger.error(e)
+                except Exception:
+                    logger.exception("[Tray] Activating an item failed")
             case 3:
                 menu = item.get_property("menu")
                 for klass in ["tray"]:
