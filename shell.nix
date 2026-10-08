@@ -48,6 +48,8 @@ pkgs.mkShell {
       geoclue2
       sox
       cava
+      grim # copy text (utils/ocr.py)
+      (tesseract.override {enableLanguages = ["eng"];})
 
       pythonEnv
     ]

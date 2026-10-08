@@ -10,6 +10,7 @@ from fabric_config.components.quick_settings.widgets.quick_settings_toggle_butto
     QuickSettingsToggleButton,
 )
 from fabric_config.services.power_profiles import PROFILES
+from fabric_config.utils.ocr import copy_text_from_region
 
 
 class DoNotDisturbToggle(QuickSettingsToggleButton):
@@ -82,15 +83,27 @@ class ScreenshotButton(QuickSettingsToggleButton):
         super().__init__(
             action_label="Screenshot",
             action_icon="camera-photo-symbolic",
-            status_off="Select a region",
+            status_off="Right-click: copy text",
             on_toggle=self._on_clicked_shot,
             **kwargs,
         )
+        self.action_button.set_tooltip_text(
+            "Click: screenshot a region\nRight-click: copy the text in a region"
+        )
+        self.action_button.connect("button-press-event", self._on_press)
 
     def _on_clicked_shot(self, _active: bool):
         self.sync_active(False)
         self._close_popup()
         config.sc.screenshot()
+
+    def _on_press(self, _button, event) -> bool:
+        if event.button != 3:
+            return False
+        self._close_popup()
+        # let the popup leave the screen before selecting
+        copy_text_from_region(delay_ms=300)
+        return True
 
 
 PROFILE_INFO = {

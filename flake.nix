@@ -80,7 +80,6 @@
             pyinstrument
             lxml
             psutil
-            requests
             python-pam
             pillow # dominant colours of wallpapers and album art
             thefuzz

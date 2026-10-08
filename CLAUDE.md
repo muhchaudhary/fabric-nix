@@ -125,6 +125,7 @@ Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-s
 - `app_search.py` — app menu entries, search scoring, launch stats (`~/.cache/fabric/app_launcher/app_stats.json`), calculator, emoji lookup
 - `cursors.py` — `install_pointer_cursors()` (called in `main.py`): hand cursor over every `Gtk.Button`/`Switch`/`Scale` app-wide via an enter-notify emission hook (GTK3 ignores CSS `cursor`); other clickable widgets opt in with the `clickable` style class
 - `color_picker.py` — `pick_color(delay_ms)`: hyprpicker, copies the hex and notifies
+- `ocr.py` — `copy_text_from_region(delay_ms)`: slurp, grim, tesseract (English; `FABRIC_OCR_LANG` for others), copies the text with wl-copy and notifies. Small selections are captured at 2x. The `copy_text` action, the radial menu's "Copy text" and right-click on quick settings' Screenshot run it
 - `uri.py` — `file_uri_to_path()` (decodes `%20` etc.; don't slice `[7:]`)
 - `accent.py` — accent color extraction from images
 - `snippits/animator.py` — animation utility

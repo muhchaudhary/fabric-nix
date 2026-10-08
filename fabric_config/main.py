@@ -27,6 +27,7 @@ from gi.repository import GLib
 
 from fabric_config.utils.color_picker import pick_color
 from fabric_config.utils.cursors import install_pointer_cursors
+from fabric_config.utils.ocr import copy_text_from_region
 from fabric_config.utils.process import run_command_async
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
@@ -90,6 +91,9 @@ class MyApp(Application):
                     else self.sc.screencast_start()
                 ),
             ),
+            RadialItem(
+                "Copy text", "edit-copy-symbolic", lambda: copy_text_from_region()
+            ),
             RadialItem("Colour", "color-select-symbolic", lambda: pick_color()),
             RadialItem(
                 "Wallpaper",
@@ -141,6 +145,11 @@ def main():
     @the_app.action()
     def start_screencast(fullscreen=False):
         return the_app.sc.screencast_start(fullscreen)
+
+    @the_app.action()
+    def copy_text():
+        """Select a region of the screen and copy the text in it (OCR)."""
+        copy_text_from_region()
 
     @the_app.action()
     def stop_screencast():
