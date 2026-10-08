@@ -1,22 +1,28 @@
 from typing import Callable
-from PIL import Image
-import threading
 
-from loguru import logger
-from gi.repository import GLib
+from PIL import Image
+
+from fabric_config.utils import image_worker
 
 
 def dominant_color(image_path: str) -> tuple[int, int, int]:
+    """The most common colour of an image file (see `dominant_color_of`)."""
+    with Image.open(image_path) as image:
+        image.draft("RGB", (256, 256))  # JPEG decodes straight to a smaller size
+        # shrink before converting: a full-size conversion is another copy
+        image.thumbnail((96, 96))
+        return dominant_color_of(image.convert("RGB"))
+
+
+def dominant_color_of(image: Image.Image) -> tuple[int, int, int]:
     """
-    The most common colour of an image, cheaply: decode at reduced size and
-    let Pillow's C quantizer do the work. (ColorThief, used before, is pure
-    Python and held the GIL for most of a second on a 4K wallpaper, freezing
-    the GTK loop.)
+    The most common colour of an image, cheaply: shrink it and let Pillow's C
+    quantizer do the work. (ColorThief, used before, is pure Python and held
+    the GIL for most of a second on a 4K wallpaper, freezing the GTK loop.)
     """
-    image = Image.open(image_path)
-    image.draft("RGB", (256, 256))  # JPEG decodes straight to a smaller size
-    image = image.convert("RGB")
-    image.thumbnail((96, 96))
+    if image.width > 96 or image.height > 96:
+        image = image.copy()
+        image.thumbnail((96, 96))
     palette_image = image.quantize(colors=5, method=Image.Quantize.MEDIANCUT)
     colors = palette_image.getcolors() or [(1, 0)]
     # palette images report (count, palette index) pairs
@@ -27,14 +33,14 @@ def dominant_color(image_path: str) -> tuple[int, int, int]:
 
 
 def grab_dominant_color_threaded(image_path: str, callback: Callable):
-    """`dominant_color` off the main thread; calls back on the main loop."""
+    """`dominant_color` on the image worker; calls back on the main loop
+    (`None` when the file can't be read)."""
+    image_worker.submit(lambda: dominant_color(image_path), callback)
 
-    def thread_function():
-        try:
-            color = dominant_color(image_path)
-        except Exception as e:
-            logger.error(f"[COLORS] Failed to read {image_path}: {e}")
-            color = None
-        GLib.idle_add(callback, color)
 
-    threading.Thread(target=thread_function, daemon=True).start()
+def grab_wallpaper_color(path: str, callback: Callable):
+    """Like `grab_dominant_color_threaded`, sharing the wallpaper's decode
+    with the other wallpaper measurements."""
+    image_worker.submit(
+        lambda: dominant_color_of(image_worker.open_reduced(path)), callback
+    )

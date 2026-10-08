@@ -23,6 +23,7 @@ from fabric_config.components.bar.widgets.prayer_extras import (
     ramadan_countdown,
     save_settings,
 )
+from fabric_config.utils.http import get_json
 from fabric_config.widgets.popup_window_v2 import PopupWindow
 from fabric_config.widgets.toggle_pill import ToggleSwitch
 
@@ -58,20 +59,16 @@ def _load_location() -> dict | None:
 
 def _reverse_geocode(lat: float, lon: float) -> str:
     try:
-        import requests
-
         url = f"https://nominatim.openstreetmap.org/reverse?lat={lat}&lon={lon}&format=json"
-        resp = requests.get(url, timeout=5, headers={"User-Agent": "fabric-config/1.0"})
-        if resp.status_code == 200:
-            addr = resp.json().get("address", {})
-            city = (
-                addr.get("city")
-                or addr.get("town")
-                or addr.get("village")
-                or addr.get("county", "")
-            )
-            country = addr.get("country", "")
-            return ", ".join(x for x in [city, country] if x)
+        addr = get_json(url, timeout=5).get("address", {})
+        city = (
+            addr.get("city")
+            or addr.get("town")
+            or addr.get("village")
+            or addr.get("county", "")
+        )
+        country = addr.get("country", "")
+        return ", ".join(x for x in [city, country] if x)
     except Exception:
         pass
     return f"{lat:.2f}°, {lon:.2f}°"
@@ -251,17 +248,14 @@ class PrayerTimesService(Service):
         self._request_data()
 
     def _fetch_with_coords(self, lat: float, lon: float):
-        import requests
-
         ts = int(datetime.datetime.now().timestamp())
         url = f"http://api.aladhan.com/v1/timings/{ts}?latitude={lat}&longitude={lon}&method=2"
         try:
-            response = requests.get(url=url, timeout=10)
-            if response.status_code == 200:
-                with open(PRAYER_TIMES_FILE, "w") as outfile:
-                    json.dump(response.json()["data"], outfile, indent=4)
-                data = self._read_json()
-                GLib.idle_add(lambda: self.update_times(data))
+            fetched = get_json(url)["data"]
+            with open(PRAYER_TIMES_FILE, "w") as outfile:
+                json.dump(fetched, outfile, indent=4)
+            data = self._read_json()
+            GLib.idle_add(lambda: self.update_times(data))
         except Exception:
             pass
 

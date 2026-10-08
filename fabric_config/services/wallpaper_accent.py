@@ -15,7 +15,7 @@ from fabric.core.service import Property, Service, Signal
 from fabric.utils import monitor_file
 from gi.repository import Gdk, GLib, Gtk
 
-from fabric_config.utils.accent import grab_dominant_color_threaded
+from fabric_config.utils.accent import grab_wallpaper_color
 from fabric_config.utils.wallpaper import (
     LAST_WALLPAPER_FILE,
     list_monitors,
@@ -149,7 +149,7 @@ class WallpaperAccent(Service):
                     callback(path)
                 return False
 
-            grab_dominant_color_threaded(path, on_color)
+            grab_wallpaper_color(path, on_color)
 
     @staticmethod
     def _primary(paths: dict[str, str], monitors: list[dict]) -> str:

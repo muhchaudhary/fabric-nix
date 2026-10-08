@@ -12,12 +12,14 @@ import json
 import os
 import re
 import threading
+from urllib.error import HTTPError
 
 from fabric.core.service import Service, Signal
 from gi.repository import GLib
 from loguru import logger
 
 import fabric_config.config as config
+from fabric_config.utils.http import get_json
 
 LYRICS_CACHE = os.path.join(GLib.get_user_cache_dir(), "fabric", "lyrics")
 LRCLIB = "https://lrclib.net/api"
@@ -269,8 +271,6 @@ class MediaState(Service):
         except (OSError, ValueError):
             pass
 
-        import requests
-
         headers = {"User-Agent": USER_AGENT}
         synced = ""
         params = {"track_name": title, "artist_name": artist}
@@ -278,24 +278,29 @@ class MediaState(Service):
             params["album_name"] = album
         if duration:
             params["duration"] = str(duration)
-        response = requests.get(
-            f"{LRCLIB}/get", params=params, headers=headers, timeout=10
-        )
-        if response.ok:
-            synced = response.json().get("syncedLyrics") or ""
+        try:
+            synced = (
+                get_json(f"{LRCLIB}/get", params=params, headers=headers).get(
+                    "syncedLyrics"
+                )
+                or ""
+            )
+        except HTTPError:
+            pass  # 404: no exact match
         if not synced:
             # the exact match is strict about album and duration; search instead
-            response = requests.get(
-                f"{LRCLIB}/search",
-                params={"track_name": title, "artist_name": artist},
-                headers=headers,
-                timeout=10,
-            )
-            if response.ok:
-                for result in response.json():
-                    if result.get("syncedLyrics"):
-                        synced = result["syncedLyrics"]
-                        break
+            try:
+                results = get_json(
+                    f"{LRCLIB}/search",
+                    params={"track_name": title, "artist_name": artist},
+                    headers=headers,
+                )
+            except HTTPError:
+                results = []
+            for result in results:
+                if result.get("syncedLyrics"):
+                    synced = result["syncedLyrics"]
+                    break
         # remember misses too, so a song without lyrics isn't looked up again
         with open(path, "w") as f:
             json.dump({"synced": synced}, f)
