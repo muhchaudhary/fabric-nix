@@ -223,6 +223,10 @@ class DesktopWindow(WaylandWindow):
         self._map_path: str | None = None
         # where "auto" placed the clock (monitor coordinates), and its score
         self._auto_spot: tuple[float, float] | None = None
+        # what the spot was last chosen from: the search takes ~15 ms, and
+        # the column is reallocated (each minute's relabel) far more often
+        # than any of it changes
+        self._spot_inputs: tuple | None = None
         self._layout_id: int | None = None
         self._last_rect: tuple[int, int, int, int] | None = None
 
@@ -519,7 +523,22 @@ class DesktopWindow(WaylandWindow):
             return False
 
         if self.manager.settings.position == "auto":
-            spot = self._choose_spot(wall_map, width, height)
+            avoid = self._avoid()
+            inputs = (
+                wall_map,
+                width,
+                height,
+                tuple(avoid),
+                self.enabled("visualizer"),
+                self._auto_spot,
+            )
+            if inputs == self._spot_inputs:
+                spot = self._auto_spot
+            else:
+                spot = self._choose_spot(wall_map, width, height, avoid)
+                # keyed on the spot it settles on, so the recheck after a
+                # move is skipped too
+                self._spot_inputs = (*inputs[:-1], spot or self._auto_spot)
             if spot is not None and spot != self._auto_spot:
                 self._auto_spot = spot
                 self._place_column()
@@ -535,7 +554,11 @@ class DesktopWindow(WaylandWindow):
         return False
 
     def _choose_spot(
-        self, wall_map: WallpaperMap, width: int, height: int
+        self,
+        wall_map: WallpaperMap,
+        width: int,
+        height: int,
+        avoid: list[tuple[float, float, float, float]],
     ) -> tuple[float, float] | None:
         """The calmest readable spot for the clock, near the top centre."""
         monitor_w, monitor_h = wall_map.monitor_width, wall_map.monitor_height
@@ -555,7 +578,6 @@ class DesktopWindow(WaylandWindow):
                 stats.busyness + 0.02 * max(0.0, 7 - contrast) + HOME_WEIGHT * distance
             )
 
-        avoid = self._avoid()
         best = wall_map.calmest(width, height, bounds, avoid, score)
         if best is None:
             return None
