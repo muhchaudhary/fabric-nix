@@ -486,7 +486,15 @@ def screenshot(state: dict, path: Path, output: str | None = None) -> Path:
     """grim inside the nested session: all outputs, or one."""
     path.parent.mkdir(parents=True, exist_ok=True)
     argv = [find_grim(), *(["-o", output] if output else []), str(path)]
-    subprocess.run(argv, env=nested_env(state), check=True)
+    # screencopy now and then fails ("failed to screenshoot all sources")
+    for attempt in range(3):
+        try:
+            subprocess.run(argv, env=nested_env(state), check=True)
+            break
+        except subprocess.CalledProcessError:
+            if attempt == 2:
+                raise
+            time.sleep(0.5)
     return path
 
 

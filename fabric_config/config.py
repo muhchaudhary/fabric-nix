@@ -8,6 +8,7 @@ from fabric_config.services.caffeine import Caffeine
 from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.hyprsunset import Hyprsunset
+from fabric_config.services.low_power import LowPower
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.power_profiles import PowerProfiles
@@ -46,8 +47,10 @@ window_previews = WindowPreviews()
 caffeine = Caffeine()
 # power-profiles-daemon; `available` is False without it
 power_profiles = PowerProfiles()
+# power-saver profile or on battery: background animation and polling ease off
+low_power = LowPower(power_profiles)
 # CPU/GPU/memory/network load and sensors, sampled each second
-system_stats = SystemStats()
+system_stats = SystemStats(low_power)
 # a new wallpaper every so often (off until switched on in the picker)
 wallpaper_slideshow = WallpaperSlideshow()
 
