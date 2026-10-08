@@ -27,11 +27,11 @@ python run_fabric.py          # start the bar
 While running, send commands via DBus:
 
 ```bash
-dbus-send --session --print-reply --dest=org.Fabric.fabric \
-  /org/Fabric/fabric org.Fabric.fabric.Evaluate string:"toggle_appmenu()"
+dbus-send --session --print-reply --dest=org.Fabric.fabric.fabric-bar \
+  /org/Fabric/fabric org.Fabric.fabric.InvokeAction string:"toggle-appmenu" array:string:
 ```
 
-Available actions are registered in `fabric_config/main.py` with `@the_app.action()`.
+Available actions are registered in `fabric_config/main.py` with `@the_app.action()` (DBus names use dashes: `toggle_appmenu` is `toggle-appmenu`). `Evaluate` runs code in `run_fabric.py`'s namespace, where only `main` is defined.
 
 ## Linting and type checking
 

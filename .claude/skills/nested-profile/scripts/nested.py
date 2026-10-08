@@ -15,6 +15,7 @@ stay out of the real cache).
     nested.py up [--monitors N] [--fps N]     start; prints the state file
     nested.py env                             `export ...` lines for the nested session
     nested.py run -- CMD...                   run CMD inside it
+    nested.py action NAME [ARGS...]           invoke a fabric action (toggle-overview, ...)
     nested.py show [WAYLAND-N...] [--monitor M]  watch it live (1:1 over the host monitor)
     nested.py hide
     nested.py screenshot [-o PNG] [--output WAYLAND-N]
@@ -38,6 +39,8 @@ STATE_FILE = STATE_DIR / "state.json"
 RULE_NAME = "fabric-nested"
 SPECIAL = "special:fabric-nested"
 DEFAULT_UNFOCUSED_FPS = 15
+# the bar's Application name is "fabric-bar"
+FABRIC_BUS = "org.Fabric.fabric.fabric-bar"
 
 
 def log(msg: str):
@@ -501,6 +504,9 @@ def main():
     p_shot = sub.add_parser("screenshot", help="grim inside the nested session")
     p_shot.add_argument("-o", "--out", type=Path, help="PNG path")
     p_shot.add_argument("--output", help="only this nested output (WAYLAND-N)")
+    p_act = sub.add_parser("action", help="invoke a fabric action in the nested bar")
+    p_act.add_argument("name", help="e.g. toggle-overview")
+    p_act.add_argument("args", nargs="*")
     p_run = sub.add_parser("run")
     p_run.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args()
@@ -526,6 +532,11 @@ def main():
             or Path(__file__).resolve().parent.parent / "screenshots" / f"{stamp}.png"
         )
         print(screenshot(require_state(), out, args.output))
+    elif args.cmd == "action":
+        argv = ["busctl", "--user", "call", FABRIC_BUS, "/org/Fabric/fabric"]
+        argv += ["org.Fabric.fabric", "InvokeAction", "sas", args.name]
+        argv += [str(len(args.args)), *args.args]
+        sys.exit(subprocess.call(argv, env=nested_env(require_state())))
     elif args.cmd == "run":
         command = args.command[1:] if args.command[:1] == ["--"] else args.command
         sys.exit(subprocess.call(command, env=nested_env(require_state())))

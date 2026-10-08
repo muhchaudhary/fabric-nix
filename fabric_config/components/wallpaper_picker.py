@@ -9,7 +9,7 @@ from fabric.widgets.image import Image
 from fabric.widgets.label import Label
 from fabric.widgets.overlay import Overlay
 from fabric.widgets.scrolledwindow import ScrolledWindow
-from gi.repository import GdkPixbuf, Gio, GLib, Gtk
+from gi.repository import Gdk, GdkPixbuf, Gio, GLib, Gtk
 from loguru import logger
 
 from fabric_config.utils.process import run_command_async
@@ -69,6 +69,44 @@ def _load_pixbuf_async(path: str, callback):
         GdkPixbuf.Pixbuf.new_from_stream_async(stream, None, on_pixbuf)
 
     Gio.File.new_for_path(path).read_async(GLib.PRIORITY_DEFAULT, None, on_read)
+
+
+def _max_scale() -> int:
+    """The highest scale of any monitor: tiles may not be on screen yet when
+    their thumbnail loads, and the picker can open on any monitor."""
+    display = Gdk.Display.get_default()
+    if display is None:
+        return 1
+    return max(
+        (
+            monitor.get_scale_factor()
+            for i in range(display.get_n_monitors())
+            if (monitor := display.get_monitor(i)) is not None
+        ),
+        default=1,
+    )
+
+
+def _fit_to_tile(pixbuf: GdkPixbuf.Pixbuf, scale: int) -> GdkPixbuf.Pixbuf:
+    """
+    The thumbnail shrunk to just cover a tile at the display's scale. Tiles
+    keep their pixbuf for redraws: kept at THUMB_SIZE, the grid held ~20 MB
+    of pixels it never showed.
+    """
+    factor = max(
+        TILE_WIDTH * scale / pixbuf.get_width(),
+        TILE_HEIGHT * scale / pixbuf.get_height(),
+    )
+    if factor >= 1:
+        return pixbuf
+    return (
+        pixbuf.scale_simple(
+            max(1, round(pixbuf.get_width() * factor)),
+            max(1, round(pixbuf.get_height() * factor)),
+            GdkPixbuf.InterpType.BILINEAR,
+        )
+        or pixbuf
+    )
 
 
 class WallpaperCard(Button):
@@ -156,9 +194,12 @@ class WallpaperCard(Button):
         self._menu = menu
         menu.popup_at_pointer(event)
 
+    def _set_thumbnail(self, pixbuf: GdkPixbuf.Pixbuf):
+        self.tile.set_pixbuf(_fit_to_tile(pixbuf, _max_scale()))
+
     def _load_thumbnail(self):
         if os.path.exists(self.wp_thumb_path):
-            _load_pixbuf_async(self.wp_thumb_path, self.tile.set_pixbuf)
+            _load_pixbuf_async(self.wp_thumb_path, self._set_thumbnail)
             return
 
         def on_thumbnail_done(success: bool, _stdout: str, stderr: str):
@@ -167,7 +208,7 @@ class WallpaperCard(Button):
                     f"[Wallpaper] Failed to thumbnail {self.wp_path}: {stderr.strip()}"
                 )
                 return
-            _load_pixbuf_async(self.wp_thumb_path, self.tile.set_pixbuf)
+            _load_pixbuf_async(self.wp_thumb_path, self._set_thumbnail)
 
         # argv list rather than a shell string, so file names with spaces work;
         # the callback fires on exit, since ffmpegthumbnailer prints nothing
