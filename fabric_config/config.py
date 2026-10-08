@@ -13,6 +13,7 @@ from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.power_profiles import PowerProfiles
 from fabric_config.services.screen_record import ScreenRecorder
+from fabric_config.services.system_health import SystemHealth
 from fabric_config.services.system_stats import SystemStats
 from fabric_config.services.theme import ThemeService
 from fabric_config.services.wallpaper_accent import WallpaperAccent
@@ -51,6 +52,8 @@ power_profiles = PowerProfiles()
 low_power = LowPower(power_profiles)
 # CPU/GPU/memory/network load and sensors, sampled each second
 system_stats = SystemStats(low_power)
+# failed units, stale pins, a full /nix/store, a pending reboot
+system_health = SystemHealth()
 # a new wallpaper every so often (off until switched on in the picker)
 wallpaper_slideshow = WallpaperSlideshow()
 

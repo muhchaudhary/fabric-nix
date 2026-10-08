@@ -23,6 +23,7 @@ from fabric_config.components.bar.widgets.notification_center import (
     NotificationCenterButton,
 )
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
+from fabric_config.components.bar.widgets.system_health import SystemHealthButton
 from fabric_config.components.bar.widgets.recording_indicator import (
     RecordingIndicator,
 )
@@ -175,6 +176,7 @@ class StatusBarSeperated(WaylandWindow):
         self.wallpaper_button = WallpapperPickerButton()
         self.clipboard_button = ClipboardHistoryButton()
         self.system_temps = SystemTemps()
+        self.system_health = SystemHealthButton()
         self.system_tray = SystemTrayRevealer(icon_size=25)
 
         self.power_menu = PowerMenuButton()
@@ -186,6 +188,7 @@ class StatusBarSeperated(WaylandWindow):
                 # clusters: readouts | status and settings | clock | power
                 children=[
                     self.recording_indicator,
+                    self.system_health,
                     self.system_temps,
                     BarDivider(),
                     self.system_tray,
