@@ -56,3 +56,7 @@ reportUnsafeMultipleInheritance = false
 # `@Property def x` + `@x.setter def x` pair counts as a redeclaration;
 # ruff's F811 still catches real duplicate definitions
 reportRedeclaration = false
+
+[tool.ruff.lint]
+# ruff 0.16 widened its default rule set; keep the earlier defaults
+select = ["E4", "E7", "E9", "F"]

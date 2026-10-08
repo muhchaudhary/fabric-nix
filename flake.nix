@@ -53,9 +53,15 @@
                     }/*.pyi $out/${pyfinal.python.sitePackages}/gi-stubs/repository/
                   '';
                 });
-                python-fabric = final.callPackage "${inputs.fabric}/default.nix" {
-                  python312Packages = pyfinal;
-                };
+                # nixpkgs checks that the dist named by pname exists; fabric's
+                # pname is python-fabric but its dist is "fabric"
+                python-fabric =
+                  (final.callPackage "${inputs.fabric}/default.nix" {
+                    python312Packages = pyfinal;
+                  }).overridePythonAttrs
+                    (_: {
+                      dontCheckPythonMetadata = true;
+                    });
               }
             );
             fabric-libglace = inputs.fabric-libglace.packages.${system}.default;
