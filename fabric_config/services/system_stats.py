@@ -2,7 +2,8 @@
 System load and sensors, sampled once a second on a worker thread.
 
 `config.system_stats` emits `updated(sample)` on the main thread and keeps a
-minute of history per metric for sparklines. The top processes are only
+minute of history per metric for sparklines (sampled less often in low-power
+mode, see services/low_power.py). The top processes are only
 gathered while someone asks for them (`set_wanted(owner, True)`): walking every
 process each second isn't free.
 """
@@ -12,6 +13,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import psutil
 from fabric.core.service import Service, Signal
@@ -20,8 +22,13 @@ from loguru import logger
 
 from fabric_config.utils.nvml import GpuSample, Nvml
 
+if TYPE_CHECKING:
+    from fabric_config.services.low_power import LowPower
+
 HISTORY = 60
 INTERVAL_S = 1.0
+# in low-power mode, unless someone wants the top processes (the popup)
+LOW_POWER_INTERVAL_S = 5.0
 TOP_PROCESSES = 5
 
 
@@ -61,8 +68,11 @@ class SystemStats(Service):
     @Signal
     def updated(self, sample: object) -> None: ...
 
-    def __init__(self, **kwargs):
+    def __init__(self, low_power: "LowPower | None" = None, **kwargs):
         super().__init__(**kwargs)
+        self._low_power = low_power
+        # set to sample now rather than at the end of the current wait
+        self._wake = threading.Event()
         self.latest: StatsSample | None = None
         self.history: dict[str, deque[float]] = {
             key: deque(maxlen=HISTORY)
@@ -79,15 +89,22 @@ class SystemStats(Service):
         """Whether `owner` wants the top processes in each sample."""
         if wanted:
             self._wanted.add(owner)
+            self._wake.set()  # don't leave an opened popup waiting 5 s
         else:
             self._wanted.discard(owner)
+
+    def _interval(self) -> float:
+        if self._low_power is not None and self._low_power.active and not self._wanted:
+            return LOW_POWER_INTERVAL_S
+        return INTERVAL_S
 
     def _run(self):
         psutil.cpu_percent()
         last_net = psutil.net_io_counters()
         last_time = time.monotonic()
         while True:
-            time.sleep(INTERVAL_S)
+            self._wake.wait(self._interval())
+            self._wake.clear()
             try:
                 now = time.monotonic()
                 net = psutil.net_io_counters()

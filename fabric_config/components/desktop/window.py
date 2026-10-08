@@ -658,8 +658,11 @@ class DesktopWindow(WaylandWindow):
             self.manager.weather_kind() if self.enabled("weather_fx") else None,
             self.manager.weather.wind,
         )
+        # in low-power mode the layer holds a still frame
         self.fx.set_animating(
-            visible and (self.fx.show_bars or self.fx.weather is not None)
+            visible
+            and not config.low_power.active
+            and (self.fx.show_bars or self.fx.weather is not None)
         )
         self.fx.queue_draw()
 
@@ -866,6 +869,7 @@ class DesktopManager:
         )
         self.cava.connect("frame", lambda *_: None)
         self.visibility.connect("changed", lambda *_: self._on_visibility_changed())
+        config.low_power.connect("notify::active", lambda *_: self._on_low_power())
 
         self.media.connect("changed", lambda *_: self._on_players_changed())
         self.media.connect(
@@ -1059,6 +1063,10 @@ class DesktopManager:
                 self.visibility.visible(window.monitor_name)
             )
 
+    def _on_low_power(self):
+        self._update_cava()
+        self._each(DesktopWindow.update_fx)
+
     # Media
 
     def _on_players_changed(self):
@@ -1076,6 +1084,7 @@ class DesktopManager:
         # the visualizer, or the music card's seek bar
         wanted = (
             player is not None
+            and not config.low_power.active
             and player.playback_status == "Playing"
             and any(
                 (
