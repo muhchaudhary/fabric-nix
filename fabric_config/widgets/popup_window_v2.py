@@ -8,6 +8,7 @@ from fabric.widgets.eventbox import EventBox
 from fabric.widgets.revealer import Revealer
 from fabric.widgets.wayland import WaylandWindow
 from fabric.widgets.widget import Widget
+from gi.repository import Gtk, GtkLayerShell
 
 
 # Greatly inspired by:
@@ -262,6 +263,27 @@ class PopupWindow(WaylandWindow):
             decorations=decorations,
         )
 
+        layout = make_layout(
+            anchor=anchor,
+            name=name,
+            popup=self.reveal_child,
+            on_button_press_event=self.on_inhibit_click,
+        )
+        # A top popup opens from a bar button, and its window covers the bar
+        # too, behind a bar-high strip that closes it: Hyprland gives a
+        # keyboard-interactive layer surface the pointer when it maps, even
+        # with the pointer over the bar, and only re-checks on motion. Below
+        # the bar, the next click there would land outside this window,
+        # where GDK drops it.
+        self._bar_strip: EventBox | None = None
+        if anchor.startswith("top"):
+            self._bar_strip = EventBox(
+                name=name,
+                events=["button-press"],
+                on_button_press_event=self.on_inhibit_click,
+            )
+            layout = Box(orientation="vertical", children=[self._bar_strip, layout])
+
         super().__init__(
             title=namespace,
             layer=self._layer,
@@ -269,14 +291,26 @@ class PopupWindow(WaylandWindow):
             visible=False,
             exclusivity="normal",
             anchor="top bottom right left",
-            child=make_layout(
-                anchor=anchor,
-                name=name,
-                popup=self.reveal_child,
-                on_button_press_event=self.on_inhibit_click,
-            ),
+            child=layout,
             on_key_release_event=self.on_key_release,
         )
+        if self._bar_strip is not None:
+            GtkLayerShell.set_exclusive_zone(self, -1)
+
+    def _fit_bar_strip(self):
+        if self._bar_strip is None:
+            return
+        height = max(
+            (
+                GtkLayerShell.get_exclusive_zone(window)
+                for window in Gtk.Window.list_toplevels()
+                if isinstance(window, Gtk.Window)
+                and window.get_title() == "fabric-bar"
+                and window.get_visible()
+            ),
+            default=0,
+        )
+        self._bar_strip.set_size_request(-1, height)
 
     def place_under(self, widget: Widget, edge_gap: int = 6):
         """
@@ -347,6 +381,7 @@ class PopupWindow(WaylandWindow):
             self.monitor_number = curr_monitor
 
         if not self.popup_visible:
+            self._fit_bar_strip()
             self.reveal_child.revealer.show()
 
         self.set_property("pass-through", not self.enable_inhibitor)
@@ -358,6 +393,7 @@ class PopupWindow(WaylandWindow):
         self.monitor = curr_monitor
 
         if not self.popup_visible:
+            self._fit_bar_strip()
             self.reveal_child.revealer.show()
         if self.popup_running:
             self.currtimeout = 0
