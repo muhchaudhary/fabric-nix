@@ -282,6 +282,10 @@ class PopupWindow(WaylandWindow):
                 events=["button-press"],
                 on_button_press_event=self.on_inhibit_click,
             )
+            # fabric sets v_expand=False explicitly, which stops GTK passing up
+            # the paddings' v_expand: without this the layout keeps its natural
+            # height and clicks below it hit no widget
+            layout.set_vexpand(True)
             layout = Box(orientation="vertical", children=[self._bar_strip, layout])
 
         super().__init__(
