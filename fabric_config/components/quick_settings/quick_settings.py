@@ -118,6 +118,11 @@ class QuickSettingsButtonBox(Gtk.Grid):
         self.active_submenu = btn.submenu
         self.active_submenu.toggle_reveal() if self.active_submenu else None
 
+    def close_submenu(self):
+        if self.active_submenu is not None:
+            self.active_submenu.do_reveal(False)
+            self.active_submenu = None
+
 
 class QuickSettings(Box):
     def __init__(self, **kwargs):
@@ -162,6 +167,9 @@ class QuickSettings(Box):
             )
         )
         self.connect("map", lambda *_: self.uptime.set_label(format_uptime()))
+        # unmapped once the popup has slid away, so the open submenu closes
+        # out of sight (unmapped revealers snap shut) and it reopens closed
+        self.connect("unmap", lambda *_: self.buttons_box.close_submenu())
         self.add(self.buttons_box)
         self.add(self.audio_slider_box)
         self.add(self.audio_slider_box.submenu)
