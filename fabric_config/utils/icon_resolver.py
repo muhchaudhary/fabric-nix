@@ -18,6 +18,14 @@ from gi.repository import GdkPixbuf, GLib, Gtk  # noqa: E402
 
 CACHE_DIR = str(GLib.get_user_cache_dir()) + "/fabric"
 ICON_CACHE_FILE = CACHE_DIR + "/icons.json"
+STEAM_LIBRARY_CACHE = GLib.get_user_data_dir() + "/Steam/appcache/librarycache"
+
+# Proton/XWayland Steam games get the window class "steam_app_<appid>"
+_STEAM_APP_RE = re.compile(r"steam_app_(\d+)")
+# Steam keeps each game's 32px client icon as "<sha1>.jpg" in its library cache
+_STEAM_CLIENT_ICON_RE = re.compile(r"[0-9a-f]{40}\.jpg")
+# too generic to match a desktop file name by
+_GENERIC_WORDS = {"app", "apps", "bin", "com", "desktop", "org"}
 if not os.path.exists(CACHE_DIR):
     os.makedirs(CACHE_DIR)
 
@@ -37,6 +45,9 @@ class IconResolver:
         self.default_applicaiton_icon = default_applicaiton_icon
 
     def get_icon_name(self, app_id: str):
+        if match := _STEAM_APP_RE.fullmatch(app_id):
+            # not cached on disk: the icon may only appear once Steam fetches it
+            return self._steam_icon(match.group(1))
         if app_id in self._icon_dict:
             return self._icon_dict[app_id]
         new_icon = self._compositor_find_icon(app_id)
@@ -88,12 +99,34 @@ class IconResolver:
                 if matching:
                     return data_dir + matching[0]
 
-                for word in list(filter(None, re.split(r"-|\.|_|\s", app_id))):
+                for word in re.split(r"-|\.|_|\s", app_id):
+                    if (
+                        len(word) < 3
+                        or word.isdigit()
+                        or word.lower() in _GENERIC_WORDS
+                    ):
+                        continue
                     matching = [s for s in files if word.lower() in s.lower()]
                     if matching:
                         return data_dir + matching[0]
 
         return None
+
+    def _steam_icon(self, steam_app_id: str) -> str:
+        # Steam's own windows (e.g. its web helper) use app id 0
+        if steam_app_id == "0":
+            return "steam"
+        # installed with a desktop shortcut for the game
+        if Gtk.IconTheme.get_default().has_icon(f"steam_icon_{steam_app_id}"):
+            return f"steam_icon_{steam_app_id}"
+        cache_dir = f"{STEAM_LIBRARY_CACHE}/{steam_app_id}"
+        try:
+            for name in os.listdir(cache_dir):
+                if _STEAM_CLIENT_ICON_RE.fullmatch(name):
+                    return f"{cache_dir}/{name}"
+        except OSError:
+            pass
+        return "steam"
 
     def _compositor_find_icon(self, app_id: str):
         if Gtk.IconTheme.get_default().has_icon(app_id):

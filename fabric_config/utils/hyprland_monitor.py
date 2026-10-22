@@ -73,3 +73,14 @@ def get_hyprland_monitors() -> HyprlandWithMonitors:
     if _shared_commands_connection is None:
         _shared_commands_connection = HyprlandWithMonitors(commands_only=True)
     return _shared_commands_connection
+
+
+_shared_events_connection: Hyprland | None = None
+
+
+def get_hyprland_events() -> Hyprland:
+    """A shared connection that also listens to Hyprland's event socket."""
+    global _shared_events_connection
+    if _shared_events_connection is None:
+        _shared_events_connection = Hyprland()
+    return _shared_events_connection

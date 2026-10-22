@@ -8,6 +8,7 @@ from fabric_config.services.caffeine import Caffeine
 from fabric_config.services.cava import Cava
 from fabric_config.services.clipboard_history import ClipboardHistory
 from fabric_config.services.hyprsunset import Hyprsunset
+from fabric_config.services.keyboard import Keyboard
 from fabric_config.services.low_power import LowPower
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
@@ -54,6 +55,8 @@ low_power = LowPower(power_profiles)
 system_stats = SystemStats(low_power)
 # failed units, stale pins, a full /nix/store, a pending reboot
 system_health = SystemHealth()
+# keyboard layout and Caps Lock
+keyboard = Keyboard()
 # a new wallpaper every so often (off until switched on in the picker)
 wallpaper_slideshow = WallpaperSlideshow()
 

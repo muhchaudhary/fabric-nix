@@ -48,3 +48,9 @@ levelbar.osd-level {
   levelbar.osd-level block.filled { background-color: a(var(--fg-dim), 0.35); }
   #osd-icon, #osd-value { color: var(--fg-dim); }
 }
+
+/* layout and Caps Lock: no level, so just the icon and a short label */
+#osd.text-only {
+  min-height: 0;
+  padding: $gap-lg $gap-sm;
+}

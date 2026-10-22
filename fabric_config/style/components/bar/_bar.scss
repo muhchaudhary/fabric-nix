@@ -121,5 +121,9 @@
   label { font-weight: 700; font-feature-settings: "tnum"; }
 }
 
+/* Keyboard: Caps Lock (accent, while on) and the layout code */
+#keyboard-caps-icon { color: var(--accent); margin: 0 $gap-sm; }
+#keyboard-layout-label { font-size: 12px; font-weight: 700; }
+
 /* Quick settings button: what's switched on (caffeine, DND, ...) in the accent */
 .panel-status-icon { color: var(--accent); }
