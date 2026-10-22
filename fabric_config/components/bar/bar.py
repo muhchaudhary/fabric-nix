@@ -27,6 +27,7 @@ from fabric_config.components.bar.widgets.notification_center import (
 )
 from fabric_config.components.bar.widgets.power_menu import PowerMenuButton
 from fabric_config.components.bar.widgets.system_health import SystemHealthButton
+from fabric_config.components.bar.widgets.privacy_indicator import PrivacyIndicator
 from fabric_config.components.bar.widgets.recording_indicator import (
     RecordingIndicator,
 )
@@ -166,6 +167,7 @@ class StatusBarSeperated(WaylandWindow):
         )
 
         self.recording_indicator = RecordingIndicator()
+        self.privacy_indicator = PrivacyIndicator()
 
         # self.open_apps_bar = OpenAppsBar()
         self.date_time = DateTime(
@@ -192,6 +194,7 @@ class StatusBarSeperated(WaylandWindow):
                 # clusters: readouts | status and settings | clock | power
                 children=[
                     self.recording_indicator,
+                    self.privacy_indicator,
                     self.system_health,
                     self.system_temps,
                     BarDivider(),

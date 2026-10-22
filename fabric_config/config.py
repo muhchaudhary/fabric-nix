@@ -14,6 +14,7 @@ from fabric_config.services.low_power import LowPower
 from fabric_config.services.mpris_v2 import MprisPlayerManager
 from fabric_config.services.notifications import NotificationCenter
 from fabric_config.services.power_profiles import PowerProfiles
+from fabric_config.services.privacy import Privacy
 from fabric_config.services.screen_record import ScreenRecorder
 from fabric_config.services.system_health import SystemHealth
 from fabric_config.services.system_stats import SystemStats
@@ -60,6 +61,8 @@ system_health = SystemHealth()
 keyboard = Keyboard()
 # outputs: mode, scale, VRR, mirroring (quick settings' display panel)
 displays = Displays()
+# apps using the microphone or camera, or sharing the screen (PipeWire)
+privacy = Privacy()
 # a new wallpaper every so often (off until switched on in the picker)
 wallpaper_slideshow = WallpaperSlideshow()
 

@@ -125,5 +125,11 @@
 #keyboard-caps-icon { color: var(--accent); margin: 0 $gap-sm; }
 #keyboard-layout-label { font-size: 12px; font-weight: 700; }
 
+/* Privacy: microphone, camera, screen sharing in use */
+#privacy-indicator {
+  image.mic, image.camera { color: var(--orange); }
+  image.screen { color: var(--red); }
+}
+
 /* Quick settings button: what's switched on (caffeine, DND, ...) in the accent */
 .panel-status-icon { color: var(--accent); }
