@@ -22,6 +22,7 @@ BARS_HEIGHT = 0.08  # tallest visualizer bar, as a fraction of the screen
 # Prayer arc
 
 PRAYERS = ("Fajr", "Dhuhr", "Asr", "Maghrib", "Isha")
+ARC_TOP = 0.6  # the arc's highest point, as a fraction of the screen
 
 
 def _minutes(hhmm: str) -> int:
@@ -51,7 +52,9 @@ class FxLayer(Gtk.DrawingArea):
         self.weather: WeatherParticles | None = None
         self._weather_dt = 0.0
         self._bars = [0.0] * CAVA_BARS  # eased copy of cava's levels
+        self._bars_shown = False
         self._tick_id: int | None = None
+        self._tick_ms = FRAME_MS
         self._last: float | None = None
         self._t = 0.0
         self.connect("draw", self._on_draw)
@@ -65,20 +68,33 @@ class FxLayer(Gtk.DrawingArea):
 
     # Animation
 
+    def _frame_ms(self) -> int:
+        # without the visualizer, tick only as often as the weather moves
+        if self.show_bars or self.weather is None:
+            return FRAME_MS
+        return max(FRAME_MS, round(self.weather.frame_s * 1000))
+
     def set_animating(self, animating: bool):
-        if animating and self._tick_id is None:
-            self._last = None
-            self._tick_id = GLib.timeout_add(FRAME_MS, self._tick)
-        elif not animating and self._tick_id is not None:
+        frame_ms = self._frame_ms()
+        if self._tick_id is not None and (not animating or frame_ms != self._tick_ms):
             GLib.source_remove(self._tick_id)
             self._tick_id = None
-            # don't leave the bars frozen mid-air
-            self._bars = [0.0] * CAVA_BARS
-            self.queue_draw()
+            if not animating:
+                # don't leave the bars frozen mid-air
+                self._bars = [0.0] * CAVA_BARS
+                self.queue_draw()
+        if animating and self._tick_id is None:
+            self._last = None
+            self._tick_ms = frame_ms
+            self._tick_id = GLib.timeout_add(frame_ms, self._tick)
 
     def _tick(self):
         now = GLib.get_monotonic_time() / 1_000_000
-        dt = min(0.1, now - self._last) if self._last is not None else FRAME_MS / 1000
+        dt = (
+            min(0.2, now - self._last)
+            if self._last is not None
+            else self._tick_ms / 1000
+        )
         self._last = now
         self._t += dt
         # rise quickly, fall gently
@@ -86,19 +102,28 @@ class FxLayer(Gtk.DrawingArea):
         self._bars = [
             b + (v - b) * (0.6 if v > b else 0.15) for b, v in zip(self._bars, target)
         ]
+        # repaint the bars while any show, and once more to clear them
+        bars_shown = any(b > 0.01 for b in self._bars)
+        repaint_bars = bars_shown or self._bars_shown
+        self._bars_shown = bars_shown
         w, h = self.get_allocated_width(), self.get_allocated_height()
         if self.weather is not None:
-            # the weather covers the whole screen; repaint it at its own pace
+            # repaint the weather at its own pace, and only where it changed
             self._weather_dt += dt
             if self._weather_dt >= self.weather.frame_s * 0.95:
                 self.weather.step(self._weather_dt)
                 self._weather_dt = 0.0
-                self.queue_draw()
-                return True
-        # only the bars move: repaint the strip along the bottom, not the
-        # whole screen (which would repaint the clock and notes on top too)
-        strip = int(h * BARS_HEIGHT) + 16
-        self.queue_draw_area(0, h - strip, w, strip)
+                rects = self.weather.dirty_rects(w, h)
+                if rects is None:
+                    self.queue_draw()
+                    return True
+                for rect in rects:
+                    self.queue_draw_area(*rect)
+        if repaint_bars:
+            # the strip along the bottom, not the whole screen (which would
+            # repaint the clock and notes on top too)
+            strip = int(h * BARS_HEIGHT) + 16
+            self.queue_draw_area(0, h - strip, w, strip)
         return True
 
     # Drawing
@@ -109,7 +134,13 @@ class FxLayer(Gtk.DrawingArea):
             self.weather.draw(cr, w, h, self.ink)
         if self.scrim is not None:
             self._draw_scrim(cr, *self.scrim)
-        if self.show_arc and self.prayer_times:
+        # the arc is the costliest part (every stroke has a halo); skip it
+        # when only the top of the screen is repainted (stars)
+        if (
+            self.show_arc
+            and self.prayer_times
+            and cr.clip_extents()[3] >= ARC_TOP * h - 30
+        ):
             self._draw_arc(cr, w, h)
         if any(b > 0.01 for b in self._bars):
             self._draw_bars(cr, w, h)
@@ -153,7 +184,8 @@ class FxLayer(Gtk.DrawingArea):
 
     def _arc_point(self, w: int, h: int, t: float) -> tuple[float, float]:
         # quadratic curve: a wide sun path rising from the lower corners,
-        # clear of the clock at the top and the visualizer at the bottom
+        # clear of the clock at the top and the visualizer at the bottom.
+        # Its highest point (ARC_TOP) is halfway between y0 and y1
         x0, y0 = w * 0.06, h * 0.84
         x1, y1 = w / 2, h * 0.36
         x2, y2 = w * 0.94, h * 0.84
