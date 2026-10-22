@@ -162,8 +162,23 @@ def host_wallpapers() -> dict[str, str]:
     return walls
 
 
-def make_cache(base: Path) -> Path:
-    """~/.cache with every entry symlinked, except fabric's, which is copied."""
+def rename_monitors(cache: Path, names: dict[str, str]):
+    """Re-key the desktop's per-monitor settings from host monitor names to
+    the nested outputs' (WAYLAND-1 mirrors the leftmost host monitor, ...)."""
+    path = cache / "fabric" / "desktop_clock.json"
+    try:
+        settings = json.loads(path.read_text())
+    except (OSError, ValueError):
+        return
+    for key, value in settings.items():
+        if isinstance(value, dict) and set(value) & set(names):
+            settings[key] = {names.get(k, k): v for k, v in value.items()}
+    path.write_text(json.dumps(settings))
+
+
+def make_cache(base: Path, monitor_names: dict[str, str]) -> Path:
+    """~/.cache with every entry symlinked, except fabric's, which is copied
+    (with per-monitor settings renamed for the nested outputs)."""
     real = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache"))
     cache = base / "cache"
     cache.mkdir(parents=True, exist_ok=True)
@@ -173,6 +188,7 @@ def make_cache(base: Path) -> Path:
             shutil.copytree(entry, target, symlinks=True, dirs_exist_ok=True)
         elif not target.exists():
             target.symlink_to(entry)
+    rename_monitors(cache, monitor_names)
     return cache
 
 
@@ -357,7 +373,9 @@ def _populate(
     ).stdout.split()
     nenv["DBUS_SESSION_BUS_ADDRESS"], state["dbus_pid"] = bus[0], int(bus[1])
     STATE_FILE.write_text(json.dumps(state, indent=2))
-    nenv["XDG_CACHE_HOME"] = str(make_cache(STATE_DIR))
+    nenv["XDG_CACHE_HOME"] = str(
+        make_cache(STATE_DIR, {m["name"]: n for m, n in zip(monitors, names)})
+    )
     inner = dict(env, **nenv)
 
     # hyprpaper with the host's wallpapers, monitor by monitor

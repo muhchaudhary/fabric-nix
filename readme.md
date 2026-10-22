@@ -3,7 +3,7 @@
 My Hyprland desktop shell, built with [Fabric](https://github.com/Fabric-Development/fabric)
 (Python + GTK3 widgets on wlr-layer-shell) and packaged for NixOS with flakes.
 
-![The desktop: bar, clock, prayer arc and music player](screenshots/desktop.jpg)
+![The desktop: bar, clock and prayer arc](screenshots/desktop.jpg)
 
 | Quick settings | Launcher | Prayer times |
 |:---:|:---:|:---:|
