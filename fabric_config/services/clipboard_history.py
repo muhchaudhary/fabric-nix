@@ -450,7 +450,18 @@ class ClipboardHistory(Service):
 
     def clear(self, on_done: Callable[[], None] | None = None):
         """Delete all history. Pins are stored separately and are kept."""
-        self.delete([e.id for e in self._entries], on_done)
+        # wipe rather than delete the listed entries: those are de-duplicated,
+        # so the hidden older copies would survive and show up again
+        ids = [e.id for e in self._entries]
+
+        def on_wiped(ok: bool, _out: bytes):
+            if not ok:
+                logger.error("[CLIPBOARD] cliphist wipe failed")
+            for i in ids:
+                self.clipboard_deleted(i)
+            self.refresh(on_done)
+
+        _run(["cliphist", "wipe"], on_wiped)
 
     # ---- pins ------------------------------------------------------------
 
