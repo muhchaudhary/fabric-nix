@@ -3,6 +3,16 @@
 My Hyprland desktop shell, built with [Fabric](https://github.com/Fabric-Development/fabric)
 (Python + GTK3 widgets on wlr-layer-shell) and packaged for NixOS with flakes.
 
+![The desktop: bar, clock, prayer arc and music player](screenshots/desktop.jpg)
+
+| Quick settings | Launcher | Prayer times |
+|:---:|:---:|:---:|
+| ![Quick settings](screenshots/quick-settings.png) | ![App launcher](screenshots/launcher.png) | ![Prayer times](screenshots/prayer-times.png) |
+
+| Wallpaper picker | Power menu |
+|:---:|:---:|
+| ![Wallpaper picker](screenshots/wallpaper-picker.png) | ![Power menu](screenshots/power-menu.png) |
+
 ## What's in it
 
 - **Bar**: workspaces, clock, tray, prayer times (Qibla compass, adhan, Ramadan
