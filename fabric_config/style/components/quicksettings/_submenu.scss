@@ -178,3 +178,61 @@
 .app-volume.muted .app-volume-mute { opacity: 0.4; }
 
 .app-volume #quicksettings-slider { margin-bottom: 0px; }
+
+/* Displays: one card per output, with steppers for its settings */
+.display-card {
+  &:hover { background-color: a(var(--fg), 0.05); border-color: a(var(--fg), 0.08); }
+}
+
+#display-row { min-height: 30px; }
+
+#display-stepper {
+  border-radius: $radius-sm;
+  background-color: a(var(--fg), 0.06);
+}
+
+#display-stepper-value {
+  font-size: 12px;
+  font-weight: 600;
+  font-feature-settings: "tnum";
+  color: var(--fg);
+}
+
+#display-stepper-button {
+  padding: $gap-xs;
+  border-radius: $radius-sm;
+  color: var(--fg-dim);
+  @include transition(background-color color);
+
+  &:hover { background-color: a(var(--fg), 0.1); color: var(--fg); }
+  &:disabled { color: a(var(--fg-dim), 0.3); }
+}
+
+#display-apply, #display-reset {
+  padding: $gap-xs $gap-md;
+  border-radius: $radius-sm;
+  font-weight: 600;
+  @include transition(background-color);
+}
+
+#display-apply {
+  background-color: var(--accent);
+  label { color: var(--bg); }
+  &:hover { background-color: a(var(--accent), 0.85); }
+  &:disabled {
+    background-color: a(var(--fg), 0.1);
+    label { color: var(--fg-dim); }
+  }
+}
+
+#display-reset {
+  background-color: a(var(--fg), 0.07);
+  &:hover { background-color: a(var(--fg), 0.12); }
+}
+
+#display-confirm {
+  padding: $gap-sm;
+  border-radius: $radius-md;
+  background-color: a(var(--accent), 0.12);
+  border: 1px solid a(var(--accent), 0.3);
+}
