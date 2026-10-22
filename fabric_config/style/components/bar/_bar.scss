@@ -121,5 +121,11 @@
   label { font-weight: 700; font-feature-settings: "tnum"; }
 }
 
+/* Privacy: microphone, camera, screen sharing in use */
+#privacy-indicator {
+  image.mic, image.camera { color: var(--orange); }
+  image.screen { color: var(--red); }
+}
+
 /* Quick settings button: what's switched on (caffeine, DND, ...) in the accent */
 .panel-status-icon { color: var(--accent); }

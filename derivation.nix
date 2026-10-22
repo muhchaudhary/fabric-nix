@@ -40,6 +40,7 @@ let
     sox # play (notification sound)
     dconf
     pulseaudio # pactl (default sink/source lookup)
+    pipewire # pw-dump (privacy indicator: mic, camera, screen sharing)
     cava # desktop audio visualizer
   ];
 in
