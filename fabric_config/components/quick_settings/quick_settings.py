@@ -18,6 +18,8 @@ from fabric_config.components.quick_settings.widgets.sliders import (
 from fabric_config.components.quick_settings.widgets.submenus import (
     BluetoothSubMenu,
     BluetoothToggle,
+    DisplaysSubMenu,
+    DisplaysToggle,
     NightLightSubMenu,
     NightLightToggle,
     WifiSubMenu,
@@ -79,6 +81,12 @@ class QuickSettingsButtonBox(Gtk.Grid):
         )
         self.theme_toggle = ThemeToggle()
 
+        # Displays: mode, scale, VRR, mirroring
+        displays_submenu = DisplaysSubMenu(config.displays)
+        self.displays_toggle = DisplaysToggle(
+            submenu=displays_submenu, service=config.displays
+        )
+
         # the popup is made after this box, so look it up when clicked
         def close_popup():
             if QuickSettingsPopup.popup_visible:
@@ -93,6 +101,7 @@ class QuickSettingsButtonBox(Gtk.Grid):
         self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.night_light_toggle.connect("reveal-clicked", self.set_active_submenu)
+        self.displays_toggle.connect("reveal-clicked", self.set_active_submenu)
 
         rows: list[tuple[Gtk.Widget, ...]] = [
             (self.wifi_toggle, self.bluetooth_toggle),
@@ -103,6 +112,8 @@ class QuickSettingsButtonBox(Gtk.Grid):
             (self.dnd_toggle, self.caffeine_toggle),
             (self.record_toggle, self.screenshot_button),
             (self.power_profile_row,),
+            (self.displays_toggle,),
+            (displays_submenu,),
         ]
         for top, row in enumerate(rows):
             for left, widget in enumerate(row):
