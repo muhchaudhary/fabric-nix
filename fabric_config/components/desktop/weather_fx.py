@@ -164,6 +164,18 @@ class WeatherParticles:
                     else random.uniform(6, 16)
                 )
 
+    def dirty_rects(self, w: int, h: int) -> list[tuple[int, int, int, int]] | None:
+        """What a step changed, as (x, y, width, height); None: everything."""
+        if not self.stars:
+            return None
+        # stars stay put; only their size and brightness change
+        scale = h / 1080
+        rects = []
+        for x, y, size, _speed, _phase in self.stars:
+            r = math.ceil(size * scale * 1.2) + 2
+            rects.append((int(x * w) - r, int(y * h) - r, 2 * r, 2 * r))
+        return rects
+
     # Drawing
 
     def draw(self, cr: cairo.Context, w: int, h: int, ink: tuple[float, float, float]):
