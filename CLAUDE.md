@@ -124,7 +124,7 @@ Keep `/* */` comments in the SCSS ASCII-only: a non-ASCII character makes dart-s
 ### Utilities (`fabric_config/utils/`)
 
 - `hyprland_monitor.py` — `HyprlandWithMonitors` for multi-monitor awareness; use the shared `get_hyprland_monitors()`
-- `icon_resolver.py` — app icon lookup; use the shared `get_icon_resolver()` (instances share one cache file)
+- `icon_resolver.py` — app icon lookup; use the shared `get_icon_resolver()` (instances share one cache file). Tries the icon theme, then desktop entries by `StartupWMClass` and desktop ID (`GioUnix.DesktopAppInfo`), then a strict GIO search. Only the exact matches are saved to `~/.cache/fabric/icons.json`; search guesses and misses last one session. Steam games (`steam_app_<id>`) use `steam_icon_<id>` or Steam's library cache. Bump `CACHE_VERSION` when the lookup changes
 - `hyprland_windows.py` — `hyprland_clients()`, `focus_window()`, `close_window()`, `kill_window()` over the shared connection
 - `process.py` — `run_command_async(argv, callback(success, stdout, stderr))`
 - `app_search.py` — app menu entries, search scoring, launch stats (`~/.cache/fabric/app_launcher/app_stats.json`), calculator, emoji lookup

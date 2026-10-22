@@ -25,6 +25,7 @@ let
   modules = [
     "AstalNetwork:0.1"
     "Cvc:1.0"
+    "GioUnix:2.0"
     "Glace:0.1"
     "Gray:0.1"
     "GtkLayerShell:0.1"
