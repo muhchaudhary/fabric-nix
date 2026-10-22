@@ -44,39 +44,6 @@ class CaffeineToggle(QuickSettingsToggleButton):
         )
 
 
-class ScreenRecordToggle(QuickSettingsToggleButton):
-    """Starts a region recording, or stops the running one."""
-
-    def __init__(self, close_popup: Callable[[], object], **kwargs):
-        self._close_popup = close_popup
-        super().__init__(
-            action_label="Record",
-            action_icon="media-record-symbolic",
-            status_on="Click to stop",
-            status_off="Select a region",
-            on_toggle=self._on_toggled,
-            **kwargs,
-        )
-        config.sc.connect("recording", lambda _, status: self._on_recording(status))
-
-    def _on_toggled(self, active: bool):
-        # the tile lights up once wf-recorder actually starts, not on click
-        self.sync_active(not active)
-        if active:
-            # out of the way of the region selection
-            self._close_popup()
-            config.sc.screencast_start()
-        else:
-            config.sc.screencast_stop()
-
-    def _on_recording(self, recording: bool):
-        self.sync_active(recording)
-        self.set_action_label("Recording" if recording else "Record")
-        self.set_action_icon(
-            "media-playback-stop-symbolic" if recording else "media-record-symbolic"
-        )
-
-
 class ScreenshotButton(QuickSettingsToggleButton):
     def __init__(self, close_popup: Callable[[], object], **kwargs):
         self._close_popup = close_popup

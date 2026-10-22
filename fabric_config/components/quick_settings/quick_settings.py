@@ -20,6 +20,8 @@ from fabric_config.components.quick_settings.widgets.submenus import (
     BluetoothToggle,
     NightLightSubMenu,
     NightLightToggle,
+    RecordSubMenu,
+    RecordToggle,
     WifiSubMenu,
     WifiToggle,
 )
@@ -32,7 +34,6 @@ from fabric_config.components.quick_settings.widgets.buttons.system_toggles impo
     CaffeineToggle,
     DoNotDisturbToggle,
     PowerProfileRow,
-    ScreenRecordToggle,
     ScreenshotButton,
 )
 from fabric_config.components.quick_settings.widgets.buttons.theme_toggle import (
@@ -86,13 +87,15 @@ class QuickSettingsButtonBox(Gtk.Grid):
 
         self.dnd_toggle = DoNotDisturbToggle()
         self.caffeine_toggle = CaffeineToggle()
-        self.record_toggle = ScreenRecordToggle(close_popup)
+        record_submenu = RecordSubMenu()
+        self.record_toggle = RecordToggle(record_submenu, config.sc, close_popup)
         self.screenshot_button = ScreenshotButton(close_popup)
         self.power_profile_row = PowerProfileRow()
 
         self.wifi_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.bluetooth_toggle.connect("reveal-clicked", self.set_active_submenu)
         self.night_light_toggle.connect("reveal-clicked", self.set_active_submenu)
+        self.record_toggle.connect("reveal-clicked", self.set_active_submenu)
 
         rows: list[tuple[Gtk.Widget, ...]] = [
             (self.wifi_toggle, self.bluetooth_toggle),
@@ -102,6 +105,7 @@ class QuickSettingsButtonBox(Gtk.Grid):
             (night_light_submenu,),
             (self.dnd_toggle, self.caffeine_toggle),
             (self.record_toggle, self.screenshot_button),
+            (record_submenu,),
             (self.power_profile_row,),
         ]
         for top, row in enumerate(rows):

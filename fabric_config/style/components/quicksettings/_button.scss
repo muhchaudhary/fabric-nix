@@ -85,15 +85,15 @@
   border-color: a(var(--fg), 0.1);
 }
 
-/* Power profile segmented control (power-profiles-daemon) */
-#power-profile-row {
+/* Segmented controls: power profile, recording options */
+#power-profile-row, .segmented-row {
   padding: 3px;
   border-radius: $radius-md;
   background-color: a(var(--fg), 0.07);
   border: 1px solid a(var(--fg), 0.1);
 }
 
-#power-profile-button {
+#power-profile-button, .segmented-button {
   min-height: 30px;
   border-radius: 9px;
   @include transition(background-color color);
