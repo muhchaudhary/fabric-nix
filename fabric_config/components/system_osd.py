@@ -11,7 +11,9 @@ from gi.repository import Gdk, GLib, Gtk
 import fabric_config.config as config
 from fabric_config.widgets import PopupWindow
 
-OSDMode = Literal["sound", "mic", "brightness", "kbd"]
+OSDMode = Literal["sound", "mic", "brightness", "kbd", "layout", "caps"]
+# modes with no level, just an icon and a short label
+TEXT_MODES = ("layout", "caps")
 
 # size of the flares joining the panel to the screen edge; keep in step
 # with $osd-radius in _osd.scss
@@ -182,12 +184,16 @@ class SystemOSD(PopupWindow):
         self.brightness.connect(
             "notify::keyboard-brightness", lambda *_: self._auto_show("kbd")
         )
+        config.keyboard.connect(
+            "notify::layout-name", lambda *_: self._auto_show("layout")
+        )
+        config.keyboard.connect("notify::caps-lock", lambda *_: self._auto_show("caps"))
         GLib.timeout_add(STARTUP_GRACE_MS, self._on_startup_done)
 
     def _on_startup_done(self):
         self._ready = True
         # record the starting values, so the first real change is detected
-        for mode in ("sound", "mic", "brightness", "kbd"):
+        for mode in get_args(OSDMode):
             self._last_shown[mode] = self._state(mode)
         return False
 
@@ -248,6 +254,10 @@ class SystemOSD(PopupWindow):
                 return (self.brightness.screen_brightness,)
             case "kbd":
                 return (self.brightness.keyboard_brightness,)
+            case "layout":
+                return (config.keyboard.layout_name,)
+            case "caps":
+                return (config.keyboard.caps_lock,)
 
     def _available(self, mode: OSDMode) -> bool:
         match mode:
@@ -259,6 +269,11 @@ class SystemOSD(PopupWindow):
                 return self.brightness.max_screen > 0
             case "kbd":
                 return self.brightness.max_kbd > 0
+            case "layout":
+                # with one layout there's nothing to switch between
+                return len(config.keyboard.layouts) > 1
+            case "caps":
+                return True
 
     def _auto_show(self, mode: OSDMode):
         if not self._ready:
@@ -305,6 +320,17 @@ class SystemOSD(PopupWindow):
                 icon = "keyboard-brightness-symbolic"
                 fraction = self.brightness.keyboard_brightness / self.brightness.max_kbd
                 text = f"{round(fraction * 100)}"
+            case "layout":
+                icon = "input-keyboard-symbolic"
+                fraction = 0
+                text = config.keyboard.layout_code
+                self.panel.set_tooltip_text(config.keyboard.layout_name)
+            case "caps":
+                muted = not config.keyboard.caps_lock
+                icon = "keyboard-caps-locked-symbolic"
+                fraction = 0
+                text = "On" if config.keyboard.caps_lock else "Off"
+                self.panel.set_tooltip_text("Caps Lock")
 
         animate = self.popup_visible and self.mode == mode
         self.mode = mode
@@ -312,6 +338,13 @@ class SystemOSD(PopupWindow):
         self.icon.set_pixel_size(ICON_SIZE)
         self.value_label.set_label(text)
         self.level.set_progress(fraction, animate=animate)
+        text_only = mode in TEXT_MODES
+        self.level.set_visible(not text_only)
+        if text_only:
+            self.panel.add_style_class("text-only")
+        else:
+            self.panel.remove_style_class("text-only")
+            self.panel.set_tooltip_text(None)
         if muted:
             self.panel.add_style_class("muted")
         else:
@@ -416,6 +449,9 @@ class SystemOSD(PopupWindow):
     def _on_click(self, _widget, event: Gdk.EventButton):
         if event.button != 1:
             return False
+        if self.mode == "layout":
+            config.keyboard.next_layout()
+            return True
         stream = {
             "sound": config.audio.speaker,
             "mic": config.audio.microphone,

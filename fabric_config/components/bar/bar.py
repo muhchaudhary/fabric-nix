@@ -19,6 +19,9 @@ from fabric_config.components.bar.widgets import (
 from fabric_config.components.bar.widgets.clipboard_history import (
     ClipboardHistoryButton,
 )
+from fabric_config.components.bar.widgets.keyboard_indicator import (
+    KeyboardIndicator,
+)
 from fabric_config.components.bar.widgets.notification_center import (
     NotificationCenterButton,
 )
@@ -178,6 +181,7 @@ class StatusBarSeperated(WaylandWindow):
         self.system_temps = SystemTemps()
         self.system_health = SystemHealthButton()
         self.system_tray = SystemTrayRevealer(icon_size=25)
+        self.keyboard = KeyboardIndicator()
 
         self.power_menu = PowerMenuButton()
 
@@ -192,6 +196,7 @@ class StatusBarSeperated(WaylandWindow):
                     self.system_temps,
                     BarDivider(),
                     self.system_tray,
+                    self.keyboard,
                     self.notification_button,
                     self.quick_settings,
                     self.battery,
