@@ -116,6 +116,34 @@ def nested_env(state: dict) -> dict[str, str]:
     return env
 
 
+_GUARD = """#!/bin/sh
+# Hyprland imports WAYLAND_DISPLAY, PATH, ... into the systemd user and D-Bus
+# activation environments (systemctl doesn't go through our private bus), so
+# apps the host session launches would open the nested display. Drop those.
+case " $* " in
+  *" import-environment "*|*" set-environment "*|*" unset-environment "*|*" unset-environment"|*" --systemd "*|*" --all "*)
+    echo "$(date +%T) dropped: $(basename "$0") $*" >>"{log}"
+    exit 0 ;;
+esac
+[ "$(basename "$0")" = systemctl ] || {{ echo "$(date +%T) dropped: $(basename "$0") $*" >>"{log}"; exit 0; }}
+exec "{real}" "$@"
+"""
+
+
+def make_env_guard(state_dir: Path) -> Path:
+    """A PATH entry whose systemctl and dbus-update-activation-environment
+    never change the host session's environment."""
+    bin_dir = state_dir / "guard"
+    bin_dir.mkdir(exist_ok=True)
+    log = state_dir / "env-guard.log"
+    for name in ("systemctl", "dbus-update-activation-environment"):
+        real = shutil.which(name) or name
+        script = bin_dir / name
+        script.write_text(_GUARD.format(log=log, real=real))
+        script.chmod(0o755)
+    return bin_dir
+
+
 def host_monitors() -> list[dict]:
     monitors = hyprctl("monitors", json_out=True) or []
     return sorted(
@@ -199,6 +227,7 @@ def up(args) -> dict:
 
     env = host_env()
     env.pop("HYPRLAND_INSTANCE_SIGNATURE", None)
+    env["PATH"] = f"{make_env_guard(STATE_DIR)}:{env['PATH']}"
     hypr_log = open(STATE_DIR / "hyprland.out", "w")
     hypr = subprocess.Popen(
         # through start-hyprland's watchdog, as a session would (Hyprland
