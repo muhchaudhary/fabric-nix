@@ -82,15 +82,16 @@ def _window_boxes() -> str:
     except Exception as e:
         logger.error(f"[SCREENRECORD] Couldn't read monitors: {e}")
         return ""
+    # by name: special workspaces have no id since Hyprland 0.57
     shown = {
-        ws.get("id")
+        ws.get("name")
         for m in monitors
         for ws in (m.get("activeWorkspace"), m.get("specialWorkspace"))
-        if ws and ws.get("id")
+        if ws and ws.get("name")
     }
     lines = []
     for c in hyprland_clients():
-        if (c.get("workspace") or {}).get("id") not in shown or c.get("hidden"):
+        if (c.get("workspace") or {}).get("name") not in shown or c.get("hidden"):
             continue
         (x, y), (w, h) = c.get("at", (0, 0)), c.get("size", (0, 0))
         if w > 0 and h > 0:

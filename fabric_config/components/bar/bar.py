@@ -1,5 +1,7 @@
+import json
 from typing import Callable, Iterable, Literal, override
 
+from fabric.hyprland.service import HyprlandEvent
 from fabric.hyprland.widgets import HyprlandWorkspaces, WorkspaceButton
 from fabric.widgets.box import Box
 from fabric.widgets.centerbox import CenterBox
@@ -37,6 +39,11 @@ from fabric_config.utils.hyprland_windows import hyprland_clients
 from fabric_config.utils.icon_resolver import get_icon_resolver
 
 
+def _numeric_id(event: HyprlandEvent) -> bool:
+    """Whether a workspace event's first field is a (non-special) workspace id."""
+    return bool(event.data) and event.data[0].lstrip("-").isdigit()
+
+
 class HyprlandWorkspaceFix(HyprlandWorkspaces):
     def __init__(
         self,
@@ -50,6 +57,39 @@ class HyprlandWorkspaceFix(HyprlandWorkspaces):
         super().__init__(
             buttons, buttons_factory, invert_scroll, empty_scroll, **kwargs
         )
+
+    # Hyprland 0.57 gives special workspaces no "id" (and names in place of
+    # ids in their events); fabric indexes it on every workspace and crashed
+    @override
+    def on_ready(self, *_):
+        open_workspaces = json.loads(
+            self.connection.send_command("j/workspaces").reply.decode()
+        )
+        active = json.loads(
+            self.connection.send_command("j/activeworkspace").reply.decode()
+        ).get("id")
+        for workspace in open_workspaces:
+            id = workspace.get("id")
+            if not isinstance(id, int) or id <= 0:
+                continue
+            self.workspace_created(id)
+            if id == active:
+                self.workspace_activated(id)
+
+    @override
+    def on_workspace(self, _, event: HyprlandEvent):
+        if _numeric_id(event):
+            super().on_workspace(_, event)
+
+    @override
+    def on_create_workspace(self, _, event: HyprlandEvent):
+        if _numeric_id(event):
+            super().on_create_workspace(_, event)
+
+    @override
+    def on_destroy_workspace(self, _, event: HyprlandEvent):
+        if _numeric_id(event):
+            super().on_destroy_workspace(_, event)
 
     # override signals again to use lua syntax
     @override

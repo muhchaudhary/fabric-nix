@@ -96,9 +96,12 @@ To instrument a specific widget without running the full profiler, add wall-time
 
 ```python
 import time
+
 t0 = time.monotonic()
 self.some_widget = SomeWidget()
-print(f"SomeWidget: {(time.monotonic()-t0)*1000:.1f}ms", file=__import__('sys').stderr)
+print(
+    f"SomeWidget: {(time.monotonic() - t0) * 1000:.1f}ms", file=__import__("sys").stderr
+)
 ```
 
 Remove timing code after investigation — do not leave it in production.

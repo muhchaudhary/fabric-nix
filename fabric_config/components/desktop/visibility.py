@@ -61,11 +61,12 @@ class DesktopVisibility(Service):
         except Exception as e:
             logger.warning(f"[Desktop] Couldn't read workspaces: {e}")
             return False
-        windows = {ws["id"]: ws.get("windows", 0) for ws in workspaces}
+        # by name: special workspaces have no id since Hyprland 0.57
+        windows = {ws.get("name"): ws.get("windows", 0) for ws in workspaces}
         visible = {}
         for monitor in monitors:
-            active = monitor.get("activeWorkspace", {}).get("id")
-            special = monitor.get("specialWorkspace", {}).get("id", 0)
+            active = monitor.get("activeWorkspace", {}).get("name")
+            special = monitor.get("specialWorkspace", {}).get("name")
             visible[monitor["name"]] = windows.get(active, 0) == 0 and not special
         if visible != self._visible:
             self._visible = visible
