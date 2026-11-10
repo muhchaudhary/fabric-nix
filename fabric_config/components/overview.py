@@ -343,7 +343,7 @@ class Overview(PopupWindow):
         workspace_monitors: dict[int, int] = {
             ws["id"]: ws["monitorID"]
             for ws in json.loads(connection.send_command("j/workspaces").reply.decode())
-            if ws["monitorID"] in monitors
+            if "id" in ws and ws["monitorID"] in monitors
         }
 
         client_sizes: dict[str, tuple[int, int]] = {}
@@ -354,7 +354,8 @@ class Overview(PopupWindow):
         for client in json.loads(
             str(connection.send_command("j/clients").reply.decode())
         ):
-            workspace_id = client["workspace"]["id"]
+            # special workspaces have no id (Hyprland 0.57), or a negative one
+            workspace_id = client["workspace"].get("id", -1)
             # We don't want any special workspaces to be included
             if workspace_id <= 0:
                 continue
