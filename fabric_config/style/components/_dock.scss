@@ -53,37 +53,52 @@
   }
 }
 
-/* Window previews */
+/* Window previews. #dock-preview and #dock-preview-window are Boxes inside
+   EventBoxes: GTK3 EventBoxes ignore CSS padding */
 #dock-preview {
-  @include panel($radius-lg);
+  @include glass($radius-xl);
   @include floating-shadow;
-  padding: $gap-sm;
+  padding: 6px;
   margin-bottom: $gap-sm;
 }
 
 #dock-preview-window {
-  padding: 6px;
-  border-radius: $radius-md;
+  padding: 6px 6px 6px 6px;
+  border-radius: $radius-lg - 2px;
   @include transition(background-color);
 
-  &.hover { background-color: a(var(--fg), 0.1); }
+  &.focused { background-color: a(var(--fg), 0.05); }
+  &.hover   { background-color: a(var(--fg), 0.1); }
+}
+
+#dock-preview-header {
+  min-height: 22px;
+  padding: 0 2px 0 4px;
 }
 
 #dock-preview-title {
   font-size: 12px;
+  font-weight: 500;
   color: var(--fg-dim);
-  margin-left: 2px;
+  @include transition(color);
 }
 
+#dock-preview-window.focused #dock-preview-title,
 #dock-preview-window.hover #dock-preview-title { color: var(--fg); }
 
 #dock-preview-close {
-  padding: 3px;
-  border-radius: $radius-sm;
+  min-width: 20px;
+  min-height: 20px;
+  padding: 0;
+  border-radius: $radius-pill;
   opacity: 0;
   @include transition(background-color opacity);
 
-  &:hover { background-color: a(var(--red), 0.8); }
+  image { color: var(--fg-dim); }
+  &:hover {
+    background-color: a(var(--red), 0.85);
+    image { color: var(--fg); }
+  }
 }
 
 #dock-preview-window.hover #dock-preview-close { opacity: 1; }

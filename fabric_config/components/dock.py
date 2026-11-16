@@ -35,15 +35,20 @@ HIDE_DELAY_MS = 400
 PREVIEW_DELAY_MS = 350
 PREVIEW_SWITCH_MS = 60
 PREVIEW_HIDE_MS = 250
-THUMB_HEIGHT = 120
-THUMB_MIN_WIDTH = 100
-THUMB_MAX_WIDTH = 240
+THUMB_HEIGHT = 190
+THUMB_MIN_WIDTH = 150
+THUMB_MAX_WIDTH = 380
+THUMB_RADIUS = 8
+TITLE_ICON_SIZE = 16
+# horizontal room each thumbnail takes beyond its image: its own padding and
+# the spacing between thumbnails (see _dock.scss)
+THUMB_CHROME = 2 * 6 + 6
 # live preview frame rate; windows that don't redraw cost nothing
 PREVIEW_FPS = 30
 # room for the dock plus the tallest preview. The window never resizes: when a
 # bottom-anchored layer surface grows, its input region (in top-left surface
 # coordinates) lags a frame behind and the pointer seems to leave the dock
-WINDOW_HEIGHT = THUMB_HEIGHT + 200
+WINDOW_HEIGHT = THUMB_HEIGHT + 220
 
 
 class AppButton(Button):
@@ -94,6 +99,8 @@ class AppButton(Button):
 
 
 class WindowThumbnail(EventBox):
+    """One window in the preview card: icon, title and close button over a live frame."""
+
     def __init__(
         self,
         client: dict,
@@ -103,7 +110,7 @@ class WindowThumbnail(EventBox):
         on_close: Callable[[str], None],
     ):
         self.address: str = client["address"]
-        self.image = RoundedCoverImage(width, height, radius=10)
+        self.image = RoundedCoverImage(width, height, radius=THUMB_RADIUS)
         title = Label(
             label=client.get("title") or client.get("class", ""),
             name="dock-preview-title",
@@ -113,41 +120,57 @@ class WindowThumbnail(EventBox):
         # let the width come from the thumbnail, not the title
         title.set_max_width_chars(1)
         title.set_xalign(0)
-        super().__init__(
+        icon = Image(name="dock-preview-icon")
+        # EventBoxes ignore CSS padding, so the styled frame is a Box inside
+        self._frame = Box(
             name="dock-preview-window",
+            orientation="v",
+            spacing=6,
+            children=[
+                Box(
+                    name="dock-preview-header",
+                    spacing=6,
+                    children=[
+                        icon,
+                        title,
+                        Button(
+                            name="dock-preview-close",
+                            image=Image(
+                                icon_name="window-close-symbolic", icon_size=12
+                            ),
+                            tooltip_text="Close window",
+                            on_clicked=lambda *_: on_close(self.address),
+                        ),
+                    ],
+                ),
+                self.image,
+            ],
+        )
+        if client.get("focusHistoryID") == 0:
+            self._frame.add_style_class("focused")
+        super().__init__(
             style_classes=["clickable"],
             events=["button-press", "enter-notify", "leave-notify"],
-            child=Box(
-                orientation="v",
-                spacing=6,
-                children=[
-                    Box(
-                        spacing=6,
-                        children=[
-                            title,
-                            Button(
-                                name="dock-preview-close",
-                                image=Image(
-                                    icon_name="window-close-symbolic", icon_size=12
-                                ),
-                                tooltip_text="Close window",
-                                on_clicked=lambda *_: on_close(self.address),
-                            ),
-                        ],
-                    ),
-                    self.image,
-                ],
-            ),
+            child=self._frame,
             on_button_press_event=lambda _, event: (
                 on_activate(self.address) if event.button == 1 else None
             ),
-            on_enter_notify_event=lambda *_: self.add_style_class("hover"),
+            on_enter_notify_event=lambda *_: self._frame.add_style_class("hover"),
             on_leave_notify_event=lambda _, event: (
-                self.remove_style_class("hover")
+                self._frame.remove_style_class("hover")
                 if event.detail != Gdk.NotifyType.INFERIOR
                 else None
             ),
         )
+        scale = self.get_scale_factor()
+        pixbuf = get_icon_resolver().get_icon_pixbuf(
+            client.get("class", ""), TITLE_ICON_SIZE * scale
+        )
+        if pixbuf is not None:
+            # a scaled surface keeps the icon sharp on HiDPI monitors
+            icon.set_from_surface(
+                Gdk.cairo_surface_create_from_pixbuf(pixbuf, scale, None)
+            )
 
 
 class AppBar(Box):
@@ -276,9 +299,9 @@ class AppDock(Window):
             h_align="center",
         )
 
-        self._preview_thumbs = Box(spacing=8)
+        self._preview_thumbs = Box(name="dock-preview", spacing=6)
+        # the EventBox only tracks hover; the Box carries the card's styling
         self._preview_card = EventBox(
-            name="dock-preview",
             events=["enter-notify", "leave-notify"],
             child=self._preview_thumbs,
             on_enter_notify_event=lambda *_: self._keep_preview(),
@@ -415,7 +438,7 @@ class AppDock(Window):
         # shrink thumbnails to fit when an app has many windows
         width_available = self.get_allocated_width() - 64
         sizes = [self._thumbnail_size(c) for c in windows]
-        total = sum(w for w, _ in sizes) + 20 * len(sizes)
+        total = sum(w + THUMB_CHROME for w, _ in sizes)
         shrink = min(1.0, width_available / total) if total > 0 else 1.0
         sizes = [(max(40, round(w * shrink)), round(h * shrink)) for w, h in sizes]
 
