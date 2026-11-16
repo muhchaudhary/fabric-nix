@@ -150,7 +150,13 @@ class WallpaperCard(Button):
             on_button_press_event=self._on_button_press,
             **kwargs,
         )
+        # keyboard focus goes to the FlowBoxChild around it (see WallpaperGrid)
+        self.set_can_focus(False)
         self._load_thumbnail()
+
+    @property
+    def monitors_using(self) -> list[str]:
+        return self._monitors_using
 
     def set_monitors_using(self, monitor_names: list[str]):
         self._monitors_using = monitor_names
@@ -169,10 +175,11 @@ class WallpaperCard(Button):
     def _on_button_press(self, _button, event):
         if event.button != 3:
             return False
-        self._show_menu(event)
+        self.show_menu(event)
         return True
 
-    def _show_menu(self, event):
+    def show_menu(self, event: Gdk.Event | None = None):
+        """The monitor menu, at the pointer for a click, else under the card."""
         menu = Gtk.Menu()
         menu.get_style_context().add_class("tray")  # shared menu styling
         monitors = self._get_monitors()
@@ -192,7 +199,16 @@ class WallpaperCard(Button):
         menu.show_all()
         # keep a reference, or the menu is garbage collected while open
         self._menu = menu
-        menu.popup_at_pointer(event)
+        if event is not None:
+            menu.popup_at_pointer(event)
+        else:
+            menu.popup_at_widget(
+                self, Gdk.Gravity.SOUTH_WEST, Gdk.Gravity.NORTH_WEST, None
+            )
+            menu.select_first(False)
+
+    def set_on_all_monitors(self):
+        self._on_set(self.wp_path, None)
 
     def _set_thumbnail(self, pixbuf: GdkPixbuf.Pixbuf):
         self.tile.set_pixbuf(_fit_to_tile(pixbuf, _max_scale()))
@@ -258,6 +274,50 @@ class WallpaperGrid(ScrolledWindow):
         self._built = False
         self._cards: dict[str, WallpaperCard] = {}
         self._monitors: list[dict] = []
+        # move keyboard focus to the current wallpaper once hyprpaper says
+        # which it is (set when the grid is built)
+        self._focus_current = False
+
+        # Enter applies the focused wallpaper; the FlowBox scrolls to follow
+        # keyboard focus once it knows the scroll adjustment
+        self.flowbox.connect(
+            "child-activated",
+            lambda _box, child: self._card_of(child).set_on_all_monitors(),
+        )
+        self.flowbox.connect("key-press-event", self._on_key_press)
+        self.flowbox.set_vadjustment(self.get_vadjustment())
+
+    @staticmethod
+    def _card_of(child: Gtk.FlowBoxChild) -> WallpaperCard:
+        return child.get_child()  # type: ignore[return-value]
+
+    def _on_key_press(self, _, event: Gdk.EventKey) -> bool:
+        # Menu key, Shift+F10 or Shift+Enter: choose a monitor for it
+        shift = event.state & Gdk.ModifierType.SHIFT_MASK
+        if not (
+            event.keyval == Gdk.KEY_Menu
+            or (
+                shift
+                and event.keyval in (Gdk.KEY_F10, Gdk.KEY_Return, Gdk.KEY_KP_Enter)
+            )
+        ):
+            return False
+        focused = self.flowbox.get_focus_child()
+        if isinstance(focused, Gtk.FlowBoxChild):
+            self._card_of(focused).show_menu()
+        return True
+
+    def focus_card(self, card: WallpaperCard | None = None):
+        """Give keyboard focus to `card` (or the first one) and scroll to it."""
+        child = (
+            card.get_parent()
+            if card is not None
+            else self.flowbox.get_child_at_index(0)
+        )
+        if isinstance(child, Gtk.FlowBoxChild):
+            # not grab_focus(): that skips the FlowBox's cursor, which its
+            # arrow keys move from
+            child.child_focus(Gtk.DirectionType.TAB_FORWARD)
 
     def build(self) -> int:
         """Populate the grid (once until cleared); returns the image count."""
@@ -276,6 +336,8 @@ class WallpaperGrid(ScrolledWindow):
         self.flowbox.show_all()
         self.empty_label.set_visible(not names)
         self.get_vadjustment().set_value(0)
+        self.focus_card()
+        self._focus_current = True
         self.refresh_assignments()
         return len(names)
 
@@ -291,6 +353,14 @@ class WallpaperGrid(ScrolledWindow):
                     by_path.setdefault(path, []).append(monitor["name"])
             for path, card in self._cards.items():
                 card.set_monitors_using(by_path.get(path, []))
+            if self._focus_current:
+                self._focus_current = False
+                current = next(
+                    (c for c in self._cards.values() if c.monitors_using),
+                    None,
+                )
+                if current is not None:
+                    self.focus_card(current)
 
         query_active_wallpapers(on_active)
 

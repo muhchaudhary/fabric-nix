@@ -39,6 +39,28 @@ COLUMNS = 4
 PREVIEW_FPS = 12
 
 
+def focus_workspace(workspace_id: int):
+    connection.send_command(f"/dispatch hl.dsp.focus({{ workspace = {workspace_id} }})")
+
+
+def close_window(address: str):
+    connection.send_command(
+        f"/dispatch hl.dsp.window.close({{ window = 'address:{address}' }})"
+    )
+
+
+def _unshifted_keyval(event: Gdk.EventKey) -> int:
+    """The key's keyval without modifiers, so Shift+1 reads as 1, not !."""
+    display = Gdk.Display.get_default()
+    if display is None:
+        return event.keyval
+    keymap = Gdk.Keymap.get_for_display(display)
+    ok, keyval, *_ = keymap.translate_keyboard_state(
+        event.hardware_keycode, Gdk.ModifierType(0), event.group
+    )
+    return keyval if ok else event.keyval
+
+
 # Hyprland 0.56+ (Lua config) only accepts hl.dsp.* dispatches. Always pass an
 # explicit `window`: without one, window dispatchers act on the focused window.
 def move_window_to_workspace(address: str, workspace_id: int):
@@ -92,9 +114,9 @@ class HyprlandWindowButton(Button):
         self.title = title
         self.window: PopupWindow = window
 
-        # minus the 1px border on each side
+        # minus the 2px border on each side
         self.preview = RoundedCoverImage(
-            max(1, size[0] - 2), max(1, size[1] - 2), radius=WINDOW_RADIUS
+            max(1, size[0] - 4), max(1, size[1] - 4), radius=WINDOW_RADIUS
         )
         badge_size = 28 if min(size) >= 60 else 18
         icon = icon_resolver.get_icon_pixbuf(app_id, badge_size)
@@ -113,11 +135,7 @@ class HyprlandWindowButton(Button):
             ),
             on_clicked=self.on_button_click,
             on_button_press_event=lambda _, event: (
-                connection.send_command(
-                    f"/dispatch hl.dsp.window.close({{ window = 'address:{address}' }})"
-                )
-                if event.button == 3
-                else None
+                close_window(address) if event.button == 3 else None
             ),
             on_drag_data_get=lambda _s, _c, data, *_: data.set_text(
                 address, len(address)
@@ -127,6 +145,8 @@ class HyprlandWindowButton(Button):
             ),
         )
 
+        # the overview handles keys itself (see Overview._on_key_press)
+        self.set_can_focus(False)
         self.drag_source_set(
             start_button_mask=Gdk.ModifierType.BUTTON1_MASK,
             targets=TARGET,
@@ -207,6 +227,7 @@ class WorkspaceCard(Box):
         focused: bool,
         monitor_name: str | None = None,
     ):
+        self.workspace_id = workspace_id
         self.wallpaper_path = wallpaper_path
         self.wallpaper_monitor: str | None = None  # monitor whose wallpaper it shows
         self.backdrop = RoundedCoverImage(size[0], size[1], radius=CARD_RADIUS)
@@ -267,7 +288,8 @@ class Overview(PopupWindow):
                 ],
             ),
             end_children=Label(
-                "Click to focus · Drag to move · Right-click to close",
+                "Arrows/1-8 workspace · Tab window · Enter focus · "
+                "Shift+arrow/number move · Del close",
                 name="overview-hint",
                 v_align="center",
             ),
@@ -283,6 +305,11 @@ class Overview(PopupWindow):
         self.clients: dict[str, HyprlandWindowButton] = {}
         self._update_timeout_id: int | None = None
         self._cards: list[WorkspaceCard] = []
+        # keyboard selection: a workspace, and one of its windows (if any)
+        self._selected_workspace: int = WORKSPACES[0]
+        self._selected_window: str | None = None
+        # each workspace's windows in reading order (top to bottom, left to right)
+        self._workspace_windows: dict[int, list[str]] = {}
         # wallpaper backdrop, loaded once per path and shared by every card
         # decoded wallpapers by path, shared by every card on that monitor
         self._wallpapers: dict[str, GdkPixbuf.Pixbuf] = {}
@@ -302,6 +329,7 @@ class Overview(PopupWindow):
             transition_type="crossfade",
             child=self.overview_box,
         )
+        self.connect("key-press-event", self._on_key_press)
         # stop capturing however the overview closes (toggle, Escape, click
         # outside)
         self.reveal_child.revealer.connect(
@@ -347,6 +375,9 @@ class Overview(PopupWindow):
         }
 
         client_sizes: dict[str, tuple[int, int]] = {}
+        positions: dict[str, tuple[int, int]] = {}
+        workspace_windows: dict[int, list[str]] = {}
+        focused_window: str | None = None
 
         def monitor_for(workspace_id: int) -> MonitorGeometry:
             return monitors[workspace_monitors.get(workspace_id, focused_monitor)]
@@ -373,6 +404,10 @@ class Overview(PopupWindow):
             height = max(8, min(round(client["size"][1] * scale), box_height - y))
 
             client_sizes[client["address"]] = tuple(client["size"])
+            positions[client["address"]] = (y, x)
+            workspace_windows.setdefault(workspace_id, []).append(client["address"])
+            if client.get("focusHistoryID") == 0:
+                focused_window = client["address"]
             self.clients[client["address"]] = HyprlandWindowButton(
                 window=self,
                 title=client["title"],
@@ -405,6 +440,17 @@ class Overview(PopupWindow):
         ]
         self.grid.children = rows
 
+        for addresses in workspace_windows.values():
+            addresses.sort(key=lambda a: positions[a])
+        self._workspace_windows = workspace_windows
+        if not signal_update:
+            # freshly opened: start on the focused workspace and window
+            self._selected_workspace = (
+                focused_workspace if focused_workspace in WORKSPACES else WORKSPACES[0]
+            )
+            self._selected_window = focused_window
+        self._select(self._selected_workspace, self._selected_window)
+
         windows = len(self.clients)
         in_use = len(self.workspace_boxes)
         self.subtitle.set_label(
@@ -418,6 +464,125 @@ class Overview(PopupWindow):
 
         for client_addr, button in self.clients.items():
             button.start_preview(self, client_sizes[client_addr])
+
+    # region: keyboard
+
+    def _select(self, workspace_id: int, address: str | None = None):
+        """Select a workspace and one of its windows (`address`, if it's there,
+        else its first), and highlight them."""
+        windows = self._workspace_windows.get(workspace_id, [])
+        if address not in windows:
+            address = windows[0] if windows else None
+        self._selected_workspace = workspace_id
+        self._selected_window = address
+        for card in self._cards:
+            if card.workspace_id == workspace_id:
+                card.add_style_class("selected")
+            else:
+                card.remove_style_class("selected")
+        for client_address, button in self.clients.items():
+            if client_address == address:
+                button.add_style_class("selected")
+            else:
+                button.remove_style_class("selected")
+
+    def _neighbour(self, workspace_id: int, keyval: int) -> int:
+        """The workspace next to `workspace_id` in the grid, in an arrow's
+        direction, wrapping around."""
+        ids = list(WORKSPACES)
+        index = ids.index(workspace_id)
+        row, column = divmod(index, COLUMNS)
+        rows = (len(ids) + COLUMNS - 1) // COLUMNS
+        if keyval in (Gdk.KEY_Left, Gdk.KEY_h):
+            index = (index - 1) % len(ids)
+        elif keyval in (Gdk.KEY_Right, Gdk.KEY_l):
+            index = (index + 1) % len(ids)
+        elif keyval in (Gdk.KEY_Up, Gdk.KEY_k):
+            index = ((row - 1) % rows) * COLUMNS + column
+        elif keyval in (Gdk.KEY_Down, Gdk.KEY_j):
+            index = ((row + 1) % rows) * COLUMNS + column
+        return ids[min(index, len(ids) - 1)]
+
+    def _move_selected_window(self, workspace_id: int):
+        address = self._selected_window
+        if address is None or workspace_id == self._selected_workspace:
+            return
+        move_window_to_workspace(address, workspace_id)
+        # follow it; the rebuild after Hyprland's movewindow event keeps this
+        self._selected_workspace = workspace_id
+        self._selected_window = address
+
+    def _on_key_press(self, _, event: Gdk.EventKey) -> bool:
+        if not self.popup_visible:
+            return False
+        if event.state & (Gdk.ModifierType.CONTROL_MASK | Gdk.ModifierType.MOD1_MASK):
+            return False
+        shift = bool(event.state & Gdk.ModifierType.SHIFT_MASK)
+        keyval = _unshifted_keyval(event)
+        selected = self._selected_workspace
+
+        arrows = (
+            Gdk.KEY_Left,
+            Gdk.KEY_Right,
+            Gdk.KEY_Up,
+            Gdk.KEY_Down,
+            Gdk.KEY_h,
+            Gdk.KEY_j,
+            Gdk.KEY_k,
+            Gdk.KEY_l,
+        )
+        if keyval in arrows:
+            target = self._neighbour(selected, keyval)
+            if shift:
+                self._move_selected_window(target)
+            else:
+                self._select(target)
+            return True
+
+        # 1-8 (top row or keypad): go to that workspace; with Shift, move the
+        # selected window there
+        number = None
+        if Gdk.KEY_1 <= keyval <= Gdk.KEY_9:
+            number = keyval - Gdk.KEY_0
+        elif Gdk.KEY_KP_1 <= keyval <= Gdk.KEY_KP_9:
+            number = keyval - Gdk.KEY_KP_0
+        if number is not None:
+            if number in WORKSPACES:
+                if shift:
+                    self._move_selected_window(number)
+                else:
+                    self.toggle_popup()
+                    focus_workspace(number)
+            return True
+
+        if keyval in (Gdk.KEY_Tab, Gdk.KEY_ISO_Left_Tab):
+            windows = self._workspace_windows.get(selected, [])
+            if windows:
+                step = -1 if shift or event.keyval == Gdk.KEY_ISO_Left_Tab else 1
+                index = (
+                    windows.index(self._selected_window)
+                    if self._selected_window in windows
+                    else -step
+                )
+                self._select(selected, windows[(index + step) % len(windows)])
+            return True
+
+        if keyval in (Gdk.KEY_Return, Gdk.KEY_KP_Enter, Gdk.KEY_space):
+            address = self._selected_window
+            if address is not None and address in self.clients:
+                self.clients[address].on_button_click()
+            else:
+                self.toggle_popup()
+                focus_workspace(selected)
+            return True
+
+        if keyval in (Gdk.KEY_Delete, Gdk.KEY_KP_Delete, Gdk.KEY_x):
+            if self._selected_window is not None:
+                close_window(self._selected_window)
+            return True
+        return False
+
+    # endregion
 
     def _sync_wallpapers(self):
         """
