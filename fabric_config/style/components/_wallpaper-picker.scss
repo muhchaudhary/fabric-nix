@@ -30,6 +30,7 @@
 
 #wallpaper-grid flowboxchild {
   padding: 0px;
+  outline: none;
   background-color: transparent;
 }
 
@@ -50,6 +51,14 @@
     border-color: var(--accent);
     background-color: a(var(--accent), 0.12);
   }
+}
+
+/* keyboard focus is on the flowboxchild around the card */
+#wallpaper-grid flowboxchild:focus #wallpaper-card {
+  background-color: a(var(--fg), 0.1);
+  border-color: a(var(--fg), 0.8);
+
+  &.current { border-color: var(--fg); }
 }
 
 /* chips naming the monitors that currently show a wallpaper */

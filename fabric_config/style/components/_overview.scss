@@ -45,6 +45,10 @@
     background-color: a(var(--accent), 0.12);
   }
 
+  /* keyboard selection */
+  &.selected { border-color: a(var(--fg), 0.8); }
+  &.focused.selected { border-color: var(--fg); }
+
   /* a window is being dragged over it */
   &.drop-target {
     border-color: var(--accent);
@@ -87,13 +91,16 @@
 
 #overview-client-box {
   padding: 0px;
-  border-radius: 9px;
-  border: 1px solid a(white, 0.18);
+  border-radius: 10px;
+  border: 2px solid a(white, 0.14);
   background-color: a(black, 0.35);
   @include transition(border-color);
 
-  &:hover { border-color: var(--accent); }
+  &:hover { border-color: a(var(--accent), 0.7); }
+  &.selected { border-color: var(--accent); }
 }
+
+#overview-client-box.selected #overview-icon { background-color: var(--accent); }
 
 #overview-icon {
   margin: 6px;
